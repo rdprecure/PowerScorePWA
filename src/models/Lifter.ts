@@ -23,6 +23,8 @@ import type {
   
     equipmentType: EquipmentType
     status: LifterStatus
+
+    isGuest: boolean
   
     bestLiftResults?: BestLiftResults
     allAttemptResults?: AllAttemptResults
