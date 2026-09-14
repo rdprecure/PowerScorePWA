@@ -142,53 +142,62 @@ import {
       expect(summary.deadlift).toBe(450)
       expect(summary.total).toBe(1100)
     })
-
-    test('bombed lifter has zero total', () => {
-        const results: BestLiftResults = {
-          squat: 415,
-          bench: 265,
-          deadlift: 475,
-        }
-      
-        const summary =
-          summarizeBestLiftResults(
-            results,
-            'bombed'
-          )
-      
-        expect(summary.total).toBe(0)
-      })
-      
-      test('scratched lifter has zero total', () => {
-        const results: BestLiftResults = {
-          squat: 415,
-          bench: 265,
-          deadlift: 475,
-        }
-      
-        const summary =
-          summarizeBestLiftResults(
-            results,
-            'scratched'
-          )
-      
-        expect(summary.total).toBe(0)
-      })
-      
-      test('disqualified lifter has zero total', () => {
-        const results: BestLiftResults = {
-          squat: 415,
-          bench: 265,
-          deadlift: 475,
-        }
-      
-        const summary =
-          summarizeBestLiftResults(
-            results,
-            'disqualified'
-          )
-      
-        expect(summary.total).toBe(0)
-      })
+  
+    test('bombed lifter keeps event lifts but has zero total', () => {
+      const results: BestLiftResults = {
+        squat: 415,
+        bench: 265,
+        deadlift: 0,
+      }
+  
+      const summary =
+        summarizeBestLiftResults(
+          results,
+          'bombed'
+        )
+  
+      expect(summary.squat).toBe(415)
+      expect(summary.bench).toBe(265)
+      expect(summary.deadlift).toBe(0)
+      expect(summary.total).toBe(0)
+    })
+  
+    test('scratched lifter keeps event lifts but has zero total', () => {
+      const results: BestLiftResults = {
+        squat: 415,
+        bench: 265,
+        deadlift: 475,
+      }
+  
+      const summary =
+        summarizeBestLiftResults(
+          results,
+          'scratched'
+        )
+  
+      expect(summary.squat).toBe(415)
+      expect(summary.bench).toBe(265)
+      expect(summary.deadlift).toBe(475)
+      expect(summary.total).toBe(0)
+    })
+  
+    test('disqualified lifter keeps event lifts but has zero total', () => {
+      const results: BestLiftResults = {
+        squat: 415,
+        bench: 265,
+        deadlift: 475,
+      }
+  
+      const summary =
+        summarizeBestLiftResults(
+          results,
+          'disqualified'
+        )
+  
+      expect(summary.squat).toBe(415)
+      expect(summary.bench).toBe(265)
+      expect(summary.deadlift).toBe(475)
+      expect(summary.total).toBe(0)
+    })
   
   })

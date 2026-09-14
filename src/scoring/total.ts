@@ -16,23 +16,24 @@ import type {
     total: number
   }
   
-  function zeroSummary(): LiftSummary {
-    return {
-      squat: 0,
-      bench: 0,
-      deadlift: 0,
-      total: 0,
+  function calculateTotal(
+    squat: number,
+    bench: number,
+    deadlift: number,
+    status: LifterStatus
+  ): number {
+  
+    if (status !== 'active') {
+      return 0
     }
+  
+    return squat + bench + deadlift
   }
   
   export function summarizeBestLiftResults(
     results: BestLiftResults,
     status: LifterStatus = 'active'
   ): LiftSummary {
-  
-    if (status !== 'active') {
-      return zeroSummary()
-    }
   
     const squat = results.squat ?? 0
     const bench = results.bench ?? 0
@@ -42,7 +43,12 @@ import type {
       squat,
       bench,
       deadlift,
-      total: squat + bench + deadlift,
+      total: calculateTotal(
+        squat,
+        bench,
+        deadlift,
+        status
+      ),
     }
   }
   
@@ -50,10 +56,6 @@ import type {
     results: AllAttemptResults,
     status: LifterStatus = 'active'
   ): LiftSummary {
-  
-    if (status !== 'active') {
-      return zeroSummary()
-    }
   
     const squat = getBestLift(results.squat)
     const bench = getBestLift(results.bench)
@@ -63,6 +65,11 @@ import type {
       squat,
       bench,
       deadlift,
-      total: squat + bench + deadlift,
+      total: calculateTotal(
+        squat,
+        bench,
+        deadlift,
+        status
+      ),
     }
   }
