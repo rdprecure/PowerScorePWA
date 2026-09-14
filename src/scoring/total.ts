@@ -3,6 +3,10 @@ import type {
     BestLiftResults,
   } from '../models/Competition'
   
+  import type {
+    LifterStatus,
+  } from '../models/LifterStatus'
+  
   import { getBestLift } from './bestLift'
   
   export interface LiftSummary {
@@ -12,9 +16,24 @@ import type {
     total: number
   }
   
+  function zeroSummary(): LiftSummary {
+    return {
+      squat: 0,
+      bench: 0,
+      deadlift: 0,
+      total: 0,
+    }
+  }
+  
   export function summarizeBestLiftResults(
-    results: BestLiftResults
+    results: BestLiftResults,
+    status: LifterStatus = 'active'
   ): LiftSummary {
+  
+    if (status !== 'active') {
+      return zeroSummary()
+    }
+  
     const squat = results.squat ?? 0
     const bench = results.bench ?? 0
     const deadlift = results.deadlift ?? 0
@@ -28,8 +47,14 @@ import type {
   }
   
   export function summarizeAllAttemptResults(
-    results: AllAttemptResults
+    results: AllAttemptResults,
+    status: LifterStatus = 'active'
   ): LiftSummary {
+  
+    if (status !== 'active') {
+      return zeroSummary()
+    }
+  
     const squat = getBestLift(results.squat)
     const bench = getBestLift(results.bench)
     const deadlift = getBestLift(results.deadlift)

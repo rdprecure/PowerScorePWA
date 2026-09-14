@@ -142,5 +142,53 @@ import {
       expect(summary.deadlift).toBe(450)
       expect(summary.total).toBe(1100)
     })
+
+    test('bombed lifter has zero total', () => {
+        const results: BestLiftResults = {
+          squat: 415,
+          bench: 265,
+          deadlift: 475,
+        }
+      
+        const summary =
+          summarizeBestLiftResults(
+            results,
+            'bombed'
+          )
+      
+        expect(summary.total).toBe(0)
+      })
+      
+      test('scratched lifter has zero total', () => {
+        const results: BestLiftResults = {
+          squat: 415,
+          bench: 265,
+          deadlift: 475,
+        }
+      
+        const summary =
+          summarizeBestLiftResults(
+            results,
+            'scratched'
+          )
+      
+        expect(summary.total).toBe(0)
+      })
+      
+      test('disqualified lifter has zero total', () => {
+        const results: BestLiftResults = {
+          squat: 415,
+          bench: 265,
+          deadlift: 475,
+        }
+      
+        const summary =
+          summarizeBestLiftResults(
+            results,
+            'disqualified'
+          )
+      
+        expect(summary.total).toBe(0)
+      })
   
   })

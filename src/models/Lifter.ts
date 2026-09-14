@@ -2,6 +2,8 @@ import type {
     AllAttemptResults,
     BestLiftResults,
   } from './Competition'
+
+  import type { LifterStatus } from './LifterStatus'
   
   export type EquipmentType =
     | 'equipped'
@@ -20,6 +22,7 @@ import type {
     weightClass: string | null
   
     equipmentType: EquipmentType
+    status: LifterStatus
   
     bestLiftResults?: BestLiftResults
     allAttemptResults?: AllAttemptResults
