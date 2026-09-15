@@ -37,13 +37,28 @@ export interface TeamScoringCandidate {
     rules: TeamScoringRules
   ): TeamScoringResult {
   
-    const eligible = lifters
-      .filter(isEligibleForTeamScoring)
-      .sort((a, b) => {
-        return a.place! - b.place!
-      })
+    const eligible =
+      lifters
+        .filter(isEligibleForTeamScoring)
+        .sort((a, b) => {
   
-    const classCounts = new Map<string, number>()
+          if (a.place! !== b.place!) {
+            return a.place! - b.place!
+          }
+  
+          /*
+           * Lifters from different weight classes
+           * can legitimately have the same place.
+           *
+           * The ID comparison merely makes the
+           * processing order deterministic. It is
+           * NOT a scoring tiebreaker.
+           */
+          return a.id - b.id
+        })
+  
+    const classCounts =
+      new Map<string, number>()
   
     const scoringLifterIds: number[] = []
   
@@ -59,7 +74,9 @@ export interface TeamScoringCandidate {
       }
   
       const classCount =
-        classCounts.get(lifter.weightClass) ?? 0
+        classCounts.get(
+          lifter.weightClass
+        ) ?? 0
   
       if (
         classCount >=
@@ -68,9 +85,12 @@ export interface TeamScoringCandidate {
         continue
       }
   
-      scoringLifterIds.push(lifter.id)
+      scoringLifterIds.push(
+        lifter.id
+      )
   
-      totalPoints += lifter.points
+      totalPoints +=
+        lifter.points
   
       classCounts.set(
         lifter.weightClass,
