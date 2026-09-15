@@ -13,10 +13,9 @@ import {
     TeamScoringRules,
   } from './teamScore'
   
-  const texasRules: TeamScoringRules = {
-    maxScoringLifters: 11,
-    maxScoringLiftersPerClass: 3,
-  }
+  import {
+    TEXAS_TEAM_SCORING,
+  } from '../rules/texas'
   
   function makeLifter(
     overrides: Partial<TeamScoringCandidate>
@@ -60,7 +59,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(15)
@@ -88,7 +87,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(5)
@@ -111,7 +110,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(5)
@@ -134,7 +133,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(5)
@@ -157,7 +156,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(5)
@@ -181,7 +180,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(5)
@@ -219,7 +218,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(15)
@@ -268,7 +267,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(16)
@@ -312,7 +311,7 @@ import {
       const result =
         calculateTeamScore(
           lifters,
-          texasRules
+          TEXAS_TEAM_SCORING
         )
   
       expect(result.totalPoints).toBe(15)

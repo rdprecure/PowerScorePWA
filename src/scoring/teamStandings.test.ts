@@ -13,9 +13,9 @@ import {
     TeamStandingRules,
   } from './teamStandings'
   
-  const standardRules: TeamStandingRules = {
-    useAverageCoefficientTieBreaker: false,
-  }
+  import {
+    TEXAS_TEAM_STANDINGS,
+  } from '../rules/texas'
   
   function makeTeam(
     overrides: Partial<TeamStandingCandidate>
@@ -46,7 +46,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results).toEqual([
@@ -80,7 +80,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results[0]).toEqual({
@@ -113,7 +113,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results[0].id).toBe(2)
@@ -140,7 +140,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results[0].id).toBe(2)
@@ -166,7 +166,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results[0].id).toBe(2)
@@ -190,7 +190,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results).toEqual([
@@ -229,7 +229,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results).toEqual([
@@ -252,8 +252,43 @@ import {
     })
   
     test('average coefficient can break otherwise identical tie', () => {
+      const teams = [
+        makeTeam({
+          id: 1,
+          totalPoints: 20,
+          placeCounts: [1, 2, 1, 0, 0],
+          averageCoefficient: 450.25,
+        }),
+        makeTeam({
+          id: 2,
+          totalPoints: 20,
+          placeCounts: [1, 2, 1, 0, 0],
+          averageCoefficient: 455.75,
+        }),
+      ]
+  
+      const results =
+        rankTeamStandings(
+          teams,
+          TEXAS_TEAM_STANDINGS
+        )
+  
+      expect(results[0]).toEqual({
+        id: 2,
+        place: 1,
+        tied: false,
+      })
+  
+      expect(results[1]).toEqual({
+        id: 1,
+        place: 2,
+        tied: false,
+      })
+    })
+  
+    test('coefficient is ignored when coefficient tiebreaker is disabled', () => {
       const rules: TeamStandingRules = {
-        useAverageCoefficientTieBreaker: true,
+        useAverageCoefficientTieBreaker: false,
       }
   
       const teams = [
@@ -275,41 +310,6 @@ import {
         rankTeamStandings(
           teams,
           rules
-        )
-  
-      expect(results[0]).toEqual({
-        id: 2,
-        place: 1,
-        tied: false,
-      })
-  
-      expect(results[1]).toEqual({
-        id: 1,
-        place: 2,
-        tied: false,
-      })
-    })
-  
-    test('coefficient is ignored when coefficient tiebreaker is disabled', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-          averageCoefficient: 450.25,
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-          averageCoefficient: 455.75,
-        }),
-      ]
-  
-      const results =
-        rankTeamStandings(
-          teams,
-          standardRules
         )
   
       expect(results[0].place).toBe(1)
@@ -334,7 +334,7 @@ import {
       const results =
         rankTeamStandings(
           teams,
-          standardRules
+          TEXAS_TEAM_STANDINGS
         )
   
       expect(results).toEqual([

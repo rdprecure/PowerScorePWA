@@ -5,9 +5,12 @@ import {
   } from 'vitest'
   
   import {
-    DEFAULT_TOTAL_POINTS,
     getPointsForPlace,
   } from './points'
+  
+  import {
+    TEXAS_INDIVIDUAL_POINTS,
+  } from '../rules/texas'
   
   describe('PowerScore individual points', () => {
   
@@ -15,7 +18,7 @@ import {
       expect(
         getPointsForPlace(
           1,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(7)
     })
@@ -24,7 +27,7 @@ import {
       expect(
         getPointsForPlace(
           2,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(5)
     })
@@ -33,7 +36,7 @@ import {
       expect(
         getPointsForPlace(
           3,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(3)
     })
@@ -42,7 +45,7 @@ import {
       expect(
         getPointsForPlace(
           4,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(2)
     })
@@ -51,44 +54,44 @@ import {
       expect(
         getPointsForPlace(
           5,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(1)
     })
   
-    test('place beyond scoring places receives zero by default', () => {
+    test('sixth place receives no points by default', () => {
       expect(
         getPointsForPlace(
           6,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(0)
     })
   
-    test('place beyond scoring places can receive last-place points', () => {
+    test('sixth place receives last-place points when enabled', () => {
       expect(
         getPointsForPlace(
           6,
-          DEFAULT_TOTAL_POINTS,
+          TEXAS_INDIVIDUAL_POINTS,
           true
         )
       ).toBe(1)
     })
   
-    test('null place receives zero points', () => {
+    test('null place receives no points', () => {
       expect(
         getPointsForPlace(
           null,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(0)
     })
   
-    test('zero place receives zero points', () => {
+    test('zero place receives no points', () => {
       expect(
         getPointsForPlace(
           0,
-          DEFAULT_TOTAL_POINTS
+          TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(0)
     })

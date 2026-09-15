@@ -1,12 +1,4 @@
-export const DEFAULT_TOTAL_POINTS = [
-    7,
-    5,
-    3,
-    2,
-    1,
-  ]
-  
-  export function getPointsForPlace(
+export function getPointsForPlace(
     place: number | null,
     points: number[],
     awardLastPlacePointsToAll = false
