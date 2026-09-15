@@ -5,12 +5,21 @@ import {
   } from 'vitest'
   
   import {
+    getBodyWeightCoefficient,
     getTableCoefficient,
   } from './coefficient'
   
   import type {
     CoefficientEntry,
   } from './coefficient'
+  
+  import {
+    THSPA_RULES,
+  } from '../rules/thspa'
+  
+  import {
+    THSWPA_RULES,
+  } from '../rules/thswpa'
   
   const TEST_TABLE:
     CoefficientEntry[] = [
@@ -152,6 +161,54 @@ import {
           }
         )
       ).toBe(1.20)
+    })
+  
+    test('THSPA selects Schwartz coefficient', () => {
+      expect(
+        getBodyWeightCoefficient(
+          180,
+          THSPA_RULES.coefficient
+        )
+      ).toBe(0.6238)
+    })
+  
+    test('THSWPA selects Malone coefficient', () => {
+      expect(
+        getBodyWeightCoefficient(
+          180,
+          THSWPA_RULES.coefficient
+        )
+      ).toBe(0.6786)
+    })
+  
+    test('THSPA fractional bodyweight follows Schwartz lookup rules', () => {
+      expect(
+        getBodyWeightCoefficient(
+          180.9,
+          THSPA_RULES.coefficient
+        )
+      ).toBe(0.6238)
+    })
+  
+    test('THSWPA fractional bodyweight follows Malone lookup rules', () => {
+      expect(
+        getBodyWeightCoefficient(
+          180.9,
+          THSWPA_RULES.coefficient
+        )
+      ).toBe(0.6786)
+    })
+  
+    test('none coefficient type returns zero', () => {
+      expect(
+        getBodyWeightCoefficient(
+          180,
+          {
+            type: 'none',
+            roundUpBodyWeight: false,
+          }
+        )
+      ).toBe(0)
     })
   
   })

@@ -1,4 +1,16 @@
-export interface CoefficientEntry {
+import type {
+    CoefficientRules,
+  } from '../rules/AssociationRules'
+  
+  import {
+    SCHWARTZ_TABLE,
+  } from '../rules/coefficients/schwartz'
+  
+  import {
+    MALONE_TABLE,
+  } from '../rules/coefficients/malone'
+  
+  export interface CoefficientEntry {
     bodyWeight: number
     coefficient: number
   }
@@ -44,4 +56,36 @@ export interface CoefficientEntry {
     }
   
     return previousCoefficient
+  }
+  
+  export function getBodyWeightCoefficient(
+    bodyWeight: number,
+    rules: CoefficientRules
+  ): number {
+  
+    switch (rules.type) {
+  
+      case 'schwartz':
+        return getTableCoefficient(
+          bodyWeight,
+          SCHWARTZ_TABLE,
+          {
+            roundUpBodyWeight:
+              rules.roundUpBodyWeight,
+          }
+        )
+  
+      case 'malone':
+        return getTableCoefficient(
+          bodyWeight,
+          MALONE_TABLE,
+          {
+            roundUpBodyWeight:
+              rules.roundUpBodyWeight,
+          }
+        )
+  
+      case 'none':
+        return 0
+    }
   }
