@@ -30,6 +30,18 @@ import {
       ).toBe('THSWPA')
     })
   
+    test('THSPA uses Schwartz coefficient', () => {
+      expect(
+        THSPA_RULES.coefficientType
+      ).toBe('schwartz')
+    })
+  
+    test('THSWPA uses Malone coefficient', () => {
+      expect(
+        THSWPA_RULES.coefficientType
+      ).toBe('malone')
+    })
+  
     test('Texas scoring uses 7-5-3-2-1', () => {
       expect(
         THSPA_RULES.individualPoints

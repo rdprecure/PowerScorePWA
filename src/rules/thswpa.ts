@@ -8,7 +8,9 @@ import type {
     TEXAS_TEAM_STANDINGS,
   } from './texas'
   
-  export const THSWPA_RULES: AssociationRules = {
+  export const THSWPA_RULES:
+    AssociationRules = {
+  
     association: 'THSWPA',
   
     individualPoints:
@@ -67,7 +69,10 @@ import type {
       },
       {
         name: '242+',
-        maxWeight: Number.POSITIVE_INFINITY,
+        maxWeight:
+          Number.POSITIVE_INFINITY,
       },
     ],
+  
+    coefficientType: 'malone',
   }

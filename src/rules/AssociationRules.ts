@@ -15,6 +15,11 @@ import type {
     | 'THSWPA'
     | 'NMAA'
   
+  export type CoefficientType =
+    | 'schwartz'
+    | 'malone'
+    | 'none'
+  
   export interface AssociationRules {
     association: Association
   
@@ -25,4 +30,6 @@ import type {
     teamStandings: TeamStandingRules
   
     weightClasses: WeightClass[]
+  
+    coefficientType: CoefficientType
   }
