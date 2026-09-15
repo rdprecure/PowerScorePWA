@@ -22,3 +22,37 @@ export function getPointsForPlace(
   
     return 0
   }
+  
+  export function getSplitPointsForTie(
+    startingPlace: number,
+    tieCount: number,
+    points: number[]
+  ): number {
+  
+    if (
+      startingPlace <= 0 ||
+      tieCount <= 0 ||
+      points.length === 0
+    ) {
+      return 0
+    }
+  
+    let combinedPoints = 0
+  
+    for (
+      let offset = 0;
+      offset < tieCount;
+      offset++
+    ) {
+      const occupiedPlace =
+        startingPlace + offset
+  
+      combinedPoints +=
+        getPointsForPlace(
+          occupiedPlace,
+          points
+        )
+    }
+  
+    return combinedPoints / tieCount
+  }

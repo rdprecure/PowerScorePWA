@@ -6,6 +6,7 @@ import {
   
   import {
     getPointsForPlace,
+    getSplitPointsForTie,
   } from './points'
   
   import {
@@ -94,6 +95,46 @@ import {
           TEXAS_INDIVIDUAL_POINTS
         )
       ).toBe(0)
+    })
+  
+    test('two-way tie for first splits first and second points', () => {
+      expect(
+        getSplitPointsForTie(
+          1,
+          2,
+          TEXAS_INDIVIDUAL_POINTS
+        )
+      ).toBe(6)
+    })
+  
+    test('three-way tie for first splits first through third points', () => {
+      expect(
+        getSplitPointsForTie(
+          1,
+          3,
+          TEXAS_INDIVIDUAL_POINTS
+        )
+      ).toBe(5)
+    })
+  
+    test('two-way tie for fourth splits fourth and fifth points', () => {
+      expect(
+        getSplitPointsForTie(
+          4,
+          2,
+          TEXAS_INDIVIDUAL_POINTS
+        )
+      ).toBe(1.5)
+    })
+  
+    test('tie crossing final scoring place includes zero-point place', () => {
+      expect(
+        getSplitPointsForTie(
+          5,
+          2,
+          TEXAS_INDIVIDUAL_POINTS
+        )
+      ).toBe(0.5)
     })
   
   })
