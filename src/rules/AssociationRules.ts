@@ -20,6 +20,11 @@ import type {
     | 'malone'
     | 'none'
   
+  export interface CoefficientRules {
+    type: CoefficientType
+    roundUpBodyWeight: boolean
+  }
+  
   export interface AssociationRules {
     association: Association
   
@@ -31,5 +36,5 @@ import type {
   
     weightClasses: WeightClass[]
   
-    coefficientType: CoefficientType
+    coefficient: CoefficientRules
   }

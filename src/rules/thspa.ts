@@ -74,5 +74,8 @@ import type {
       },
     ],
   
-    coefficientType: 'schwartz',
+    coefficient: {
+      type: 'schwartz',
+      roundUpBodyWeight: false,
+    },
   }

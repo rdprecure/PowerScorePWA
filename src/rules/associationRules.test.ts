@@ -32,14 +32,30 @@ import {
   
     test('THSPA uses Schwartz coefficient', () => {
       expect(
-        THSPA_RULES.coefficientType
+        THSPA_RULES.coefficient.type
       ).toBe('schwartz')
     })
   
     test('THSWPA uses Malone coefficient', () => {
       expect(
-        THSWPA_RULES.coefficientType
+        THSWPA_RULES.coefficient.type
       ).toBe('malone')
+    })
+  
+    test('THSPA does not round up bodyweight for Schwartz lookup', () => {
+      expect(
+        THSPA_RULES
+          .coefficient
+          .roundUpBodyWeight
+      ).toBe(false)
+    })
+  
+    test('THSWPA Malone bodyweight rounding is independently configured', () => {
+      expect(
+        THSWPA_RULES
+          .coefficient
+          .roundUpBodyWeight
+      ).toBe(false)
     })
   
     test('Texas scoring uses 7-5-3-2-1', () => {

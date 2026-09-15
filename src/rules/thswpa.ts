@@ -74,5 +74,8 @@ import type {
       },
     ],
   
-    coefficientType: 'malone',
+    coefficient: {
+      type: 'malone',
+      roundUpBodyWeight: false,
+    },
   }
