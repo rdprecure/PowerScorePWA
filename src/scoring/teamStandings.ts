@@ -7,6 +7,7 @@ export interface TeamStandingCandidate {
   }
   
   export interface TeamStandingRules {
+    useAllOtherPlacesTieBreaker: boolean
     useAverageCoefficientTieBreaker: boolean
   }
   
@@ -18,7 +19,8 @@ export interface TeamStandingCandidate {
   
   function comparePlaceCounts(
     a: TeamStandingCandidate,
-    b: TeamStandingCandidate
+    b: TeamStandingCandidate,
+    rules: TeamStandingRules
   ): number {
   
     const maxPlaces =
@@ -45,8 +47,9 @@ export interface TeamStandingCandidate {
     }
   
     if (
+      rules.useAllOtherPlacesTieBreaker &&
       a.allOtherPlaceCount !==
-      b.allOtherPlaceCount
+        b.allOtherPlaceCount
     ) {
       return (
         b.allOtherPlaceCount -
@@ -76,7 +79,8 @@ export interface TeamStandingCandidate {
     const placeComparison =
       comparePlaceCounts(
         a,
-        b
+        b,
+        rules
       )
   
     if (placeComparison !== 0) {

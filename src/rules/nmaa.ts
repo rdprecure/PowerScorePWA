@@ -23,5 +23,6 @@ import type {
   
   export const NMAA_TEAM_STANDINGS:
     TeamStandingRules = {
+      useAllOtherPlacesTieBreaker: false,
       useAverageCoefficientTieBreaker: false,
     }
