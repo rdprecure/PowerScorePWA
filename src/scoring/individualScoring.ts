@@ -3,7 +3,7 @@ import type {
   } from './placing'
   
   import {
-    rankTexasByTotal,
+    rankByTotal,
   } from './placing'
   
   import {
@@ -19,13 +19,13 @@ import type {
     points: number
   }
   
-  export function scoreTexasIndividuals(
+  export function scoreIndividuals(
     lifters: PlacementCandidate[],
     pointSchedule: number[]
   ): IndividualScoringResult[] {
   
     const placements =
-      rankTexasByTotal(lifters)
+      rankByTotal(lifters)
   
     return placements.map((placement) => {
   
@@ -53,4 +53,21 @@ import type {
         points,
       }
     })
+  }
+  
+  /*
+   * Compatibility wrapper for existing
+   * Texas callers and tests.
+   *
+   * New code should use scoreIndividuals().
+   */
+  export function scoreTexasIndividuals(
+    lifters: PlacementCandidate[],
+    pointSchedule: number[]
+  ): IndividualScoringResult[] {
+  
+    return scoreIndividuals(
+      lifters,
+      pointSchedule
+    )
   }

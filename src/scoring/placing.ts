@@ -29,7 +29,7 @@ import type {
     )
   }
   
-  export function rankTexasByTotal(
+  export function rankByTotal(
     lifters: PlacementCandidate[]
   ): PlacementResult[] {
   
@@ -135,4 +135,17 @@ import type {
       ...results,
       ...unplaced,
     ]
+  }
+  
+  /*
+   * Compatibility wrapper for existing
+   * Texas callers and tests.
+   *
+   * New code should use rankByTotal().
+   */
+  export function rankTexasByTotal(
+    lifters: PlacementCandidate[]
+  ): PlacementResult[] {
+  
+    return rankByTotal(lifters)
   }

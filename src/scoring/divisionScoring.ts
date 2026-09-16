@@ -11,7 +11,7 @@ import type {
   } from './weightClass'
   
   import {
-    scoreTexasIndividuals,
+    scoreIndividuals,
   } from './individualScoring'
   
   export interface DivisionScoringCandidate {
@@ -83,7 +83,7 @@ import type {
         )
   
       const individualResults =
-        scoreTexasIndividuals(
+        scoreIndividuals(
           classLifters.map(
             lifter => ({
               id:
