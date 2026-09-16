@@ -31,10 +31,19 @@ import type {
     buildTeamStandingCandidates,
   } from './teamStandingCandidates'
   
+  import type {
+    BestLifterPlacement,
+  } from './bestLifterPlacing'
+  
+  import {
+    placeDivisionBestLifters,
+  } from './divisionBestLifterPlacing'
+  
   export interface TexasDivisionScoringResult {
     lifters: ScoredDivisionLifter[]
     teams: DivisionTeamScore[]
     teamStandings: TeamStandingResult[]
+    bestLifterPlacements: BestLifterPlacement[]
   }
   
   export function scoreTexasMeetDivision(
@@ -67,9 +76,17 @@ import type {
         rules.teamStandings
       )
   
+    const bestLifterPlacements =
+      placeDivisionBestLifters(
+        scoredLifters,
+        rules,
+        rules.bestLifter.placesPerGroup
+      )
+  
     return {
       lifters: scoredLifters,
       teams,
       teamStandings,
+      bestLifterPlacements,
     }
   }
