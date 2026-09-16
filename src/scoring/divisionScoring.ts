@@ -40,7 +40,7 @@ import type {
     points: number
   }
   
-  export function scoreTexasDivision(
+  export function scoreDivision(
     lifters: DivisionScoringCandidate[],
     rules: AssociationRules
   ): ScoredDivisionLifter[] {
@@ -144,4 +144,21 @@ import type {
     }
   
     return scoredLifters
+  }
+  
+  /*
+   * Compatibility wrapper for existing
+   * Texas callers and tests.
+   *
+   * New code should use scoreDivision().
+   */
+  export function scoreTexasDivision(
+    lifters: DivisionScoringCandidate[],
+    rules: AssociationRules
+  ): ScoredDivisionLifter[] {
+  
+    return scoreDivision(
+      lifters,
+      rules
+    )
   }

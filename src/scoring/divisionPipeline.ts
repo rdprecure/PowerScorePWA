@@ -8,7 +8,7 @@ import type {
   } from './divisionScoring'
   
   import {
-    scoreTexasDivision,
+    scoreDivision,
   } from './divisionScoring'
   
   import type {
@@ -52,7 +52,7 @@ import type {
   ): DivisionScoringResult {
   
     const scoredLifters =
-      scoreTexasDivision(
+      scoreDivision(
         lifters,
         rules
       )
