@@ -4,89 +4,26 @@ import type {
   
   import type {
     DivisionScoringCandidate,
-    ScoredDivisionLifter,
-  } from './divisionScoring'
-  
-  import {
-    scoreTexasDivision,
   } from './divisionScoring'
   
   import type {
-    DivisionTeamScore,
-  } from './divisionTeamScoring'
+    DivisionScoringResult,
+  } from './divisionPipeline'
   
   import {
-    scoreDivisionTeams,
-  } from './divisionTeamScoring'
+    scoreMeetDivision,
+  } from './divisionPipeline'
   
-  import type {
-    TeamStandingResult,
-  } from './teamStandings'
-  
-  import {
-    rankTeamStandings,
-  } from './teamStandings'
-  
-  import {
-    buildTeamStandingCandidates,
-  } from './teamStandingCandidates'
-  
-  import type {
-    BestLifterPlacement,
-  } from './bestLifterPlacing'
-  
-  import {
-    placeDivisionBestLifters,
-  } from './divisionBestLifterPlacing'
-  
-  export interface TexasDivisionScoringResult {
-    lifters: ScoredDivisionLifter[]
-    teams: DivisionTeamScore[]
-    teamStandings: TeamStandingResult[]
-    bestLifterPlacements: BestLifterPlacement[]
-  }
+  export type TexasDivisionScoringResult =
+    DivisionScoringResult
   
   export function scoreTexasMeetDivision(
     lifters: DivisionScoringCandidate[],
     rules: AssociationRules
   ): TexasDivisionScoringResult {
   
-    const scoredLifters =
-      scoreTexasDivision(
-        lifters,
-        rules
-      )
-  
-    const teams =
-      scoreDivisionTeams(
-        scoredLifters,
-        rules
-      )
-  
-    const teamStandingCandidates =
-      buildTeamStandingCandidates(
-        scoredLifters,
-        teams,
-        rules.individualPoints.length
-      )
-  
-    const teamStandings =
-      rankTeamStandings(
-        teamStandingCandidates,
-        rules.teamStandings
-      )
-  
-    const bestLifterPlacements =
-      placeDivisionBestLifters(
-        scoredLifters,
-        rules,
-        rules.bestLifter.placesPerGroup
-      )
-  
-    return {
-      lifters: scoredLifters,
-      teams,
-      teamStandings,
-      bestLifterPlacements,
-    }
+    return scoreMeetDivision(
+      lifters,
+      rules
+    )
   }
