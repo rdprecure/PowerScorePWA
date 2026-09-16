@@ -3,20 +3,24 @@ import type {
   } from '../models/LifterStatus'
   
   import type {
-    CoefficientRules,
+    AssociationRules,
   } from '../rules/AssociationRules'
   
   import {
     calculateCoefficientTotal,
   } from './coefficientTotal'
   
+  import {
+    getBestLifterGroup,
+  } from './bestLifterGroup'
+  
   export interface BestLifterCandidate {
     id: number
     bodyWeight: number
+    weightClass: string
     total: number
     status: LifterStatus
     isGuest: boolean
-    group: string
   }
   
   export interface BestLifterPlacement {
@@ -35,14 +39,13 @@ import type {
       lifter.status === 'active' &&
       lifter.total > 0 &&
       lifter.bodyWeight > 0 &&
-      lifter.isGuest === false &&
-      lifter.group.trim() !== ''
+      lifter.isGuest === false
     )
   }
   
   export function placeBestLifters(
     lifters: BestLifterCandidate[],
-    coefficientRules: CoefficientRules,
+    rules: AssociationRules,
     placesPerGroup: number
   ): BestLifterPlacement[] {
   
@@ -58,15 +61,23 @@ import type {
         .map(
           lifter => {
   
+            const group =
+              getBestLifterGroup(
+                lifter.weightClass,
+                rules.weightClasses,
+                rules.bestLifterGroups
+              )
+  
             const coefficientResult =
               calculateCoefficientTotal(
                 lifter.bodyWeight,
                 lifter.total,
-                coefficientRules
+                rules.coefficient
               )
   
             return {
               lifter,
+              group,
               coefficient:
                 coefficientResult.coefficient,
               coefficientTotal:
@@ -77,8 +88,8 @@ import type {
         )
         .filter(
           candidate =>
-            candidate
-              .coefficientTotal > 0
+            candidate.group !== 'N/A' &&
+            candidate.coefficientTotal > 0
         )
   
     const groups =
@@ -86,7 +97,7 @@ import type {
         new Set(
           eligible.map(
             candidate =>
-              candidate.lifter.group
+              candidate.group
           )
         )
       )
@@ -100,7 +111,7 @@ import type {
         eligible
           .filter(
             candidate =>
-              candidate.lifter.group ===
+              candidate.group ===
               group
           )
           .sort(

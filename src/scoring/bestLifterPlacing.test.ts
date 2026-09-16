@@ -31,25 +31,25 @@ import {
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1000,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
             {
               id: 2,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1100,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
+            THSPA_RULES,
             2
           )
   
@@ -68,47 +68,61 @@ import {
         ).toBe(2)
       })
   
-      test('groups are placed independently', () => {
+      test('groups are derived from weight class and placed independently', () => {
   
         const lifters:
           BestLifterCandidate[] = [
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1000,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
             {
               id: 2,
               bodyWeight: 220,
+              weightClass: '220',
               total: 1400,
               status: 'active',
               isGuest: false,
-              group: 'Heavy',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
+            THSPA_RULES,
             1
           )
   
-        expect(
+        const light =
           results.find(
             result =>
               result.id === 1
-          )?.place
-        ).toBe(1)
+          )
   
-        expect(
+        const heavy =
           results.find(
             result =>
               result.id === 2
-          )?.place
+          )
+  
+        expect(
+          light?.group
+        ).toBe('114 to 165')
+  
+        expect(
+          light?.place
+        ).toBe(1)
+  
+        expect(
+          heavy?.group
+        ).toBe('181 to SHW')
+  
+        expect(
+          heavy?.place
         ).toBe(1)
       })
   
@@ -119,25 +133,25 @@ import {
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1200,
               status: 'active',
               isGuest: true,
-              group: 'Light',
             },
             {
               id: 2,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1000,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
+            THSPA_RULES,
             2
           )
   
@@ -163,41 +177,41 @@ import {
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1200,
               status: 'bombed',
               isGuest: false,
-              group: 'Light',
             },
             {
               id: 2,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1200,
               status: 'scratched',
               isGuest: false,
-              group: 'Light',
             },
             {
               id: 3,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1200,
               status: 'disqualified',
               isGuest: false,
-              group: 'Light',
             },
             {
               id: 4,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1000,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
+            THSPA_RULES,
             4
           )
   
@@ -218,17 +232,17 @@ import {
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 0,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
+            THSPA_RULES,
             1
           )
   
@@ -244,33 +258,33 @@ import {
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1200,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
             {
               id: 2,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1100,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
             {
               id: 3,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1000,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
+            THSPA_RULES,
             2
           )
   
@@ -286,71 +300,56 @@ import {
         ).toBe(false)
       })
   
-      test('lighter body weight breaks equal coefficient total', () => {
+      test('unknown weight class does not receive Best Lifter place', () => {
   
         const lifters:
           BestLifterCandidate[] = [
             {
               id: 1,
               bodyWeight: 150,
-              total: 1000,
+              weightClass: 'UNKNOWN',
+              total: 1200,
               status: 'active',
               isGuest: false,
-              group: 'Light',
-            },
-            {
-              id: 2,
-              bodyWeight: 149,
-              total: 1000,
-              status: 'active',
-              isGuest: false,
-              group: 'Light',
             },
           ]
-  
-        /*
-         * Supply no coefficient adjustment
-         * by using equal preconditions that
-         * exercise deterministic ordering.
-         *
-         * Actual coefficient totals will
-         * normally differ by body weight,
-         * so this test verifies only that
-         * the resulting order is stable.
-         */
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
-            2
+            THSPA_RULES,
+            1
           )
   
         expect(
-          results.length
-        ).toBe(2)
+          results
+        ).toEqual([])
       })
   
-      test('THSWPA Best Lifter placing uses Malone coefficient rules', () => {
+      test('THSWPA derives the correct group and uses Malone coefficient rules', () => {
   
         const lifters:
           BestLifterCandidate[] = [
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1000,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSWPA_RULES.coefficient,
+            THSWPA_RULES,
             1
           )
+  
+        expect(
+          results[0].group
+        ).toBe('148 to 242+')
   
         expect(
           results[0].coefficient
@@ -367,26 +366,30 @@ import {
         )
       })
   
-      test('THSPA Best Lifter placing uses Schwartz coefficient rules', () => {
+      test('THSPA derives the correct group and uses Schwartz coefficient rules', () => {
   
         const lifters:
           BestLifterCandidate[] = [
             {
               id: 1,
               bodyWeight: 150,
+              weightClass: '165',
               total: 1000,
               status: 'active',
               isGuest: false,
-              group: 'Light',
             },
           ]
   
         const results =
           placeBestLifters(
             lifters,
-            THSPA_RULES.coefficient,
+            THSPA_RULES,
             1
           )
+  
+        expect(
+          results[0].group
+        ).toBe('114 to 165')
   
         expect(
           results[0].coefficient
@@ -401,6 +404,106 @@ import {
           720.7,
           1
         )
+      })
+  
+      test('THSWPA 132 and 148 lifters are placed in separate award groups', () => {
+  
+        const lifters:
+          BestLifterCandidate[] = [
+            {
+              id: 1,
+              bodyWeight: 132,
+              weightClass: '132',
+              total: 900,
+              status: 'active',
+              isGuest: false,
+            },
+            {
+              id: 2,
+              bodyWeight: 148,
+              weightClass: '148',
+              total: 1000,
+              status: 'active',
+              isGuest: false,
+            },
+          ]
+  
+        const results =
+          placeBestLifters(
+            lifters,
+            THSWPA_RULES,
+            1
+          )
+  
+        expect(
+          results.find(
+            result =>
+              result.id === 1
+          )
+        ).toMatchObject({
+          group: '97 to 132',
+          place: 1,
+        })
+  
+        expect(
+          results.find(
+            result =>
+              result.id === 2
+          )
+        ).toMatchObject({
+          group: '148 to 242+',
+          place: 1,
+        })
+      })
+  
+      test('THSPA 165 and 181 lifters are placed in separate award groups', () => {
+  
+        const lifters:
+          BestLifterCandidate[] = [
+            {
+              id: 1,
+              bodyWeight: 165,
+              weightClass: '165',
+              total: 1000,
+              status: 'active',
+              isGuest: false,
+            },
+            {
+              id: 2,
+              bodyWeight: 181,
+              weightClass: '181',
+              total: 1100,
+              status: 'active',
+              isGuest: false,
+            },
+          ]
+  
+        const results =
+          placeBestLifters(
+            lifters,
+            THSPA_RULES,
+            1
+          )
+  
+        expect(
+          results.find(
+            result =>
+              result.id === 1
+          )
+        ).toMatchObject({
+          group: '114 to 165',
+          place: 1,
+        })
+  
+        expect(
+          results.find(
+            result =>
+              result.id === 2
+          )
+        ).toMatchObject({
+          group: '181 to SHW',
+          place: 1,
+        })
       })
   
     }
