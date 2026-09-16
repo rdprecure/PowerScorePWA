@@ -75,12 +75,23 @@ import type {
       ],
   
       coefficient: {
-        type: 'none',
+        type: 'malone',
         roundUpBodyWeight: false,
       },
   
       bestLifter: {
-        placesPerGroup: 0,
-        groups: [],
+        placesPerGroup: 3,
+        groups: [
+          {
+            name: '97 to 148',
+            firstWeightClass: '97',
+            lastWeightClass: '148',
+          },
+          {
+            name: '165 to 259+',
+            firstWeightClass: '165',
+            lastWeightClass: 'SHW',
+          },
+        ],
       },
     }

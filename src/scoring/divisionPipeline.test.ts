@@ -149,7 +149,32 @@ import {
   
         expect(
           result.bestLifterPlacements
-        ).toEqual([])
+            .length
+        ).toBe(1)
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .group
+        ).toBe('198 to SHW')
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .place
+        ).toBe(1)
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .coefficient
+        ).toBeCloseTo(
+          0.5545
+        )
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .coefficientTotal
+        ).toBeCloseTo(
+          665.4
+        )
       })
   
       test('NMAA girls can use the generic pipeline', () => {
@@ -187,7 +212,32 @@ import {
   
         expect(
           result.bestLifterPlacements
-        ).toEqual([])
+            .length
+        ).toBe(1)
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .group
+        ).toBe('165 to 259+')
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .place
+        ).toBe(1)
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .coefficient
+        ).toBeCloseTo(
+          0.5649
+        )
+  
+        expect(
+          result.bestLifterPlacements[0]
+            .coefficientTotal
+        ).toBeCloseTo(
+          564.9
+        )
       })
   
       test('NMAA uses a maximum of two scoring lifters per weight class', () => {
@@ -309,7 +359,7 @@ import {
         ).toBe(5)
       })
   
-      test('NMAA does not produce Best Lifter placements while configuration is disabled', () => {
+      test('NMAA Best Lifter placing keeps the two award groups separate', () => {
   
         const lifters:
           DivisionScoringCandidate[] = [
@@ -341,7 +391,62 @@ import {
   
         expect(
           result.bestLifterPlacements
-        ).toEqual([])
+            .length
+        ).toBe(2)
+  
+        const lightGroup =
+          result.bestLifterPlacements.find(
+            placement =>
+              placement.group ===
+              '114 to 181'
+          )
+  
+        const heavyGroup =
+          result.bestLifterPlacements.find(
+            placement =>
+              placement.group ===
+              '198 to SHW'
+          )
+  
+        expect(
+          lightGroup?.id
+        ).toBe(1)
+  
+        expect(
+          lightGroup?.place
+        ).toBe(1)
+  
+        expect(
+          lightGroup?.coefficient
+        ).toBeCloseTo(
+          0.9991
+        )
+  
+        expect(
+          lightGroup?.coefficientTotal
+        ).toBeCloseTo(
+          1198.92
+        )
+  
+        expect(
+          heavyGroup?.id
+        ).toBe(2)
+  
+        expect(
+          heavyGroup?.place
+        ).toBe(1)
+  
+        expect(
+          heavyGroup?.coefficient
+        ).toBeCloseTo(
+          0.5826
+        )
+  
+        expect(
+          heavyGroup?.coefficientTotal
+        ).toBeCloseTo(
+          873.9
+        )
       })
   
       test('generic pipeline produces team standings for NMAA', () => {

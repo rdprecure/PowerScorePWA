@@ -55,11 +55,19 @@ import {
         ).toBe(2)
       })
   
-      test('does not apply an unverified coefficient team tie breaker', () => {
+      test('does not use coefficient total as a team tie breaker', () => {
   
         expect(
           NMAA_TEAM_STANDINGS
             .useAverageCoefficientTieBreaker
+        ).toBe(false)
+      })
+  
+      test('does not use places below fifth as a team tie breaker', () => {
+  
+        expect(
+          NMAA_TEAM_STANDINGS
+            .useAllOtherPlacesTieBreaker
         ).toBe(false)
       })
   
@@ -149,46 +157,92 @@ import {
         ).toBe('SHW')
       })
   
-      test('NMAA coefficient calculation is explicitly disabled for now', () => {
+      test('boys use Schwartz coefficient', () => {
   
         expect(
           NMAA_BOYS_RULES
             .coefficient
             .type
-        ).toBe('none')
+        ).toBe('schwartz')
   
         expect(
-          NMAA_GIRLS_RULES
+          NMAA_BOYS_RULES
             .coefficient
-            .type
-        ).toBe('none')
+            .roundUpBodyWeight
+        ).toBe(false)
       })
   
-      test('NMAA Best Lifter placing is explicitly disabled for now', () => {
+      test('girls use Malone coefficient', () => {
+  
+        expect(
+          NMAA_GIRLS_RULES
+            .coefficient
+            .type
+        ).toBe('malone')
+  
+        expect(
+          NMAA_GIRLS_RULES
+            .coefficient
+            .roundUpBodyWeight
+        ).toBe(false)
+      })
+  
+      test('boys award three Best Lifter places per group', () => {
   
         expect(
           NMAA_BOYS_RULES
             .bestLifter
             .placesPerGroup
-        ).toBe(0)
+        ).toBe(3)
+      })
   
-        expect(
-          NMAA_BOYS_RULES
-            .bestLifter
-            .groups
-        ).toEqual([])
+      test('girls award three Best Lifter places per group', () => {
   
         expect(
           NMAA_GIRLS_RULES
             .bestLifter
             .placesPerGroup
-        ).toBe(0)
+        ).toBe(3)
+      })
+  
+      test('boys Best Lifter groups are 114 through 181 and 198 through SHW', () => {
+  
+        expect(
+          NMAA_BOYS_RULES
+            .bestLifter
+            .groups
+        ).toEqual([
+          {
+            name: '114 to 181',
+            firstWeightClass: '114',
+            lastWeightClass: '181',
+          },
+          {
+            name: '198 to SHW',
+            firstWeightClass: '198',
+            lastWeightClass: 'SHW',
+          },
+        ])
+      })
+  
+      test('girls Best Lifter groups are 97 through 148 and 165 through 259+', () => {
   
         expect(
           NMAA_GIRLS_RULES
             .bestLifter
             .groups
-        ).toEqual([])
+        ).toEqual([
+          {
+            name: '97 to 148',
+            firstWeightClass: '97',
+            lastWeightClass: '148',
+          },
+          {
+            name: '165 to 259+',
+            firstWeightClass: '165',
+            lastWeightClass: 'SHW',
+          },
+        ])
       })
   
     }
