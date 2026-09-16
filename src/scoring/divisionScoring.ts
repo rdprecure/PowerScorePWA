@@ -17,36 +17,26 @@ import type {
   export interface DivisionScoringCandidate {
     id: number
     teamId: number | null
-  
     bodyWeight: number
     total: number
-  
     status: LifterStatus
-  
     isGuest: boolean
     isExtraLifter: boolean
-  
     tieGroup?: string
   }
   
   export interface ScoredDivisionLifter {
     id: number
     teamId: number | null
-  
     bodyWeight: number
     total: number
-  
     status: LifterStatus
-  
     isGuest: boolean
     isExtraLifter: boolean
-  
     weightClass: string
-  
     place: number | null
     tied: boolean
     tieCount: number
-  
     points: number
   }
   
@@ -56,20 +46,23 @@ import type {
   ): ScoredDivisionLifter[] {
   
     const liftersWithClasses =
-      lifters.map((lifter) => ({
-        ...lifter,
-  
-        weightClass: getWeightClass(
-          lifter.bodyWeight,
-          rules.weightClasses
-        ),
-      }))
+      lifters.map(
+        lifter => ({
+          ...lifter,
+          weightClass:
+            getWeightClass(
+              lifter.bodyWeight,
+              rules.weightClasses
+            ),
+        })
+      )
   
     const classNames =
       Array.from(
         new Set(
           liftersWithClasses.map(
-            (lifter) => lifter.weightClass
+            lifter =>
+              lifter.weightClass
           )
         )
       )
@@ -77,41 +70,58 @@ import type {
     const scoredLifters:
       ScoredDivisionLifter[] = []
   
-    for (const className of classNames) {
+    for (
+      const className
+      of classNames
+    ) {
   
       const classLifters =
         liftersWithClasses.filter(
-          (lifter) =>
-            lifter.weightClass === className
+          lifter =>
+            lifter.weightClass ===
+            className
         )
   
       const individualResults =
         scoreTexasIndividuals(
-          classLifters.map((lifter) => ({
-            id: lifter.id,
-            bodyWeight: lifter.bodyWeight,
-            total: lifter.total,
-            status: lifter.status,
-            isGuest: lifter.isGuest,
-            tieGroup: lifter.tieGroup,
-          })),
+          classLifters.map(
+            lifter => ({
+              id:
+                lifter.id,
+              bodyWeight:
+                lifter.bodyWeight,
+              total:
+                lifter.total,
+              status:
+                lifter.status,
+              isGuest:
+                lifter.isGuest,
+              tieGroup:
+                lifter.tieGroup,
+            })
+          ),
           rules.individualPoints
         )
   
       const resultById =
         new Map(
           individualResults.map(
-            (result) => [
+            result => [
               result.id,
               result,
             ]
           )
         )
   
-      for (const lifter of classLifters) {
+      for (
+        const lifter
+        of classLifters
+      ) {
   
         const result =
-          resultById.get(lifter.id)
+          resultById.get(
+            lifter.id
+          )
   
         if (!result) {
           throw new Error(
@@ -120,26 +130,15 @@ import type {
         }
   
         scoredLifters.push({
-          id: lifter.id,
-          teamId: lifter.teamId,
-  
-          bodyWeight: lifter.bodyWeight,
-          total: lifter.total,
-  
-          status: lifter.status,
-  
-          isGuest: lifter.isGuest,
-          isExtraLifter:
-            lifter.isExtraLifter,
-  
-          weightClass:
-            lifter.weightClass,
-  
-          place: result.place,
-          tied: result.tied,
-          tieCount: result.tieCount,
-  
-          points: result.points,
+          ...lifter,
+          place:
+            result.place,
+          tied:
+            result.tied,
+          tieCount:
+            result.tieCount,
+          points:
+            result.points,
         })
       }
     }
