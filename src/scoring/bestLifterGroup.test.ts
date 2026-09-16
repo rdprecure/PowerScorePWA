@@ -26,7 +26,7 @@ import {
           getBestLifterGroup(
             '114',
             THSPA_RULES.weightClasses,
-            THSPA_RULES.bestLifterGroups
+            THSPA_RULES.bestLifter.groups
           )
         ).toBe('114 to 165')
       })
@@ -37,7 +37,7 @@ import {
           getBestLifterGroup(
             '165',
             THSPA_RULES.weightClasses,
-            THSPA_RULES.bestLifterGroups
+            THSPA_RULES.bestLifter.groups
           )
         ).toBe('114 to 165')
       })
@@ -48,7 +48,7 @@ import {
           getBestLifterGroup(
             '181',
             THSPA_RULES.weightClasses,
-            THSPA_RULES.bestLifterGroups
+            THSPA_RULES.bestLifter.groups
           )
         ).toBe('181 to SHW')
       })
@@ -59,7 +59,7 @@ import {
           getBestLifterGroup(
             'SHW',
             THSPA_RULES.weightClasses,
-            THSPA_RULES.bestLifterGroups
+            THSPA_RULES.bestLifter.groups
           )
         ).toBe('181 to SHW')
       })
@@ -70,7 +70,7 @@ import {
           getBestLifterGroup(
             '97',
             THSWPA_RULES.weightClasses,
-            THSWPA_RULES.bestLifterGroups
+            THSWPA_RULES.bestLifter.groups
           )
         ).toBe('97 to 132')
       })
@@ -81,7 +81,7 @@ import {
           getBestLifterGroup(
             '132',
             THSWPA_RULES.weightClasses,
-            THSWPA_RULES.bestLifterGroups
+            THSWPA_RULES.bestLifter.groups
           )
         ).toBe('97 to 132')
       })
@@ -92,7 +92,7 @@ import {
           getBestLifterGroup(
             '148',
             THSWPA_RULES.weightClasses,
-            THSWPA_RULES.bestLifterGroups
+            THSWPA_RULES.bestLifter.groups
           )
         ).toBe('148 to 242+')
       })
@@ -103,7 +103,7 @@ import {
           getBestLifterGroup(
             '242+',
             THSWPA_RULES.weightClasses,
-            THSWPA_RULES.bestLifterGroups
+            THSWPA_RULES.bestLifter.groups
           )
         ).toBe('148 to 242+')
       })
@@ -114,7 +114,7 @@ import {
           getBestLifterGroup(
             'UNKNOWN',
             THSPA_RULES.weightClasses,
-            THSPA_RULES.bestLifterGroups
+            THSPA_RULES.bestLifter.groups
           )
         ).toBe('N/A')
       })

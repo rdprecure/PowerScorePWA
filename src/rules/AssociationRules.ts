@@ -11,7 +11,7 @@ import type {
   } from '../models/WeightClass'
   
   import type {
-    BestLifterGroup,
+    BestLifterRules,
   } from '../models/BestLifterGroup'
   
   export type Association =
@@ -36,5 +36,5 @@ import type {
     teamStandings: TeamStandingRules
     weightClasses: WeightClass[]
     coefficient: CoefficientRules
-    bestLifterGroups: BestLifterGroup[]
+    bestLifter: BestLifterRules
   }

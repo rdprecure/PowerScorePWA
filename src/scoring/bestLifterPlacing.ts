@@ -65,7 +65,7 @@ import type {
               getBestLifterGroup(
                 lifter.weightClass,
                 rules.weightClasses,
-                rules.bestLifterGroups
+                rules.bestLifter.groups
               )
   
             const coefficientResult =

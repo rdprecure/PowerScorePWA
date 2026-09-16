@@ -79,16 +79,20 @@ import type {
         roundUpBodyWeight: false,
       },
   
-      bestLifterGroups: [
-        {
-          name: '97 to 132',
-          firstWeightClass: '97',
-          lastWeightClass: '132',
-        },
-        {
-          name: '148 to 242+',
-          firstWeightClass: '148',
-          lastWeightClass: '242+',
-        },
-      ],
+      bestLifter: {
+        placesPerGroup: 3,
+  
+        groups: [
+          {
+            name: '97 to 132',
+            firstWeightClass: '97',
+            lastWeightClass: '132',
+          },
+          {
+            name: '148 to 242+',
+            firstWeightClass: '148',
+            lastWeightClass: '242+',
+          },
+        ],
+      },
     }

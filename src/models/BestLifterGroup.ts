@@ -3,3 +3,8 @@ export interface BestLifterGroup {
     firstWeightClass: string
     lastWeightClass: string
   }
+  
+  export interface BestLifterRules {
+    placesPerGroup: number
+    groups: BestLifterGroup[]
+  }
