@@ -1,12 +1,9 @@
 export interface TeamStandingCandidate {
     id: number
     totalPoints: number
-  
     placeCounts: number[]
-  
     allOtherPlaceCount: number
-  
-    averageCoefficient?: number
+    averageCoefficientTotal?: number
   }
   
   export interface TeamStandingRules {
@@ -24,14 +21,23 @@ export interface TeamStandingCandidate {
     b: TeamStandingCandidate
   ): number {
   
-    const count = Math.max(
-      a.placeCounts.length,
-      b.placeCounts.length
-    )
+    const maxPlaces =
+      Math.max(
+        a.placeCounts.length,
+        b.placeCounts.length
+      )
   
-    for (let i = 0; i < count; i++) {
-      const aCount = a.placeCounts[i] ?? 0
-      const bCount = b.placeCounts[i] ?? 0
+    for (
+      let index = 0;
+      index < maxPlaces;
+      index++
+    ) {
+  
+      const aCount =
+        a.placeCounts[index] ?? 0
+  
+      const bCount =
+        b.placeCounts[index] ?? 0
   
       if (aCount !== bCount) {
         return bCount - aCount
@@ -57,26 +63,42 @@ export interface TeamStandingCandidate {
     rules: TeamStandingRules
   ): number {
   
-    if (a.totalPoints !== b.totalPoints) {
-      return b.totalPoints - a.totalPoints
+    if (
+      a.totalPoints !==
+      b.totalPoints
+    ) {
+      return (
+        b.totalPoints -
+        a.totalPoints
+      )
     }
   
     const placeComparison =
-      comparePlaceCounts(a, b)
+      comparePlaceCounts(
+        a,
+        b
+      )
   
     if (placeComparison !== 0) {
       return placeComparison
     }
   
-    if (rules.useAverageCoefficientTieBreaker) {
-      const aCoefficient =
-        a.averageCoefficient ?? 0
+    if (
+      rules
+        .useAverageCoefficientTieBreaker
+    ) {
   
-      const bCoefficient =
-        b.averageCoefficient ?? 0
+      const aAverage =
+        a.averageCoefficientTotal ?? 0
   
-      if (aCoefficient !== bCoefficient) {
-        return bCoefficient - aCoefficient
+      const bAverage =
+        b.averageCoefficientTotal ?? 0
+  
+      if (aAverage !== bAverage) {
+        return (
+          bAverage -
+          aAverage
+        )
       }
     }
   
@@ -88,7 +110,14 @@ export interface TeamStandingCandidate {
     b: TeamStandingCandidate,
     rules: TeamStandingRules
   ): boolean {
-    return compareTeams(a, b, rules) === 0
+  
+    return (
+      compareTeams(
+        a,
+        b,
+        rules
+      ) === 0
+    )
   }
   
   export function rankTeamStandings(
@@ -96,36 +125,73 @@ export interface TeamStandingCandidate {
     rules: TeamStandingRules
   ): TeamStandingResult[] {
   
-    const eligible = teams
-      .filter((team) => team.totalPoints > 0)
-      .sort((a, b) =>
-        compareTeams(a, b, rules)
-      )
+    const eligible =
+      teams
+        .filter(
+          team =>
+            team.totalPoints > 0
+        )
+        .sort(
+          (a, b) =>
+            compareTeams(
+              a,
+              b,
+              rules
+            )
+        )
   
-    const results: TeamStandingResult[] = []
+    const results:
+      TeamStandingResult[] = []
   
-    for (let i = 0; i < eligible.length; i++) {
-      const team = eligible[i]
+    let previousTeam:
+      TeamStandingCandidate |
+      undefined
   
-      let place = i + 1
-      let tied = false
+    let previousPlace:
+      number | null = null
   
-      if (i > 0) {
-        const previous = eligible[i - 1]
+    for (
+      let index = 0;
+      index < eligible.length;
+      index++
+    ) {
   
-        if (
-          teamsAreTied(
-            team,
-            previous,
-            rules
-          )
-        ) {
-          place =
-            results[results.length - 1].place!
+      const team =
+        eligible[index]
   
-          tied = true
+      const currentPosition =
+        index + 1
   
-          results[results.length - 1].tied = true
+      let place =
+        currentPosition
+  
+      let tied =
+        false
+  
+      if (
+        previousTeam &&
+        teamsAreTied(
+          previousTeam,
+          team,
+          rules
+        )
+      ) {
+  
+        place =
+          previousPlace ??
+          currentPosition
+  
+        tied =
+          true
+  
+        const previousResult =
+          results[
+            results.length - 1
+          ]
+  
+        if (previousResult) {
+          previousResult.tied =
+            true
         }
       }
   
@@ -134,15 +200,27 @@ export interface TeamStandingCandidate {
         place,
         tied,
       })
+  
+      previousTeam =
+        team
+  
+      previousPlace =
+        place
     }
   
-    const unplaced = teams
-      .filter((team) => team.totalPoints <= 0)
-      .map((team) => ({
-        id: team.id,
-        place: null,
-        tied: false,
-      }))
+    const unplaced =
+      teams
+        .filter(
+          team =>
+            team.totalPoints <= 0
+        )
+        .map(
+          team => ({
+            id: team.id,
+            place: null,
+            tied: false,
+          })
+        )
   
     return [
       ...results,

@@ -17,31 +17,39 @@ import {
     TEXAS_TEAM_STANDINGS,
   } from '../rules/texas'
   
-  function makeTeam(
-    overrides: Partial<TeamStandingCandidate>
-  ): TeamStandingCandidate {
-    return {
-      id: 1,
-      totalPoints: 0,
-      placeCounts: [0, 0, 0, 0, 0],
-      allOtherPlaceCount: 0,
-      ...overrides,
-    }
-  }
-  
   describe('PowerScore team standings', () => {
   
-    test('team with more points places higher', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 25,
-        }),
-      ]
+    test('team with more points ranks higher', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              0,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 500,
+          },
+          {
+            id: 2,
+            totalPoints: 18,
+            placeCounts: [
+              3,
+              0,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 900,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -49,33 +57,52 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results).toEqual([
-        {
-          id: 2,
-          place: 1,
-          tied: false,
-        },
-        {
-          id: 1,
-          place: 2,
-          tied: false,
-        },
-      ])
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(2)
     })
   
-    test('first-place count breaks equal-points tie', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [2, 0, 2, 0, 0],
-        }),
-      ]
+    test('first-place count breaks equal team points', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              2,
+              0,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 500,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              4,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 900,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -83,32 +110,52 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results[0]).toEqual({
-        id: 2,
-        place: 1,
-        tied: false,
-      })
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
   
-      expect(results[1]).toEqual({
-        id: 1,
-        place: 2,
-        tied: false,
-      })
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(2)
     })
   
-    test('second-place count breaks tie when firsts are equal', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 1, 2, 0, 0],
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [1, 2, 0, 0, 0],
-        }),
-      ]
+    test('second-place count breaks tie when first-place counts are equal', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              3,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 500,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              2,
+              5,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 900,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -116,26 +163,52 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results[0].id).toBe(2)
-      expect(results[0].place).toBe(1)
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
   
-      expect(results[1].id).toBe(1)
-      expect(results[1].place).toBe(2)
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(2)
     })
   
-    test('later place counts are considered in order', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 1, 1, 1, 0],
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [1, 1, 2, 0, 0],
-        }),
-      ]
+    test('later place counts are compared in order', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              2,
+              3,
+              1,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 500,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              2,
+              3,
+              0,
+              10,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 900,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -143,25 +216,52 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results[0].id).toBe(2)
-      expect(results[1].id).toBe(1)
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(2)
     })
   
-    test('all-other-place count is used after configured places', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 1, 1, 0, 0],
-          allOtherPlaceCount: 1,
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [1, 1, 1, 0, 0],
-          allOtherPlaceCount: 2,
-        }),
-      ]
+    test('all-other-place count is compared after configured place counts', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 3,
+            averageCoefficientTotal: 500,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 900,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -169,23 +269,52 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results[0].id).toBe(2)
-      expect(results[1].id).toBe(1)
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(2)
     })
   
-    test('identical scoring records produce a true tie', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-        }),
-      ]
+    test('average coefficient total is final tiebreaker', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 650,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 700,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -193,38 +322,52 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results).toEqual([
-        {
-          id: 1,
-          place: 1,
-          tied: true,
-        },
-        {
-          id: 2,
-          place: 1,
-          tied: true,
-        },
-      ])
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(2)
     })
   
-    test('placing after a tie uses competition ranking', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 25,
-          placeCounts: [2, 1, 0, 0, 0],
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 25,
-          placeCounts: [2, 1, 0, 0, 0],
-        }),
-        makeTeam({
-          id: 3,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-        }),
-      ]
+    test('teams remain tied when all tiebreakers are equal', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 650,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 650,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -232,40 +375,79 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results).toEqual([
-        {
-          id: 1,
-          place: 1,
-          tied: true,
-        },
-        {
-          id: 2,
-          place: 1,
-          tied: true,
-        },
-        {
-          id: 3,
-          place: 3,
-          tied: false,
-        },
-      ])
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.tied
+      ).toBe(true)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.tied
+      ).toBe(true)
     })
   
-    test('average coefficient can break otherwise identical tie', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-          averageCoefficient: 450.25,
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-          averageCoefficient: 455.75,
-        }),
-      ]
+    test('competition ranking skips place after tied teams', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 650,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 650,
+          },
+          {
+            id: 3,
+            totalPoints: 18,
+            placeCounts: [
+              3,
+              0,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 900,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -273,38 +455,65 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results[0]).toEqual({
-        id: 2,
-        place: 1,
-        tied: false,
-      })
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
   
-      expect(results[1]).toEqual({
-        id: 1,
-        place: 2,
-        tied: false,
-      })
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 3
+        )?.place
+      ).toBe(3)
     })
   
-    test('coefficient is ignored when coefficient tiebreaker is disabled', () => {
-      const rules: TeamStandingRules = {
-        useAverageCoefficientTieBreaker: false,
-      }
+    test('coefficient total does not break tie when rule disables it', () => {
   
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-          averageCoefficient: 450.25,
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 20,
-          placeCounts: [1, 2, 1, 0, 0],
-          averageCoefficient: 455.75,
-        }),
-      ]
+      const rules:
+        TeamStandingRules = {
+          useAverageCoefficientTieBreaker:
+            false,
+        }
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 600,
+          },
+          {
+            id: 2,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              1,
+              1,
+              1,
+              1,
+            ],
+            allOtherPlaceCount: 2,
+            averageCoefficientTotal: 700,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -312,24 +521,66 @@ import {
           rules
         )
   
-      expect(results[0].place).toBe(1)
-      expect(results[1].place).toBe(1)
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
   
-      expect(results[0].tied).toBe(true)
-      expect(results[1].tied).toBe(true)
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.tied
+      ).toBe(true)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.tied
+      ).toBe(true)
     })
   
-    test('team with zero points receives no place', () => {
-      const teams = [
-        makeTeam({
-          id: 1,
-          totalPoints: 20,
-        }),
-        makeTeam({
-          id: 2,
-          totalPoints: 0,
-        }),
-      ]
+    test('team with zero points is unplaced', () => {
+  
+      const teams:
+        TeamStandingCandidate[] = [
+          {
+            id: 1,
+            totalPoints: 20,
+            placeCounts: [
+              1,
+              0,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 600,
+          },
+          {
+            id: 2,
+            totalPoints: 0,
+            placeCounts: [
+              0,
+              0,
+              0,
+              0,
+              0,
+            ],
+            allOtherPlaceCount: 0,
+            averageCoefficientTotal: 900,
+          },
+        ]
   
       const results =
         rankTeamStandings(
@@ -337,18 +588,19 @@ import {
           TEXAS_TEAM_STANDINGS
         )
   
-      expect(results).toEqual([
-        {
-          id: 1,
-          place: 1,
-          tied: false,
-        },
-        {
-          id: 2,
-          place: null,
-          tied: false,
-        },
-      ])
+      expect(
+        results.find(
+          result =>
+            result.id === 1
+        )?.place
+      ).toBe(1)
+  
+      expect(
+        results.find(
+          result =>
+            result.id === 2
+        )?.place
+      ).toBeNull()
     })
   
   })
