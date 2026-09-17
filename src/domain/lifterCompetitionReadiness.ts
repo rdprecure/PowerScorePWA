@@ -28,6 +28,7 @@ export interface LifterReadinessError {
 
 export interface LifterCompetitionReadiness {
   ready: boolean
+  requiresReadiness: boolean
   errors: LifterReadinessError[]
 }
 
@@ -36,6 +37,17 @@ export function validateLifterCompetitionReadiness(
   state: MeetState,
   rules: AssociationRules,
 ): LifterCompetitionReadiness {
+
+  if (
+    lifter.status !==
+    'active'
+  ) {
+    return {
+      ready: true,
+      requiresReadiness: false,
+      errors: [],
+    }
+  }
 
   const errors:
     LifterReadinessError[] = []
@@ -66,6 +78,9 @@ export function validateLifterCompetitionReadiness(
   return {
     ready:
       errors.length === 0,
+
+    requiresReadiness:
+      true,
 
     errors,
   }
@@ -110,10 +125,6 @@ function validateWeightClass(
     return
   }
 
-  /*
-   * Avoid reporting a second weight-class
-   * error when body weight itself is missing.
-   */
   if (
     lifter.bodyWeight === null ||
     lifter.bodyWeight <= 0

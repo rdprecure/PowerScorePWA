@@ -18,14 +18,17 @@ export interface MeetLifterReadiness {
   lifterId: number
   lifterNumber: number
   ready: boolean
+  requiresReadiness: boolean
   errors: LifterReadinessError[]
 }
 
 export interface MeetCompetitionReadiness {
   ready: boolean
   totalLifters: number
+  competingLifters: number
   readyLifters: number
   notReadyLifters: number
+  notCompetingLifters: number
   lifters: MeetLifterReadiness[]
 }
 
@@ -56,21 +59,40 @@ export function validateMeetCompetitionReadiness(
             ready:
               readiness.ready,
 
+            requiresReadiness:
+              readiness.requiresReadiness,
+
             errors:
               readiness.errors,
           }
         }
       )
 
+  const competingLifters =
+    lifters.filter(
+      lifter =>
+        lifter.requiresReadiness
+    ).length
+
   const readyLifters =
     lifters.filter(
       lifter =>
+        lifter.requiresReadiness &&
         lifter.ready
     ).length
 
   const notReadyLifters =
-    lifters.length -
-    readyLifters
+    lifters.filter(
+      lifter =>
+        lifter.requiresReadiness &&
+        !lifter.ready
+    ).length
+
+  const notCompetingLifters =
+    lifters.filter(
+      lifter =>
+        !lifter.requiresReadiness
+    ).length
 
   return {
     ready:
@@ -79,9 +101,13 @@ export function validateMeetCompetitionReadiness(
     totalLifters:
       lifters.length,
 
+    competingLifters,
+
     readyLifters,
 
     notReadyLifters,
+
+    notCompetingLifters,
 
     lifters,
   }

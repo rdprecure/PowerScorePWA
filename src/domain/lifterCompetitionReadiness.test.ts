@@ -86,7 +86,7 @@ describe(
   'PowerScore lifter competition readiness',
   () => {
 
-    test('complete lifter is ready for competition', () => {
+    test('complete active lifter is ready for competition', () => {
 
       const result =
         validateLifterCompetitionReadiness(
@@ -97,6 +97,10 @@ describe(
 
       expect(
         result.ready
+      ).toBe(true)
+
+      expect(
+        result.requiresReadiness
       ).toBe(true)
 
       expect(
@@ -127,11 +131,15 @@ describe(
       ).toBe(true)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors
       ).toEqual([])
     })
 
-    test('missing body weight prevents competition readiness', () => {
+    test('missing body weight prevents active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -154,6 +162,10 @@ describe(
       ).toBe(false)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors.map(
           error =>
             error.code
@@ -164,7 +176,7 @@ describe(
       ])
     })
 
-    test('zero body weight prevents competition readiness', () => {
+    test('zero body weight prevents active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -184,6 +196,10 @@ describe(
       ).toBe(false)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors.some(
           error =>
             error.code ===
@@ -192,7 +208,7 @@ describe(
       ).toBe(true)
     })
 
-    test('missing assigned weight class prevents competition readiness', () => {
+    test('missing assigned weight class prevents active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -212,6 +228,10 @@ describe(
       ).toBe(false)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors.some(
           error =>
             error.code ===
@@ -220,7 +240,7 @@ describe(
       ).toBe(true)
     })
 
-    test('class above next higher class prevents competition readiness', () => {
+    test('class above next higher class prevents active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -243,6 +263,10 @@ describe(
       ).toBe(false)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors.some(
           error =>
             error.code ===
@@ -251,7 +275,7 @@ describe(
       ).toBe(true)
     })
 
-    test('unknown association class prevents competition readiness', () => {
+    test('unknown association class prevents active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -274,6 +298,10 @@ describe(
       ).toBe(false)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors.some(
           error =>
             error.code ===
@@ -282,7 +310,7 @@ describe(
       ).toBe(true)
     })
 
-    test('nonexistent division prevents competition readiness', () => {
+    test('nonexistent division prevents active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -302,6 +330,10 @@ describe(
       ).toBe(false)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors.some(
           error =>
             error.code ===
@@ -310,7 +342,7 @@ describe(
       ).toBe(true)
     })
 
-    test('nonexistent team prevents competition readiness', () => {
+    test('nonexistent team prevents active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -330,6 +362,10 @@ describe(
       ).toBe(false)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors.some(
           error =>
             error.code ===
@@ -338,7 +374,7 @@ describe(
       ).toBe(true)
     })
 
-    test('unattached lifter is ready without a team', () => {
+    test('unattached active lifter is ready without a team', () => {
 
       const lifter =
         createLifter()
@@ -358,11 +394,15 @@ describe(
       ).toBe(true)
 
       expect(
+        result.requiresReadiness
+      ).toBe(true)
+
+      expect(
         result.errors
       ).toEqual([])
     })
 
-    test('age and grade are not required for competition readiness', () => {
+    test('age and grade are not required for active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -383,9 +423,13 @@ describe(
       expect(
         result.ready
       ).toBe(true)
+
+      expect(
+        result.requiresReadiness
+      ).toBe(true)
     })
 
-    test('declared deadlift opener is not required for competition readiness', () => {
+    test('declared deadlift opener is not required for active lifter readiness', () => {
 
       const lifter =
         createLifter()
@@ -403,6 +447,112 @@ describe(
       expect(
         result.ready
       ).toBe(true)
+
+      expect(
+        result.requiresReadiness
+      ).toBe(true)
+    })
+
+    test('scratched lifter does not require competition readiness', () => {
+
+      const lifter =
+        createLifter()
+
+      lifter.status =
+        'scratched'
+
+      lifter.bodyWeight =
+        null
+
+      lifter.weightClass =
+        null
+
+      const result =
+        validateLifterCompetitionReadiness(
+          lifter,
+          createMeetState(),
+          THSPA_RULES,
+        )
+
+      expect(
+        result.ready
+      ).toBe(true)
+
+      expect(
+        result.requiresReadiness
+      ).toBe(false)
+
+      expect(
+        result.errors
+      ).toEqual([])
+    })
+
+    test('bombed lifter does not require competition readiness', () => {
+
+      const lifter =
+        createLifter()
+
+      lifter.status =
+        'bombed'
+
+      lifter.bodyWeight =
+        null
+
+      lifter.weightClass =
+        null
+
+      const result =
+        validateLifterCompetitionReadiness(
+          lifter,
+          createMeetState(),
+          THSPA_RULES,
+        )
+
+      expect(
+        result.ready
+      ).toBe(true)
+
+      expect(
+        result.requiresReadiness
+      ).toBe(false)
+
+      expect(
+        result.errors
+      ).toEqual([])
+    })
+
+    test('disqualified lifter does not require competition readiness', () => {
+
+      const lifter =
+        createLifter()
+
+      lifter.status =
+        'disqualified'
+
+      lifter.bodyWeight =
+        null
+
+      lifter.weightClass =
+        null
+
+      const result =
+        validateLifterCompetitionReadiness(
+          lifter,
+          createMeetState(),
+          THSPA_RULES,
+        )
+
+      expect(
+        result.ready
+      ).toBe(true)
+
+      expect(
+        result.requiresReadiness
+      ).toBe(false)
+
+      expect(
+        result.errors
+      ).toEqual([])
     })
 
   }

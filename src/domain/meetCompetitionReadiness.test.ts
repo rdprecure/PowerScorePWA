@@ -108,6 +108,10 @@ describe(
       ).toBe(0)
 
       expect(
+        result.competingLifters
+      ).toBe(0)
+
+      expect(
         result.readyLifters
       ).toBe(0)
 
@@ -116,11 +120,15 @@ describe(
       ).toBe(0)
 
       expect(
+        result.notCompetingLifters
+      ).toBe(0)
+
+      expect(
         result.lifters
       ).toEqual([])
     })
 
-    test('meet with all complete lifters is ready', () => {
+    test('meet with all complete active lifters is ready', () => {
 
       const state =
         createMeetState([
@@ -149,15 +157,23 @@ describe(
       ).toBe(2)
 
       expect(
+        result.competingLifters
+      ).toBe(2)
+
+      expect(
         result.readyLifters
       ).toBe(2)
 
       expect(
         result.notReadyLifters
       ).toBe(0)
+
+      expect(
+        result.notCompetingLifters
+      ).toBe(0)
     })
 
-    test('meet is not ready when one lifter is incomplete', () => {
+    test('meet is not ready when one active lifter is incomplete', () => {
 
       const readyLifter =
         createLifter(
@@ -198,15 +214,23 @@ describe(
       ).toBe(2)
 
       expect(
+        result.competingLifters
+      ).toBe(2)
+
+      expect(
         result.readyLifters
       ).toBe(1)
 
       expect(
         result.notReadyLifters
       ).toBe(1)
+
+      expect(
+        result.notCompetingLifters
+      ).toBe(0)
     })
 
-    test('summary identifies ready lifter by id and number', () => {
+    test('summary identifies ready active lifter by id and number', () => {
 
       const state =
         createMeetState([
@@ -228,11 +252,12 @@ describe(
         lifterId: 100,
         lifterNumber: 17,
         ready: true,
+        requiresReadiness: true,
         errors: [],
       })
     })
 
-    test('summary preserves readiness errors for incomplete lifter', () => {
+    test('summary preserves readiness errors for incomplete active lifter', () => {
 
       const lifter =
         createLifter(
@@ -265,6 +290,10 @@ describe(
       ).toBe(false)
 
       expect(
+        lifterResult.requiresReadiness
+      ).toBe(true)
+
+      expect(
         lifterResult.errors.map(
           error =>
             error.code
@@ -275,7 +304,7 @@ describe(
       ])
     })
 
-    test('summary counts multiple incomplete lifters', () => {
+    test('summary counts multiple incomplete active lifters', () => {
 
       const lifter1 =
         createLifter(
@@ -322,6 +351,10 @@ describe(
       ).toBe(3)
 
       expect(
+        result.competingLifters
+      ).toBe(3)
+
+      expect(
         result.readyLifters
       ).toBe(1)
 
@@ -330,11 +363,15 @@ describe(
       ).toBe(2)
 
       expect(
+        result.notCompetingLifters
+      ).toBe(0)
+
+      expect(
         result.ready
       ).toBe(false)
     })
 
-    test('next-higher-class lifter is counted as ready', () => {
+    test('next-higher-class active lifter is counted as ready', () => {
 
       const lifter =
         createLifter(
@@ -364,6 +401,10 @@ describe(
       ).toBe(true)
 
       expect(
+        result.competingLifters
+      ).toBe(1)
+
+      expect(
         result.readyLifters
       ).toBe(1)
 
@@ -372,7 +413,7 @@ describe(
       ).toBe(0)
     })
 
-    test('unattached lifter is counted as ready', () => {
+    test('unattached active lifter is counted as ready', () => {
 
       const lifter =
         createLifter(
@@ -399,7 +440,203 @@ describe(
       ).toBe(true)
 
       expect(
+        result.competingLifters
+      ).toBe(1)
+
+      expect(
         result.readyLifters
+      ).toBe(1)
+    })
+
+    test('incomplete scratched lifter does not prevent meet readiness', () => {
+
+      const lifter =
+        createLifter(
+          100,
+          1,
+        )
+
+      lifter.status =
+        'scratched'
+
+      lifter.bodyWeight =
+        null
+
+      lifter.weightClass =
+        null
+
+      const state =
+        createMeetState([
+          lifter,
+        ])
+
+      const result =
+        validateMeetCompetitionReadiness(
+          state,
+          THSPA_RULES,
+        )
+
+      expect(
+        result.ready
+      ).toBe(true)
+
+      expect(
+        result.totalLifters
+      ).toBe(1)
+
+      expect(
+        result.competingLifters
+      ).toBe(0)
+
+      expect(
+        result.readyLifters
+      ).toBe(0)
+
+      expect(
+        result.notReadyLifters
+      ).toBe(0)
+
+      expect(
+        result.notCompetingLifters
+      ).toBe(1)
+
+      expect(
+        result.lifters[0].requiresReadiness
+      ).toBe(false)
+    })
+
+    test('bombed lifter is counted as not competing', () => {
+
+      const lifter =
+        createLifter(
+          100,
+          1,
+        )
+
+      lifter.status =
+        'bombed'
+
+      const result =
+        validateMeetCompetitionReadiness(
+          createMeetState([
+            lifter,
+          ]),
+          THSPA_RULES,
+        )
+
+      expect(
+        result.ready
+      ).toBe(true)
+
+      expect(
+        result.competingLifters
+      ).toBe(0)
+
+      expect(
+        result.readyLifters
+      ).toBe(0)
+
+      expect(
+        result.notCompetingLifters
+      ).toBe(1)
+    })
+
+    test('disqualified lifter is counted as not competing', () => {
+
+      const lifter =
+        createLifter(
+          100,
+          1,
+        )
+
+      lifter.status =
+        'disqualified'
+
+      const result =
+        validateMeetCompetitionReadiness(
+          createMeetState([
+            lifter,
+          ]),
+          THSPA_RULES,
+        )
+
+      expect(
+        result.ready
+      ).toBe(true)
+
+      expect(
+        result.competingLifters
+      ).toBe(0)
+
+      expect(
+        result.readyLifters
+      ).toBe(0)
+
+      expect(
+        result.notCompetingLifters
+      ).toBe(1)
+    })
+
+    test('scratched lifter does not hide incomplete active lifter', () => {
+
+      const scratched =
+        createLifter(
+          100,
+          1,
+        )
+
+      scratched.status =
+        'scratched'
+
+      scratched.bodyWeight =
+        null
+
+      scratched.weightClass =
+        null
+
+      const active =
+        createLifter(
+          200,
+          2,
+        )
+
+      active.bodyWeight =
+        null
+
+      active.weightClass =
+        null
+
+      const result =
+        validateMeetCompetitionReadiness(
+          createMeetState([
+            scratched,
+            active,
+          ]),
+          THSPA_RULES,
+        )
+
+      expect(
+        result.ready
+      ).toBe(false)
+
+      expect(
+        result.totalLifters
+      ).toBe(2)
+
+      expect(
+        result.competingLifters
+      ).toBe(1)
+
+      expect(
+        result.readyLifters
+      ).toBe(0)
+
+      expect(
+        result.notReadyLifters
+      ).toBe(1)
+
+      expect(
+        result.notCompetingLifters
       ).toBe(1)
     })
 
