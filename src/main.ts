@@ -83,26 +83,11 @@ function escapeHtml(
 ): string {
 
   return value
-    .replaceAll(
-      '&',
-      '&amp;',
-    )
-    .replaceAll(
-      '<',
-      '&lt;',
-    )
-    .replaceAll(
-      '>',
-      '&gt;',
-    )
-    .replaceAll(
-      '"',
-      '&quot;',
-    )
-    .replaceAll(
-      "'",
-      '&#039;',
-    )
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
 }
 
 
@@ -146,7 +131,68 @@ function getNextTeamId():
 }
 
 
-function addDivision(): void {
+function focusElement(
+  selector: string,
+): void {
+
+  window.requestAnimationFrame(
+    () => {
+      document
+        .querySelector<HTMLInputElement>(
+          selector
+        )
+        ?.focus()
+    }
+  )
+}
+
+
+function startDivisionEntry():
+  void {
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      '#newDivisionName'
+    )
+
+  input?.focus()
+}
+
+
+function startTeamEntry():
+  void {
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      '#newTeamName'
+    )
+
+  input?.focus()
+}
+
+
+function commitNewDivision():
+  void {
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      '#newDivisionName'
+    )
+
+  if (
+    input === null
+  ) {
+    return
+  }
+
+  const name =
+    input.value.trim()
+
+  if (
+    name === ''
+  ) {
+    return
+  }
 
   const division:
     Division = {
@@ -157,8 +203,7 @@ function addDivision(): void {
       meetId:
         meetState.meet.id,
 
-      name:
-        '',
+      name,
     }
 
   meetState.divisions.push(
@@ -167,12 +212,105 @@ function addDivision(): void {
 
   renderApp()
 
+  flashRow(
+    `[data-division-row="${division.id}"]`
+  )
+
+  focusElement(
+    '#newDivisionName'
+  )
+}
+
+
+function commitNewTeam():
+  void {
+
   const input =
     document.querySelector<HTMLInputElement>(
-      `[data-division-name="${division.id}"]`
+      '#newTeamName'
     )
 
-  input?.focus()
+  if (
+    input === null
+  ) {
+    return
+  }
+
+  const name =
+    input.value.trim()
+
+  if (
+    name === ''
+  ) {
+    return
+  }
+
+  const team:
+    Team = {
+
+      id:
+        getNextTeamId(),
+
+      meetId:
+        meetState.meet.id,
+
+      name,
+
+      region:
+        null,
+
+      classification:
+        null,
+    }
+
+  meetState.teams.push(
+    team
+  )
+
+  renderApp()
+
+  flashRow(
+    `[data-team-row="${team.id}"]`
+  )
+
+  focusElement(
+    '#newTeamName'
+  )
+}
+
+
+function flashRow(
+  selector: string,
+): void {
+
+  window.requestAnimationFrame(
+    () => {
+
+      const row =
+        document.querySelector(
+          selector
+        )
+
+      if (
+        row === null
+      ) {
+        return
+      }
+
+      row.classList.add(
+        'entry-accepted'
+      )
+
+      window.setTimeout(
+        () => {
+          row.classList.remove(
+            'entry-accepted'
+          )
+        },
+        450
+      )
+    }
+  )
 }
 
 
@@ -205,42 +343,6 @@ function removeDivision(
     )
 
   renderApp()
-}
-
-
-function addTeam(): void {
-
-  const team:
-    Team = {
-
-      id:
-        getNextTeamId(),
-
-      meetId:
-        meetState.meet.id,
-
-      name:
-        '',
-
-      region:
-        null,
-
-      classification:
-        null,
-    }
-
-  meetState.teams.push(
-    team
-  )
-
-  renderApp()
-
-  const input =
-    document.querySelector<HTMLInputElement>(
-      `[data-team-name="${team.id}"]`
-    )
-
-  input?.focus()
 }
 
 
@@ -286,8 +388,7 @@ function renderNavigation():
         id="navSetup"
         type="button"
         class="nav-item ${
-          currentPage ===
-          'setup'
+          currentPage === 'setup'
             ? 'active'
             : ''
         }"
@@ -299,8 +400,7 @@ function renderNavigation():
         id="navRegistration"
         type="button"
         class="nav-item ${
-          currentPage ===
-          'registration'
+          currentPage === 'registration'
             ? 'active'
             : ''
         }"
@@ -348,134 +448,138 @@ function renderNavigation():
 function renderDivisionRows():
   string {
 
-  if (
-    meetState.divisions.length === 0
-  ) {
-    return `
-      <div class="empty-grid">
-        No divisions have been added.
-      </div>
-    `
-  }
-
-  return meetState.divisions
-    .map(
-      division => `
-        <div class="data-row division-row">
-
-          <span class="row-number">
-            ${division.id}
-          </span>
-
-          <input
-            type="text"
-            value="${
-              escapeHtml(
-                division.name
-              )
-            }"
-            data-division-name="${
-              division.id
-            }"
-            aria-label="Division name"
+  const rows =
+    meetState.divisions
+      .map(
+        division => `
+          <div
+            class="data-row division-row"
+            data-division-row="${division.id}"
           >
 
-          <button
-            type="button"
-            class="row-delete"
-            data-delete-division="${
-              division.id
-            }"
-            title="Remove division"
-          >
-            ×
-          </button>
+            <span class="row-number">
+              ${division.id}
+            </span>
 
-        </div>
-      `
-    )
-    .join('')
+            <input
+              type="text"
+              value="${
+                escapeHtml(
+                  division.name
+                )
+              }"
+              data-division-name="${division.id}"
+              aria-label="Division name"
+            >
+
+            <button
+              type="button"
+              class="row-delete"
+              data-delete-division="${division.id}"
+              title="Remove division"
+              tabindex="-1"
+            >
+              ×
+            </button>
+
+          </div>
+        `
+      )
+      .join('')
+
+  return `
+    ${rows}
+
+    <div
+      class="data-row division-row entry-row"
+    >
+
+      <span class="row-number">
+        +
+      </span>
+
+      <input
+        id="newDivisionName"
+        type="text"
+        value=""
+        placeholder="New division — Enter to add"
+        aria-label="New division name"
+        autocomplete="off"
+      >
+
+      <span></span>
+
+    </div>
+  `
 }
 
 
 function renderTeamRows():
   string {
 
-  if (
-    meetState.teams.length === 0
-  ) {
-    return `
-      <div class="empty-grid">
-        No teams have been added.
-      </div>
-    `
-  }
-
-  return meetState.teams
-    .map(
-      team => `
-        <div class="data-row team-row">
-
-          <span class="row-number">
-            ${team.id}
-          </span>
-
-          <input
-            type="text"
-            value="${
-              escapeHtml(
-                team.name
-              )
-            }"
-            data-team-name="${
-              team.id
-            }"
-            aria-label="Team name"
+  const rows =
+    meetState.teams
+      .map(
+        team => `
+          <div
+            class="data-row team-row"
+            data-team-row="${team.id}"
           >
 
-          <input
-            type="text"
-            value="${
-              escapeHtml(
-                team.region ??
-                ''
-              )
-            }"
-            data-team-region="${
-              team.id
-            }"
-            aria-label="Region"
-          >
+            <span class="row-number">
+              ${team.id}
+            </span>
 
-          <input
-            type="text"
-            value="${
-              escapeHtml(
-                team.classification ??
-                ''
-              )
-            }"
-            data-team-classification="${
-              team.id
-            }"
-            aria-label="Classification"
-          >
+            <input
+              type="text"
+              value="${
+                escapeHtml(
+                  team.name
+                )
+              }"
+              data-team-name="${team.id}"
+              aria-label="Team name"
+            >
 
-          <button
-            type="button"
-            class="row-delete"
-            data-delete-team="${
-              team.id
-            }"
-            title="Remove team"
-          >
-            ×
-          </button>
+            <button
+              type="button"
+              class="row-delete"
+              data-delete-team="${team.id}"
+              title="Remove team"
+              tabindex="-1"
+            >
+              ×
+            </button>
 
-        </div>
-      `
-    )
-    .join('')
+          </div>
+        `
+      )
+      .join('')
+
+  return `
+    ${rows}
+
+    <div
+      class="data-row team-row entry-row"
+    >
+
+      <span class="row-number">
+        +
+      </span>
+
+      <input
+        id="newTeamName"
+        type="text"
+        value=""
+        placeholder="New team / school — Enter to add"
+        aria-label="New team or school name"
+        autocomplete="off"
+      >
+
+      <span></span>
+
+    </div>
+  `
 }
 
 
@@ -493,7 +597,7 @@ function renderMeetSetup():
 
         <div class="meet-form">
 
-          <label class="field meet-name-field">
+          <label class="field">
             <span>Meet Name</span>
 
             <input
@@ -519,7 +623,7 @@ function renderMeetSetup():
             >
           </label>
 
-          <label class="field location-field">
+          <label class="field">
             <span>Location</span>
 
             <input
@@ -632,8 +736,7 @@ function renderMeetSetup():
 
               <span class="item-count">
                 ${
-                  meetState.divisions
-                    .length
+                  meetState.divisions.length
                 }
               </span>
             </div>
@@ -642,10 +745,17 @@ function renderMeetSetup():
               id="addDivision"
               type="button"
               class="compact-button"
+              tabindex="-1"
             >
               + Add Division
             </button>
 
+          </div>
+
+          <div class="entry-help">
+            Type a division and press
+            <kbd>Enter</kbd>
+            to add the next one.
           </div>
 
           <div class="data-grid">
@@ -679,8 +789,7 @@ function renderMeetSetup():
 
               <span class="item-count">
                 ${
-                  meetState.teams
-                    .length
+                  meetState.teams.length
                 }
               </span>
             </div>
@@ -689,10 +798,17 @@ function renderMeetSetup():
               id="addTeam"
               type="button"
               class="compact-button"
+              tabindex="-1"
             >
               + Add Team
             </button>
 
+          </div>
+
+          <div class="entry-help">
+            Type a school/team and press
+            <kbd>Enter</kbd>
+            to add the next one.
           </div>
 
           <div class="data-grid">
@@ -703,8 +819,6 @@ function renderMeetSetup():
             >
               <span>ID</span>
               <span>Team / School</span>
-              <span>Region</span>
-              <span>Class</span>
               <span></span>
             </div>
 
@@ -719,10 +833,9 @@ function renderMeetSetup():
       </div>
 
       <div class="setup-note">
-        Changes are currently held in
-        memory for this development
-        milestone. Meet file storage
-        will be added later.
+        School Region and Classification
+        will come from the School Directory
+        rather than being entered for each meet.
       </div>
 
     </main>
@@ -747,8 +860,7 @@ function renderRegistration():
 
             <span class="item-count">
               ${
-                meetState.lifters
-                  .length
+                meetState.lifters.length
               }
               lifters
             </span>
@@ -775,8 +887,7 @@ function renderRegistration():
               meetState.divisions.length
             }
             division${
-              meetState.divisions.length ===
-              1
+              meetState.divisions.length === 1
                 ? ''
                 : 's'
             }
@@ -785,8 +896,7 @@ function renderRegistration():
               meetState.teams.length
             }
             team${
-              meetState.teams.length ===
-              1
+              meetState.teams.length === 1
                 ? ''
                 : 's'
             }
@@ -851,8 +961,7 @@ function renderApp(): void {
       ${renderNavigation()}
 
       ${
-        currentPage ===
-        'setup'
+        currentPage === 'setup'
           ? renderMeetSetup()
           : renderRegistration()
       }
@@ -863,8 +972,7 @@ function renderApp(): void {
   wireNavigation()
 
   if (
-    currentPage ===
-    'setup'
+    currentPage === 'setup'
   ) {
     wireMeetSetup()
   }
@@ -1015,7 +1123,7 @@ function wireMeetSetup(): void {
     )
     ?.addEventListener(
       'click',
-      addDivision
+      startDivisionEntry
     )
 
 
@@ -1025,7 +1133,43 @@ function wireMeetSetup(): void {
     )
     ?.addEventListener(
       'click',
-      addTeam
+      startTeamEntry
+    )
+
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#newDivisionName'
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key === 'Enter'
+        ) {
+          event.preventDefault()
+          commitNewDivision()
+        }
+      }
+    )
+
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#newTeamName'
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key === 'Enter'
+        ) {
+          event.preventDefault()
+          commitNewTeam()
+        }
+      }
     )
 
 
@@ -1057,6 +1201,19 @@ function wireMeetSetup(): void {
             ) {
               division.name =
                 input.value
+            }
+          }
+        )
+
+        input.addEventListener(
+          'keydown',
+          event => {
+
+            if (
+              event.key === 'Enter'
+            ) {
+              event.preventDefault()
+              startDivisionEntry()
             }
           }
         )
@@ -1123,77 +1280,16 @@ function wireMeetSetup(): void {
             }
           }
         )
-      }
-    )
-
-
-  document
-    .querySelectorAll<HTMLInputElement>(
-      '[data-team-region]'
-    )
-    .forEach(
-      input => {
 
         input.addEventListener(
-          'input',
-          () => {
-
-            const id =
-              Number(
-                input.dataset
-                  .teamRegion
-              )
-
-            const team =
-              meetState.teams.find(
-                item =>
-                  item.id === id
-              )
+          'keydown',
+          event => {
 
             if (
-              team !== undefined
+              event.key === 'Enter'
             ) {
-              team.region =
-                input.value === ''
-                  ? null
-                  : input.value
-            }
-          }
-        )
-      }
-    )
-
-
-  document
-    .querySelectorAll<HTMLInputElement>(
-      '[data-team-classification]'
-    )
-    .forEach(
-      input => {
-
-        input.addEventListener(
-          'input',
-          () => {
-
-            const id =
-              Number(
-                input.dataset
-                  .teamClassification
-              )
-
-            const team =
-              meetState.teams.find(
-                item =>
-                  item.id === id
-              )
-
-            if (
-              team !== undefined
-            ) {
-              team.classification =
-                input.value === ''
-                  ? null
-                  : input.value
+              event.preventDefault()
+              startTeamEntry()
             }
           }
         )
