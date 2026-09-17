@@ -61,7 +61,6 @@ function createMeetState():
       name: 'Test Meet',
       date: '2026-09-16',
       location: 'Test Gym',
-      association: 'THSPA',
       resultEntryMode:
         'best-lift-only',
     },
@@ -71,11 +70,13 @@ function createMeetState():
         id: 10,
         meetId: 'meet-1',
         name: 'Division 1',
+        ruleSet: 'THSPA',
       },
       {
         id: 11,
         meetId: 'meet-1',
         name: 'Division 2',
+        ruleSet: 'THSWPA',
       },
     ],
 

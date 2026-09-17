@@ -1,12 +1,13 @@
 import './style.css'
 
 import type {
-  Association,
-} from './models/Meet'
+  Division,
+  DivisionRuleSet,
+} from './models/Division'
 
 import type {
-  Division,
-} from './models/Division'
+  Lifter,
+} from './models/Lifter'
 
 import type {
   Team,
@@ -20,62 +21,205 @@ import type {
   ResultEntryMode,
 } from './models/Competition'
 
+import {
+  createRegisteredLifter,
+  assignRegisteredLifterWeightClass,
+} from './domain/lifterRegistration'
+
+import {
+  getAutomaticWeightClass,
+} from './domain/weightClassAssignment'
+
+import {
+  validateLifterCompetitionReadiness,
+} from './domain/lifterCompetitionReadiness'
+
+import {
+  getDivisionRules,
+} from './rules/divisionRules'
+
 
 type AppPage =
   | 'setup'
   | 'registration'
 
 
-const meetState: MeetState = {
-  meet: {
-    id: 'development-meet',
-    name: 'PowerScore Development Meet',
-    date: '2026-09-16',
-    location: 'Lubbock, Texas',
-    association: 'THSPA',
-    resultEntryMode:
-      'best-lift-only',
+interface DivisionTeam {
+  divisionId: number
+  teamId: number
+}
+
+
+interface LocalMeet {
+  state: MeetState
+  divisionTeams: DivisionTeam[]
+}
+
+
+interface RegistrationDefaults {
+  divisionId: number | null
+  teamId: number | null
+  equipmentType:
+    Lifter['equipmentType']
+}
+
+
+const localMeets: LocalMeet[] = [
+  {
+    state: {
+      meet: {
+        id: 'development-meet',
+        name: 'PowerScore Development Meet',
+        date: '2026-09-16',
+        location: 'Lubbock, Texas',
+        resultEntryMode:
+          'best-lift-only',
+      },
+
+      divisions: [
+        {
+          id: 1,
+          meetId:
+            'development-meet',
+          name:
+            'Division 1',
+          ruleSet:
+            'THSPA',
+        },
+
+        {
+          id: 2,
+          meetId:
+            'development-meet',
+          name:
+            'Division 2',
+          ruleSet:
+            'THSWPA',
+        },
+      ],
+
+      teams: [
+        {
+          id: 1,
+          meetId:
+            'development-meet',
+          name:
+            'Sundown',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 2,
+          meetId:
+            'development-meet',
+          name:
+            'Levelland',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 3,
+          meetId:
+            'development-meet',
+          name:
+            'Brownfield',
+          region: null,
+          classification: null,
+        },
+      ],
+
+      lifters: [],
+    },
+
+    divisionTeams: [
+      {
+        divisionId: 1,
+        teamId: 1,
+      },
+
+      {
+        divisionId: 1,
+        teamId: 2,
+      },
+
+      {
+        divisionId: 2,
+        teamId: 1,
+      },
+
+      {
+        divisionId: 2,
+        teamId: 3,
+      },
+    ],
   },
 
-  divisions: [
-    {
-      id: 1,
-      meetId:
-        'development-meet',
-      name:
-        'Division 1',
-    },
-  ],
+  {
+    state: {
+      meet: {
+        id: 'second-development-meet',
+        name: 'Second Development Meet',
+        date: '2026-10-03',
+        location: '',
+        resultEntryMode:
+          'best-lift-only',
+      },
 
-  teams: [
-    {
-      id: 1,
-      meetId:
-        'development-meet',
-      name:
-        'Sundown',
-      region: null,
-      classification: null,
+      divisions: [
+        {
+          id: 1,
+          meetId:
+            'second-development-meet',
+          name:
+            'Division 1',
+          ruleSet:
+            'THSPA',
+        },
+      ],
+
+      teams: [],
+
+      lifters: [],
     },
 
-    {
-      id: 2,
-      meetId:
-        'development-meet',
-      name:
-        'Levelland',
-      region: null,
-      classification: null,
-    },
-  ],
-
-  lifters: [],
-}
+    divisionTeams: [],
+  },
+]
 
 
 let currentPage:
   AppPage =
     'setup'
+
+
+let selectedMeetId:
+  string | null =
+    localMeets[0]?.state.meet.id ??
+    null
+
+
+let selectedDivisionId:
+  number | null =
+    getSelectedMeet()
+      ?.state.divisions[0]
+      ?.id ??
+    null
+
+
+let registrationDefaults:
+  RegistrationDefaults = {
+
+    divisionId:
+      selectedDivisionId,
+
+    teamId:
+      null,
+
+    equipmentType:
+      'equipped',
+  }
 
 
 function escapeHtml(
@@ -91,18 +235,106 @@ function escapeHtml(
 }
 
 
-function getNextDivisionId():
-  number {
+function createMeetId():
+  string {
+
+  return (
+    'meet-' +
+    Date.now().toString() +
+    '-' +
+    Math.random()
+      .toString(36)
+      .slice(2, 8)
+  )
+}
+
+
+function getSelectedMeet():
+  LocalMeet | undefined {
+
+  return localMeets.find(
+    item =>
+      item.state.meet.id ===
+      selectedMeetId
+  )
+}
+
+
+function getSelectedDivision():
+  Division | undefined {
+
+  const meet =
+    getSelectedMeet()
 
   if (
-    meetState.divisions.length === 0
+    meet === undefined ||
+    selectedDivisionId === null
+  ) {
+    return undefined
+  }
+
+  return meet.state.divisions.find(
+    division =>
+      division.id ===
+      selectedDivisionId
+  )
+}
+
+
+function selectMeet(
+  meetId: string,
+): void {
+
+  selectedMeetId =
+    meetId
+
+  const meet =
+    getSelectedMeet()
+
+  selectedDivisionId =
+    meet?.state.divisions[0]
+      ?.id ??
+    null
+
+  registrationDefaults = {
+    divisionId:
+      selectedDivisionId,
+
+    teamId:
+      null,
+
+    equipmentType:
+      'equipped',
+  }
+
+  renderApp()
+}
+
+
+function selectDivision(
+  divisionId: number,
+): void {
+
+  selectedDivisionId =
+    divisionId
+
+  renderApp()
+}
+
+
+function getNextDivisionId(
+  meet: LocalMeet,
+): number {
+
+  if (
+    meet.state.divisions.length === 0
   ) {
     return 1
   }
 
   return (
     Math.max(
-      ...meetState.divisions.map(
+      ...meet.state.divisions.map(
         division =>
           division.id
       )
@@ -111,23 +343,70 @@ function getNextDivisionId():
 }
 
 
-function getNextTeamId():
-  number {
+function getNextTeamId(
+  meet: LocalMeet,
+): number {
 
   if (
-    meetState.teams.length === 0
+    meet.state.teams.length === 0
   ) {
     return 1
   }
 
   return (
     Math.max(
-      ...meetState.teams.map(
+      ...meet.state.teams.map(
         team =>
           team.id
       )
     ) + 1
   )
+}
+
+
+function getNextLifterId(
+  state: MeetState,
+): number {
+
+  if (
+    state.lifters.length === 0
+  ) {
+    return 1
+  }
+
+  return (
+    Math.max(
+      ...state.lifters.map(
+        lifter =>
+          lifter.id
+      )
+    ) + 1
+  )
+}
+
+
+function getNextUnusedLifterNumber(
+  state: MeetState,
+): number {
+
+  const used =
+    new Set(
+      state.lifters.map(
+        lifter =>
+          lifter.lifterNumber
+      )
+    )
+
+  let candidate =
+    1
+
+  while (
+    used.has(candidate)
+  ) {
+    candidate += 1
+  }
+
+  return candidate
 }
 
 
@@ -138,143 +417,11 @@ function focusElement(
   window.requestAnimationFrame(
     () => {
       document
-        .querySelector<HTMLInputElement>(
+        .querySelector<HTMLElement>(
           selector
         )
         ?.focus()
     }
-  )
-}
-
-
-function startDivisionEntry():
-  void {
-
-  const input =
-    document.querySelector<HTMLInputElement>(
-      '#newDivisionName'
-    )
-
-  input?.focus()
-}
-
-
-function startTeamEntry():
-  void {
-
-  const input =
-    document.querySelector<HTMLInputElement>(
-      '#newTeamName'
-    )
-
-  input?.focus()
-}
-
-
-function commitNewDivision():
-  void {
-
-  const input =
-    document.querySelector<HTMLInputElement>(
-      '#newDivisionName'
-    )
-
-  if (
-    input === null
-  ) {
-    return
-  }
-
-  const name =
-    input.value.trim()
-
-  if (
-    name === ''
-  ) {
-    return
-  }
-
-  const division:
-    Division = {
-
-      id:
-        getNextDivisionId(),
-
-      meetId:
-        meetState.meet.id,
-
-      name,
-    }
-
-  meetState.divisions.push(
-    division
-  )
-
-  renderApp()
-
-  flashRow(
-    `[data-division-row="${division.id}"]`
-  )
-
-  focusElement(
-    '#newDivisionName'
-  )
-}
-
-
-function commitNewTeam():
-  void {
-
-  const input =
-    document.querySelector<HTMLInputElement>(
-      '#newTeamName'
-    )
-
-  if (
-    input === null
-  ) {
-    return
-  }
-
-  const name =
-    input.value.trim()
-
-  if (
-    name === ''
-  ) {
-    return
-  }
-
-  const team:
-    Team = {
-
-      id:
-        getNextTeamId(),
-
-      meetId:
-        meetState.meet.id,
-
-      name,
-
-      region:
-        null,
-
-      classification:
-        null,
-    }
-
-  meetState.teams.push(
-    team
-  )
-
-  renderApp()
-
-  flashRow(
-    `[data-team-row="${team.id}"]`
-  )
-
-  focusElement(
-    '#newTeamName'
   )
 }
 
@@ -314,12 +461,339 @@ function flashRow(
 }
 
 
+function startMeetEntry():
+  void {
+
+  focusElement(
+    '#newMeetName'
+  )
+}
+
+
+function startDivisionEntry():
+  void {
+
+  focusElement(
+    '#newDivisionName'
+  )
+}
+
+
+function startTeamEntry():
+  void {
+
+  focusElement(
+    '#newTeamName'
+  )
+}
+
+
+function commitNewMeet():
+  void {
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      '#newMeetName'
+    )
+
+  if (
+    input === null
+  ) {
+    return
+  }
+
+  const name =
+    input.value.trim()
+
+  if (
+    name === ''
+  ) {
+    return
+  }
+
+  const meetId =
+    createMeetId()
+
+  const newMeet:
+    LocalMeet = {
+
+      state: {
+        meet: {
+          id:
+            meetId,
+
+          name,
+
+          date:
+            '',
+
+          location:
+            '',
+
+          resultEntryMode:
+            'best-lift-only',
+        },
+
+        divisions: [],
+
+        teams: [],
+
+        lifters: [],
+      },
+
+      divisionTeams: [],
+    }
+
+  localMeets.push(
+    newMeet
+  )
+
+  selectedMeetId =
+    meetId
+
+  selectedDivisionId =
+    null
+
+  registrationDefaults = {
+    divisionId: null,
+    teamId: null,
+    equipmentType:
+      'equipped',
+  }
+
+  renderApp()
+
+  flashRow(
+    `[data-meet-row="${meetId}"]`
+  )
+
+  focusElement(
+    '#meetDate'
+  )
+}
+
+
+function commitNewDivision():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      '#newDivisionName'
+    )
+
+  if (
+    meet === undefined ||
+    input === null
+  ) {
+    return
+  }
+
+  const name =
+    input.value.trim()
+
+  if (
+    name === ''
+  ) {
+    return
+  }
+
+  const ruleSetInput =
+    document.querySelector<HTMLSelectElement>(
+      '#newDivisionRuleSet'
+    )
+
+  const ruleSet =
+    ruleSetInput?.value as
+      DivisionRuleSet | undefined
+
+  if (
+    ruleSet !== 'THSPA' &&
+    ruleSet !== 'THSWPA' &&
+    ruleSet !== 'NMAA_BOYS' &&
+    ruleSet !== 'NMAA_GIRLS'
+  ) {
+    window.alert(
+      'Select a valid rule set for the division.'
+    )
+
+    return
+  }
+
+  const division:
+    Division = {
+
+      id:
+        getNextDivisionId(
+          meet
+        ),
+
+      meetId:
+        meet.state.meet.id,
+
+      name,
+
+      ruleSet,
+    }
+
+  meet.state.divisions.push(
+    division
+  )
+
+  selectedDivisionId =
+    division.id
+
+  registrationDefaults.divisionId =
+    division.id
+
+  registrationDefaults.teamId =
+    null
+
+  renderApp()
+
+  flashRow(
+    `[data-division-row="${division.id}"]`
+  )
+
+  focusElement(
+    '#newDivisionName'
+  )
+}
+
+
+function findTeamByName(
+  meet: LocalMeet,
+  name: string,
+): Team | undefined {
+
+  const normalized =
+    name
+      .trim()
+      .toLocaleLowerCase()
+
+  return meet.state.teams.find(
+    team =>
+      team.name
+        .trim()
+        .toLocaleLowerCase() ===
+      normalized
+  )
+}
+
+
+function commitNewTeam():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      '#newTeamName'
+    )
+
+  if (
+    meet === undefined ||
+    division === undefined ||
+    input === null
+  ) {
+    return
+  }
+
+  const name =
+    input.value.trim()
+
+  if (
+    name === ''
+  ) {
+    return
+  }
+
+  let team =
+    findTeamByName(
+      meet,
+      name
+    )
+
+  if (
+    team === undefined
+  ) {
+    team = {
+      id:
+        getNextTeamId(
+          meet
+        ),
+
+      meetId:
+        meet.state.meet.id,
+
+      name,
+
+      region:
+        null,
+
+      classification:
+        null,
+    }
+
+    meet.state.teams.push(
+      team
+    )
+  }
+
+  const alreadyAssigned =
+    meet.divisionTeams.some(
+      item =>
+        item.divisionId ===
+          division.id &&
+        item.teamId ===
+          team.id
+    )
+
+  if (
+    !alreadyAssigned
+  ) {
+    meet.divisionTeams.push({
+      divisionId:
+        division.id,
+
+      teamId:
+        team.id,
+    })
+  }
+
+  renderApp()
+
+  flashRow(
+    `[data-team-row="${team.id}"]`
+  )
+
+  focusElement(
+    '#newTeamName'
+  )
+}
+
+
 function removeDivision(
   divisionId: number,
 ): void {
 
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
   const used =
-    meetState.lifters.some(
+    meet.state.lifters.some(
       lifter =>
         lifter.divisionId ===
         divisionId
@@ -335,46 +809,140 @@ function removeDivision(
     return
   }
 
-  meetState.divisions =
-    meetState.divisions.filter(
+  meet.state.divisions =
+    meet.state.divisions.filter(
       division =>
         division.id !==
         divisionId
     )
 
+  meet.divisionTeams =
+    meet.divisionTeams.filter(
+      item =>
+        item.divisionId !==
+        divisionId
+    )
+
+  if (
+    selectedDivisionId ===
+    divisionId
+  ) {
+    selectedDivisionId =
+      meet.state.divisions[0]
+        ?.id ??
+      null
+  }
+
   renderApp()
 }
 
 
-function removeTeam(
+function removeTeamFromDivision(
   teamId: number,
 ): void {
 
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return
+  }
+
   const used =
-    meetState.lifters.some(
+    meet.state.lifters.some(
       lifter =>
+        lifter.divisionId ===
+          division.id &&
         lifter.teamId ===
-        teamId
+          teamId
     )
 
   if (
     used
   ) {
     window.alert(
-      'This team cannot be removed because one or more lifters are assigned to it.'
+      'This team cannot be removed from the division because one or more lifters in this division are assigned to it.'
     )
 
     return
   }
 
-  meetState.teams =
-    meetState.teams.filter(
-      team =>
-        team.id !==
-        teamId
+  meet.divisionTeams =
+    meet.divisionTeams.filter(
+      item =>
+        !(
+          item.divisionId ===
+            division.id &&
+          item.teamId ===
+            teamId
+        )
     )
 
   renderApp()
+}
+
+
+function getTeamsForDivision(
+  meet: LocalMeet,
+  divisionId: number,
+): Team[] {
+
+  const teamIds =
+    new Set(
+      meet.divisionTeams
+        .filter(
+          item =>
+            item.divisionId ===
+            divisionId
+        )
+        .map(
+          item =>
+            item.teamId
+        )
+    )
+
+  return meet.state.teams
+    .filter(
+      team =>
+        teamIds.has(
+          team.id
+        )
+    )
+    .sort(
+      (a, b) =>
+        a.name.localeCompare(
+          b.name
+        )
+    )
+}
+
+
+function getTeamsForSelectedDivision():
+  Team[] {
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return []
+  }
+
+  return getTeamsForDivision(
+    meet,
+    division.id
+  )
 }
 
 
@@ -388,7 +956,8 @@ function renderNavigation():
         id="navSetup"
         type="button"
         class="nav-item ${
-          currentPage === 'setup'
+          currentPage ===
+          'setup'
             ? 'active'
             : ''
         }"
@@ -400,7 +969,8 @@ function renderNavigation():
         id="navRegistration"
         type="button"
         class="nav-item ${
-          currentPage === 'registration'
+          currentPage ===
+          'registration'
             ? 'active'
             : ''
         }"
@@ -445,69 +1015,215 @@ function renderNavigation():
 }
 
 
-function renderDivisionRows():
+function renderMeetRows():
   string {
 
   const rows =
-    meetState.divisions
+    localMeets
       .map(
-        division => `
-          <div
-            class="data-row division-row"
-            data-division-row="${division.id}"
-          >
+        item => {
 
-            <span class="row-number">
-              ${division.id}
-            </span>
+          const meet =
+            item.state.meet
 
-            <input
-              type="text"
-              value="${
-                escapeHtml(
-                  division.name
-                )
+          const selected =
+            meet.id ===
+            selectedMeetId
+
+          return `
+            <div
+              class="selector-row ${
+                selected
+                  ? 'selected'
+                  : ''
               }"
-              data-division-name="${division.id}"
-              aria-label="Division name"
+              data-meet-row="${meet.id}"
+              data-select-meet="${meet.id}"
+              tabindex="0"
             >
 
-            <button
-              type="button"
-              class="row-delete"
-              data-delete-division="${division.id}"
-              title="Remove division"
-              tabindex="-1"
-            >
-              ×
-            </button>
+              <div class="selector-main">
+                ${
+                  escapeHtml(
+                    meet.name
+                  )
+                }
+              </div>
 
-          </div>
-        `
+              <div class="selector-detail">
+                ${
+                  meet.date === ''
+                    ? 'Date not set'
+                    : escapeHtml(
+                        meet.date
+                      )
+                }
+              </div>
+
+            </div>
+          `
+        }
       )
       .join('')
 
   return `
     ${rows}
 
-    <div
-      class="data-row division-row entry-row"
-    >
-
-      <span class="row-number">
-        +
-      </span>
-
+    <div class="quick-entry-row">
       <input
-        id="newDivisionName"
+        id="newMeetName"
         type="text"
-        value=""
-        placeholder="New division — Enter to add"
-        aria-label="New division name"
+        placeholder="New meet — Enter to add"
         autocomplete="off"
+        aria-label="New meet name"
       >
+    </div>
+  `
+}
 
-      <span></span>
+
+function getDivisionRuleSetLabel(
+  ruleSet: DivisionRuleSet | undefined,
+): string {
+
+  switch (
+    ruleSet
+  ) {
+    case 'THSPA':
+      return 'THSPA'
+
+    case 'THSWPA':
+      return 'THSWPA'
+
+    case 'NMAA_BOYS':
+      return 'NMAA Boys'
+
+    case 'NMAA_GIRLS':
+      return 'NMAA Girls'
+
+    default:
+      return 'Rules required'
+  }
+}
+
+
+function renderDivisionRows():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <div class="empty-column">
+        Select or create a meet.
+      </div>
+    `
+  }
+
+  const rows =
+    meet.state.divisions
+      .map(
+        division => {
+
+          const selected =
+            division.id ===
+            selectedDivisionId
+
+          const detail =
+            getDivisionRuleSetLabel(
+              division.ruleSet
+            )
+
+          return `
+            <div
+              class="selector-row selector-row-with-delete ${
+                selected
+                  ? 'selected'
+                  : ''
+              }"
+              data-division-row="${division.id}"
+            >
+
+              <button
+                type="button"
+                class="selector-button"
+                data-select-division="${division.id}"
+              >
+                <span class="selector-button-main">
+                  ${
+                    escapeHtml(
+                      division.name
+                    )
+                  }
+                </span>
+
+                ${
+                  detail === ''
+                    ? ''
+                    : `
+                      <span class="selector-button-detail">
+                        ${detail}
+                      </span>
+                    `
+                }
+              </button>
+
+              <button
+                type="button"
+                class="row-delete"
+                data-delete-division="${division.id}"
+                title="Remove division"
+                tabindex="-1"
+              >
+                ×
+              </button>
+
+            </div>
+          `
+        }
+      )
+      .join('')
+
+  return `
+    ${rows}
+
+    <div class="quick-entry-row">
+
+      <div class="division-entry-fields">
+
+        <input
+          id="newDivisionName"
+          type="text"
+          placeholder="New division — Enter to add"
+          autocomplete="off"
+          aria-label="New division name"
+        >
+
+        <select
+          id="newDivisionRuleSet"
+          aria-label="Division rule set"
+        >
+          <option value="THSPA">
+            THSPA
+          </option>
+
+          <option value="THSWPA">
+            THSWPA
+          </option>
+
+          <option value="NMAA_BOYS">
+            NMAA Boys
+          </option>
+
+          <option value="NMAA_GIRLS">
+            NMAA Girls
+          </option>
+        </select>
+
+      </div>
 
     </div>
   `
@@ -517,35 +1233,58 @@ function renderDivisionRows():
 function renderTeamRows():
   string {
 
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <div class="empty-column">
+        Select or create a meet.
+      </div>
+    `
+  }
+
+  if (
+    division === undefined
+  ) {
+    return `
+      <div class="empty-column">
+        Add a division before
+        adding teams.
+      </div>
+    `
+  }
+
+  const teams =
+    getTeamsForSelectedDivision()
+
   const rows =
-    meetState.teams
+    teams
       .map(
         team => `
           <div
-            class="data-row team-row"
+            class="selector-row selector-row-with-delete"
             data-team-row="${team.id}"
           >
 
-            <span class="row-number">
-              ${team.id}
-            </span>
-
-            <input
-              type="text"
-              value="${
+            <div class="team-name">
+              ${
                 escapeHtml(
                   team.name
                 )
-              }"
-              data-team-name="${team.id}"
-              aria-label="Team name"
-            >
+              }
+            </div>
 
             <button
               type="button"
               class="row-delete"
-              data-delete-team="${team.id}"
-              title="Remove team"
+              data-remove-team="${team.id}"
+              title="Remove team from division"
               tabindex="-1"
             >
               ×
@@ -559,24 +1298,111 @@ function renderTeamRows():
   return `
     ${rows}
 
-    <div
-      class="data-row team-row entry-row"
-    >
-
-      <span class="row-number">
-        +
-      </span>
-
+    <div class="quick-entry-row">
       <input
         id="newTeamName"
         type="text"
-        value=""
-        placeholder="New team / school — Enter to add"
-        aria-label="New team or school name"
+        placeholder="New or existing team — Enter to add"
         autocomplete="off"
+        aria-label="New or existing team name"
       >
+    </div>
+  `
+}
 
-      <span></span>
+
+function renderMeetDetails():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <div class="meet-details-empty">
+        Select or create a meet
+        to edit its information.
+      </div>
+    `
+  }
+
+  return `
+    <div class="meet-details">
+
+      <label class="field">
+        <span>Meet Name</span>
+
+        <input
+          id="meetName"
+          type="text"
+          value="${
+            escapeHtml(
+              meet.state.meet.name
+            )
+          }"
+        >
+      </label>
+
+      <label class="field">
+        <span>Date</span>
+
+        <input
+          id="meetDate"
+          type="date"
+          value="${
+            meet.state.meet.date
+          }"
+        >
+      </label>
+
+      <label class="field">
+        <span>Location</span>
+
+        <input
+          id="meetLocation"
+          type="text"
+          value="${
+            escapeHtml(
+              meet.state.meet.location
+            )
+          }"
+        >
+      </label>
+      <label class="field">
+        <span>Result Entry</span>
+
+        <select
+          id="resultEntryMode"
+        >
+          <option
+            value="best-lift-only"
+            ${
+              meet.state.meet
+                .resultEntryMode ===
+              'best-lift-only'
+                ? 'selected'
+                : ''
+            }
+          >
+            Best Lift Only
+          </option>
+
+          <option
+            value="all-attempts"
+            ${
+              meet.state.meet
+                .resultEntryMode ===
+              'all-attempts'
+                ? 'selected'
+                : ''
+            }
+          >
+            All Attempts
+          </option>
+        </select>
+      </label>
 
     </div>
   `
@@ -586,157 +1412,65 @@ function renderTeamRows():
 function renderMeetSetup():
   string {
 
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
   return `
     <main class="workspace setup-workspace">
 
-      <section class="workspace-panel">
+      <div class="setup-browser">
 
-        <div class="section-title">
-          Meet Information
-        </div>
+        <section class="setup-column">
 
-        <div class="meet-form">
-
-          <label class="field">
-            <span>Meet Name</span>
-
-            <input
-              id="meetName"
-              type="text"
-              value="${
-                escapeHtml(
-                  meetState.meet.name
-                )
-              }"
-            >
-          </label>
-
-          <label class="field">
-            <span>Date</span>
-
-            <input
-              id="meetDate"
-              type="date"
-              value="${
-                meetState.meet.date
-              }"
-            >
-          </label>
-
-          <label class="field">
-            <span>Location</span>
-
-            <input
-              id="meetLocation"
-              type="text"
-              value="${
-                escapeHtml(
-                  meetState.meet.location
-                )
-              }"
-            >
-          </label>
-
-          <label class="field">
-            <span>Association</span>
-
-            <select
-              id="meetAssociation"
-            >
-              <option
-                value="THSPA"
-                ${
-                  meetState.meet
-                    .association ===
-                  'THSPA'
-                    ? 'selected'
-                    : ''
-                }
-              >
-                THSPA
-              </option>
-
-              <option
-                value="THSWPA"
-                ${
-                  meetState.meet
-                    .association ===
-                  'THSWPA'
-                    ? 'selected'
-                    : ''
-                }
-              >
-                THSWPA
-              </option>
-
-              <option
-                value="NMAA"
-                ${
-                  meetState.meet
-                    .association ===
-                  'NMAA'
-                    ? 'selected'
-                    : ''
-                }
-              >
-                NMAA
-              </option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Result Entry</span>
-
-            <select
-              id="resultEntryMode"
-            >
-              <option
-                value="best-lift-only"
-                ${
-                  meetState.meet
-                    .resultEntryMode ===
-                  'best-lift-only'
-                    ? 'selected'
-                    : ''
-                }
-              >
-                Best Lift Only
-              </option>
-
-              <option
-                value="all-attempts"
-                ${
-                  meetState.meet
-                    .resultEntryMode ===
-                  'all-attempts'
-                    ? 'selected'
-                    : ''
-                }
-              >
-                All Attempts
-              </option>
-            </select>
-          </label>
-
-        </div>
-
-      </section>
-
-
-      <div class="setup-columns">
-
-        <section class="workspace-panel">
-
-          <div class="panel-toolbar">
+          <div class="column-heading">
 
             <div>
-              <span class="section-title">
-                Divisions
+              <strong>Meets</strong>
+
+              <span class="item-count">
+                ${localMeets.length}
               </span>
+            </div>
+
+            <button
+              id="addMeet"
+              type="button"
+              class="compact-button"
+              tabindex="-1"
+            >
+              + Meet
+            </button>
+
+          </div>
+
+          <div class="column-context">
+            Local meets on this device
+          </div>
+
+          <div class="selector-list">
+            ${renderMeetRows()}
+          </div>
+
+        </section>
+
+
+        <section class="setup-column">
+
+          <div class="column-heading">
+
+            <div>
+              <strong>Divisions</strong>
 
               <span class="item-count">
                 ${
-                  meetState.divisions.length
+                  meet
+                    ?.state
+                    .divisions
+                    .length ??
+                  0
                 }
               </span>
             </div>
@@ -745,51 +1479,46 @@ function renderMeetSetup():
               id="addDivision"
               type="button"
               class="compact-button"
+              ${
+                meet === undefined
+                  ? 'disabled'
+                  : ''
+              }
               tabindex="-1"
             >
-              + Add Division
+              + Division
             </button>
 
           </div>
 
-          <div class="entry-help">
-            Type a division and press
-            <kbd>Enter</kbd>
-            to add the next one.
+          <div class="column-context">
+            ${
+              meet === undefined
+                ? 'Select a meet'
+                : escapeHtml(
+                    meet.state.meet.name
+                  )
+            }
           </div>
 
-          <div class="data-grid">
-
-            <div
-              class="data-header
-                division-row"
-            >
-              <span>ID</span>
-              <span>Division Name</span>
-              <span></span>
-            </div>
-
-            <div class="data-body">
-              ${renderDivisionRows()}
-            </div>
-
+          <div class="selector-list">
+            ${renderDivisionRows()}
           </div>
 
         </section>
 
 
-        <section class="workspace-panel">
+        <section class="setup-column">
 
-          <div class="panel-toolbar">
+          <div class="column-heading">
 
             <div>
-              <span class="section-title">
-                Teams
-              </span>
+              <strong>Teams</strong>
 
               <span class="item-count">
                 ${
-                  meetState.teams.length
+                  getTeamsForSelectedDivision()
+                    .length
                 }
               </span>
             </div>
@@ -798,44 +1527,53 @@ function renderMeetSetup():
               id="addTeam"
               type="button"
               class="compact-button"
+              ${
+                division === undefined
+                  ? 'disabled'
+                  : ''
+              }
               tabindex="-1"
             >
-              + Add Team
+              + Team
             </button>
 
           </div>
 
-          <div class="entry-help">
-            Type a school/team and press
-            <kbd>Enter</kbd>
-            to add the next one.
+          <div class="column-context">
+            ${
+              division === undefined
+                ? 'Select a division'
+                : escapeHtml(
+                    division.name
+                  )
+            }
           </div>
 
-          <div class="data-grid">
-
-            <div
-              class="data-header
-                team-row"
-            >
-              <span>ID</span>
-              <span>Team / School</span>
-              <span></span>
-            </div>
-
-            <div class="data-body">
-              ${renderTeamRows()}
-            </div>
-
+          <div class="selector-list">
+            ${renderTeamRows()}
           </div>
 
         </section>
 
       </div>
 
+
+      <section class="workspace-panel">
+
+        <div class="detail-heading">
+          Meet Information
+        </div>
+
+        ${renderMeetDetails()}
+
+      </section>
+
+
       <div class="setup-note">
-        School Region and Classification
-        will come from the School Directory
-        rather than being entered for each meet.
+        Teams are shared within a meet.
+        The Teams column shows which
+        teams participate in the
+        selected division.
       </div>
 
     </main>
@@ -843,15 +1581,671 @@ function renderMeetSetup():
 }
 
 
+function renderDivisionOptions(
+  state: MeetState,
+  selectedId: number | null,
+): string {
+
+  return state.divisions
+    .map(
+      division => `
+        <option
+          value="${division.id}"
+          ${
+            division.id ===
+            selectedId
+              ? 'selected'
+              : ''
+          }
+        >
+          ${
+            escapeHtml(
+              division.name
+            )
+          }
+        </option>
+      `
+    )
+    .join('')
+}
+
+
+function renderTeamOptions(
+  meet: LocalMeet,
+  divisionId: number | null,
+  selectedTeamId: number | null,
+): string {
+
+  if (
+    divisionId === null
+  ) {
+    return `
+      <option value="">
+        Unattached
+      </option>
+    `
+  }
+
+  const teams =
+    getTeamsForDivision(
+      meet,
+      divisionId
+    )
+
+  return `
+    <option
+      value=""
+      ${
+        selectedTeamId === null
+          ? 'selected'
+          : ''
+      }
+    >
+      Unattached
+    </option>
+
+    ${
+      teams
+        .map(
+          team => `
+            <option
+              value="${team.id}"
+              ${
+                team.id ===
+                selectedTeamId
+                  ? 'selected'
+                  : ''
+              }
+            >
+              ${
+                escapeHtml(
+                  team.name
+                )
+              }
+            </option>
+          `
+        )
+        .join('')
+    }
+  `
+}
+
+
+function getLifterReadinessLabel(
+  lifter: Lifter,
+  meet: LocalMeet,
+): string {
+
+  if (
+    lifter.status !==
+    'active'
+  ) {
+    return 'Not Competing'
+  }
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        lifter.divisionId
+    )
+
+  if (
+    division === undefined
+  ) {
+    return 'Needs Attention'
+  }
+
+  try {
+
+    const rules =
+      getDivisionRules(
+          division
+        )
+
+    const readiness =
+      validateLifterCompetitionReadiness(
+        lifter,
+        meet.state,
+        rules
+      )
+
+    return readiness.ready
+      ? 'Ready'
+      : 'Needs Attention'
+
+  } catch {
+
+    return 'Needs Attention'
+  }
+}
+
+
+function renderRegisteredLifterRows(
+  meet: LocalMeet,
+): string {
+
+  if (
+    meet.state.lifters.length ===
+    0
+  ) {
+    return ''
+  }
+
+  return [...meet.state.lifters]
+    .sort(
+      (a, b) =>
+        a.lifterNumber -
+        b.lifterNumber
+    )
+    .map(
+      lifter => {
+
+        const division =
+          meet.state.divisions.find(
+            item =>
+              item.id ===
+              lifter.divisionId
+          )
+
+        const team =
+          lifter.teamId === null
+            ? undefined
+            : meet.state.teams.find(
+                item =>
+                  item.id ===
+                  lifter.teamId
+              )
+
+        const readiness =
+          getLifterReadinessLabel(
+            lifter,
+            meet
+          )
+
+        return `
+          <div
+            class="registration-row registered-row"
+            data-lifter-row="${lifter.id}"
+          >
+
+            <div class="cell-number">
+              ${lifter.lifterNumber}
+            </div>
+
+            <div class="cell-name">
+              ${
+                escapeHtml(
+                  lifter.firstName
+                )
+              }
+            </div>
+
+            <div class="cell-name">
+              ${
+                escapeHtml(
+                  lifter.lastName
+                )
+              }
+            </div>
+
+            <div class="cell-text">
+              ${
+                escapeHtml(
+                  division?.name ??
+                  ''
+                )
+              }
+            </div>
+
+            <div class="cell-text">
+              ${
+                escapeHtml(
+                  team?.name ??
+                  'Unattached'
+                )
+              }
+            </div>
+
+            <div class="cell-number">
+              ${
+                lifter.bodyWeight ??
+                ''
+              }
+            </div>
+
+            <div class="cell-class">
+              ${
+                escapeHtml(
+                  lifter.weightClass ??
+                  ''
+                )
+              }
+            </div>
+
+            <div class="cell-number">
+              ${
+                lifter.grade ??
+                ''
+              }
+            </div>
+
+            <div class="cell-text">
+              ${
+                lifter.equipmentType ===
+                'equipped'
+                  ? 'Eq'
+                  : 'UnEq'
+              }
+            </div>
+
+            <div class="cell-flag">
+              ${
+                lifter.isGuest
+                  ? 'G'
+                  : ''
+              }
+            </div>
+
+            <div class="cell-flag">
+              ${
+                lifter.isExtraLifter
+                  ? 'X'
+                  : ''
+              }
+            </div>
+
+            <div
+              class="readiness ${
+                readiness === 'Ready'
+                  ? 'ready'
+                  : readiness ===
+                    'Not Competing'
+                    ? 'not-competing'
+                    : 'attention'
+              }"
+            >
+              ${readiness}
+            </div>
+
+          </div>
+        `
+      }
+    )
+    .join('')
+}
+
+
+function renderRegistrationEntryRow(
+  meet: LocalMeet,
+): string {
+
+  if (
+    meet.state.divisions.length ===
+    0
+  ) {
+    return `
+      <div class="registration-empty">
+        Add at least one division
+        on Meet Setup before
+        registering lifters.
+      </div>
+    `
+  }
+
+  let divisionId =
+    registrationDefaults
+      .divisionId
+
+  const divisionExists =
+    meet.state.divisions.some(
+      division =>
+        division.id ===
+        divisionId
+    )
+
+  if (
+    !divisionExists
+  ) {
+    divisionId =
+      meet.state.divisions[0]
+        ?.id ??
+      null
+
+    registrationDefaults
+      .divisionId =
+        divisionId
+
+    registrationDefaults
+      .teamId =
+        null
+  }
+
+  const division =
+    divisionId === null
+      ? undefined
+      : meet.state.divisions.find(
+          item =>
+            item.id ===
+            divisionId
+        )
+
+  let automaticClass =
+    ''
+
+  if (
+    division !== undefined
+  ) {
+    try {
+
+      const rules =
+        getDivisionRules(
+          division
+        )
+
+      const bodyWeight =
+        readNumberInput(
+          '#entryBodyWeight'
+        )
+
+      automaticClass =
+        getAutomaticWeightClass(
+          bodyWeight,
+          rules.weightClasses
+        ) ??
+        ''
+
+    } catch {
+      automaticClass =
+        ''
+    }
+  }
+
+  return `
+    <div
+      class="registration-row registration-entry-row"
+    >
+
+      <input
+        id="entryLifterNumber"
+        class="grid-input number-input"
+        type="number"
+        min="1"
+        value="${
+          getNextUnusedLifterNumber(
+            meet.state
+          )
+        }"
+        aria-label="Lifter number"
+      >
+
+      <input
+        id="entryFirstName"
+        class="grid-input"
+        type="text"
+        autocomplete="off"
+        aria-label="First name"
+      >
+
+      <input
+        id="entryLastName"
+        class="grid-input"
+        type="text"
+        autocomplete="off"
+        aria-label="Last name"
+      >
+
+      <select
+        id="entryDivision"
+        class="grid-select"
+        aria-label="Division"
+      >
+        ${
+          renderDivisionOptions(
+            meet.state,
+            divisionId
+          )
+        }
+      </select>
+
+      <select
+        id="entryTeam"
+        class="grid-select"
+        aria-label="Team"
+      >
+        ${
+          renderTeamOptions(
+            meet,
+            divisionId,
+            registrationDefaults
+              .teamId
+          )
+        }
+      </select>
+
+      <input
+        id="entryBodyWeight"
+        class="grid-input number-input"
+        type="number"
+        min="0"
+        step="0.1"
+        aria-label="Body weight"
+      >
+
+      <select
+        id="entryWeightClass"
+        class="grid-select"
+        aria-label="Weight class"
+      >
+        ${
+          renderEntryWeightClassOptions(
+            meet,
+            divisionId,
+            automaticClass
+          )
+        }
+      </select>
+
+      <input
+        id="entryGrade"
+        class="grid-input number-input"
+        type="number"
+        min="1"
+        max="12"
+        aria-label="Grade"
+      >
+
+      <select
+        id="entryEquipment"
+        class="grid-select"
+        aria-label="Equipment"
+      >
+        <option
+          value="equipped"
+          ${
+            registrationDefaults
+              .equipmentType ===
+            'equipped'
+              ? 'selected'
+              : ''
+          }
+        >
+          Eq
+        </option>
+
+        <option
+          value="unequipped"
+          ${
+            registrationDefaults
+              .equipmentType ===
+            'unequipped'
+              ? 'selected'
+              : ''
+          }
+        >
+          UnEq
+        </option>
+      </select>
+
+      <label
+        class="grid-check"
+        title="Guest lifter"
+      >
+        <input
+          id="entryGuest"
+          type="checkbox"
+          aria-label="Guest lifter"
+        >
+      </label>
+
+      <label
+        class="grid-check"
+        title="Extra lifter"
+      >
+        <input
+          id="entryExtra"
+          type="checkbox"
+          aria-label="Extra lifter"
+        >
+      </label>
+
+      <button
+        id="addLifter"
+        type="button"
+        class="entry-add-button"
+      >
+        Add
+      </button>
+
+    </div>
+  `
+}
+
+
+function renderEntryWeightClassOptions(
+  meet: LocalMeet,
+  divisionId: number | null,
+  selectedClass: string,
+): string {
+
+  if (
+    divisionId === null
+  ) {
+    return `
+      <option value="">
+        —
+      </option>
+    `
+  }
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        divisionId
+    )
+
+  if (
+    division === undefined
+  ) {
+    return `
+      <option value="">
+        —
+      </option>
+    `
+  }
+
+  try {
+
+    const rules =
+      getDivisionRules(
+          division
+        )
+
+    return `
+      <option value="">
+        Auto
+      </option>
+
+      ${
+        rules.weightClasses
+          .map(
+            weightClass => `
+              <option
+                value="${
+                  escapeHtml(
+                    weightClass.name
+                  )
+                }"
+                ${
+                  weightClass.name ===
+                  selectedClass
+                    ? 'selected'
+                    : ''
+                }
+              >
+                ${
+                  escapeHtml(
+                    weightClass.name
+                  )
+                }
+              </option>
+            `
+          )
+          .join('')
+      }
+    `
+
+  } catch {
+
+    return `
+      <option value="">
+        Rules?
+      </option>
+    `
+  }
+}
+
+
 function renderRegistration():
   string {
 
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="workspace">
+
+        <section class="workspace-panel">
+
+          <div class="registration-placeholder">
+
+            <strong>
+              No Meet Selected
+            </strong>
+
+            <span>
+              Select or create a meet
+              on Meet Setup.
+            </span>
+
+          </div>
+
+        </section>
+
+      </main>
+    `
+  }
+
   return `
-    <main class="workspace">
+    <main class="workspace registration-workspace">
 
-      <section class="workspace-panel">
+      <section class="workspace-panel registration-panel">
 
-        <div class="panel-toolbar">
+        <div class="registration-toolbar">
 
           <div>
             <span class="section-title">
@@ -860,54 +2254,59 @@ function renderRegistration():
 
             <span class="item-count">
               ${
-                meetState.lifters.length
+                meet.state.lifters.length
               }
               lifters
             </span>
           </div>
 
-          <button
-            type="button"
-            class="compact-button"
-            disabled
-          >
-            + Add Lifter
-          </button>
+          <div class="registration-meet-name">
+            ${
+              escapeHtml(
+                meet.state.meet.name
+              )
+            }
+          </div>
+
+          <div class="registration-help">
+            Enter adds lifter
+          </div>
 
         </div>
 
-        <div class="registration-placeholder">
 
-          <strong>
-            Lifter Registration
-          </strong>
+        <div class="registration-grid">
 
-          <span>
+          <div class="registration-row registration-header">
+            <div>#</div>
+            <div>First</div>
+            <div>Last</div>
+            <div>Division</div>
+            <div>Team</div>
+            <div>BW</div>
+            <div>Class</div>
+            <div>Grade</div>
+            <div>Equip</div>
+            <div>G</div>
+            <div>X</div>
+            <div>Status</div>
+          </div>
+
+          <div class="registration-body">
             ${
-              meetState.divisions.length
+              renderRegisteredLifterRows(
+                meet
+              )
             }
-            division${
-              meetState.divisions.length === 1
-                ? ''
-                : 's'
-            }
-            and
-            ${
-              meetState.teams.length
-            }
-            team${
-              meetState.teams.length === 1
-                ? ''
-                : 's'
-            }
-            are currently configured.
-          </span>
+          </div>
 
-          <span>
-            The compact keyboard-first
-            lifter entry grid is the
-            next development step.
-          </span>
+          <div class="registration-entry">
+            ${
+              renderRegistrationEntryRow(
+                meet
+              )
+            }
+          </div>
 
         </div>
 
@@ -918,63 +2317,445 @@ function renderRegistration():
 }
 
 
-function renderApp(): void {
+function readNumberInput(
+  selector: string,
+): number | null {
 
-  const app =
-    document.querySelector<HTMLDivElement>(
-      '#app'
+  const input =
+    document.querySelector<HTMLInputElement>(
+      selector
     )
 
   if (
-    app === null
+    input === null ||
+    input.value.trim() ===
+    ''
+  ) {
+    return null
+  }
+
+  const value =
+    Number(
+      input.value
+    )
+
+  return Number.isFinite(value)
+    ? value
+    : null
+}
+
+
+function updateEntryTeams():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const divisionInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryDivision'
+    )
+
+  const teamInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryTeam'
+    )
+
+  if (
+    meet === undefined ||
+    divisionInput === null ||
+    teamInput === null
   ) {
     return
   }
 
-  app.innerHTML = `
-    <div class="powerscore">
+  const divisionId =
+    Number(
+      divisionInput.value
+    )
 
-      <header class="app-header">
+  registrationDefaults
+    .divisionId =
+      divisionId
 
-        <div class="brand">
-          <strong>PowerScore</strong>
+  registrationDefaults
+    .teamId =
+      null
 
-          <span>
-            Powerlifting Meet Management
-          </span>
-        </div>
+  teamInput.innerHTML =
+    renderTeamOptions(
+      meet,
+      divisionId,
+      null
+    )
 
-        <div class="current-meet">
-          ${
-            escapeHtml(
-              meetState.meet.name
-            )
-          }
-        </div>
+  updateEntryWeightClasses()
+}
 
-        <div class="version">
-          Development Version
-        </div>
 
-      </header>
+function updateEntryWeightClasses():
+  void {
 
-      ${renderNavigation()}
+  const meet =
+    getSelectedMeet()
 
-      ${
-        currentPage === 'setup'
-          ? renderMeetSetup()
-          : renderRegistration()
-      }
+  const divisionInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryDivision'
+    )
 
-    </div>
-  `
-
-  wireNavigation()
+  const classInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryWeightClass'
+    )
 
   if (
-    currentPage === 'setup'
+    meet === undefined ||
+    divisionInput === null ||
+    classInput === null
   ) {
-    wireMeetSetup()
+    return
+  }
+
+  const divisionId =
+    Number(
+      divisionInput.value
+    )
+
+  const bodyWeight =
+    readNumberInput(
+      '#entryBodyWeight'
+    )
+
+  let automaticClass =
+    ''
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        divisionId
+    )
+
+  if (
+    division !== undefined
+  ) {
+    try {
+
+      const rules =
+        getDivisionRules(
+          division
+        )
+
+      automaticClass =
+        getAutomaticWeightClass(
+          bodyWeight,
+          rules.weightClasses
+        ) ??
+        ''
+
+    } catch {
+      automaticClass =
+        ''
+    }
+  }
+
+  classInput.innerHTML =
+    renderEntryWeightClassOptions(
+      meet,
+      divisionId,
+      automaticClass
+    )
+
+  if (
+    automaticClass !== ''
+  ) {
+    classInput.value =
+      automaticClass
+  }
+}
+
+
+function commitNewLifter():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const numberInput =
+    document.querySelector<HTMLInputElement>(
+      '#entryLifterNumber'
+    )
+
+  const firstInput =
+    document.querySelector<HTMLInputElement>(
+      '#entryFirstName'
+    )
+
+  const lastInput =
+    document.querySelector<HTMLInputElement>(
+      '#entryLastName'
+    )
+
+  const divisionInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryDivision'
+    )
+
+  const teamInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryTeam'
+    )
+
+  const classInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryWeightClass'
+    )
+
+  const gradeInput =
+    document.querySelector<HTMLInputElement>(
+      '#entryGrade'
+    )
+
+  const equipmentInput =
+    document.querySelector<HTMLSelectElement>(
+      '#entryEquipment'
+    )
+
+  const guestInput =
+    document.querySelector<HTMLInputElement>(
+      '#entryGuest'
+    )
+
+  const extraInput =
+    document.querySelector<HTMLInputElement>(
+      '#entryExtra'
+    )
+
+  if (
+    numberInput === null ||
+    firstInput === null ||
+    lastInput === null ||
+    divisionInput === null ||
+    teamInput === null ||
+    classInput === null ||
+    gradeInput === null ||
+    equipmentInput === null ||
+    guestInput === null ||
+    extraInput === null
+  ) {
+    return
+  }
+
+  const lifterNumber =
+    Number(
+      numberInput.value
+    )
+
+  if (
+    !Number.isInteger(
+      lifterNumber
+    ) ||
+    lifterNumber <= 0
+  ) {
+    window.alert(
+      'Enter a valid lifter number.'
+    )
+
+    numberInput.focus()
+
+    return
+  }
+
+  const firstName =
+    firstInput.value.trim()
+
+  const lastName =
+    lastInput.value.trim()
+
+  if (
+    firstName === ''
+  ) {
+    window.alert(
+      'Enter the lifter first name.'
+    )
+
+    firstInput.focus()
+
+    return
+  }
+
+  if (
+    lastName === ''
+  ) {
+    window.alert(
+      'Enter the lifter last name.'
+    )
+
+    lastInput.focus()
+
+    return
+  }
+
+  const divisionId =
+    Number(
+      divisionInput.value
+    )
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        divisionId
+    )
+
+  if (
+    division === undefined
+  ) {
+    window.alert(
+      'Select a valid division.'
+    )
+
+    return
+  }
+
+  let rules
+
+  try {
+
+    rules =
+      getDivisionRules(
+          division
+        )
+
+  } catch (
+    error
+  ) {
+
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to determine division rules.'
+    )
+
+    return
+  }
+
+  const teamId =
+    teamInput.value === ''
+      ? null
+      : Number(
+          teamInput.value
+        )
+
+  const bodyWeight =
+    readNumberInput(
+      '#entryBodyWeight'
+    )
+
+  const grade =
+    gradeInput.value.trim() ===
+    ''
+      ? null
+      : Number(
+          gradeInput.value
+        )
+
+  try {
+
+    let lifter =
+      createRegisteredLifter(
+        meet.state,
+        {
+          id:
+            getNextLifterId(
+              meet.state
+            ),
+
+          lifterNumber,
+
+          firstName,
+
+          lastName,
+
+          divisionId,
+
+          teamId,
+
+          bodyWeight,
+
+          equipmentType:
+            equipmentInput.value as
+              Lifter['equipmentType'],
+
+          age:
+            null,
+
+          grade,
+
+          isGuest:
+            guestInput.checked,
+
+          isExtraLifter:
+            extraInput.checked,
+        },
+        rules
+      )
+
+    const selectedClass =
+      classInput.value
+
+    if (
+      selectedClass !== '' &&
+      selectedClass !==
+        lifter.weightClass
+    ) {
+      lifter =
+        assignRegisteredLifterWeightClass(
+          lifter,
+          selectedClass,
+          rules
+        )
+    }
+
+    meet.state.lifters.push(
+      lifter
+    )
+
+    registrationDefaults = {
+      divisionId,
+
+      teamId,
+
+      equipmentType:
+        lifter.equipmentType,
+    }
+
+    renderApp()
+
+    flashRow(
+      `[data-lifter-row="${lifter.id}"]`
+    )
+
+    focusElement(
+      '#entryFirstName'
+    )
+
+  } catch (
+    error
+  ) {
+
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to add lifter.'
+    )
   }
 }
 
@@ -988,6 +2769,7 @@ function wireNavigation(): void {
     ?.addEventListener(
       'click',
       () => {
+
         currentPage =
           'setup'
 
@@ -1002,16 +2784,253 @@ function wireNavigation(): void {
     ?.addEventListener(
       'click',
       () => {
+
         currentPage =
           'registration'
 
         renderApp()
+
+        focusElement(
+          '#entryFirstName'
+        )
       }
     )
 }
 
 
 function wireMeetSetup(): void {
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#addMeet'
+    )
+    ?.addEventListener(
+      'click',
+      startMeetEntry
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#addDivision'
+    )
+    ?.addEventListener(
+      'click',
+      startDivisionEntry
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#addTeam'
+    )
+    ?.addEventListener(
+      'click',
+      startTeamEntry
+    )
+
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#newMeetName'
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key ===
+          'Enter'
+        ) {
+          event.preventDefault()
+          commitNewMeet()
+        }
+      }
+    )
+
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#newDivisionName'
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key ===
+          'Enter'
+        ) {
+          event.preventDefault()
+          commitNewDivision()
+        }
+      }
+    )
+
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#newTeamName'
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key ===
+          'Enter'
+        ) {
+          event.preventDefault()
+          commitNewTeam()
+        }
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLElement>(
+      '[data-select-meet]'
+    )
+    .forEach(
+      row => {
+
+        const activate =
+          () => {
+
+            const meetId =
+              row.dataset
+                .selectMeet
+
+            if (
+              meetId !== undefined
+            ) {
+              selectMeet(
+                meetId
+              )
+            }
+          }
+
+        row.addEventListener(
+          'click',
+          activate
+        )
+
+        row.addEventListener(
+          'keydown',
+          event => {
+
+            if (
+              event.key ===
+                'Enter' ||
+              event.key ===
+                ' '
+            ) {
+              event.preventDefault()
+              activate()
+            }
+          }
+        )
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-select-division]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            const id =
+              Number(
+                button.dataset
+                  .selectDivision
+              )
+
+            if (
+              !Number.isNaN(id)
+            ) {
+              selectDivision(
+                id
+              )
+            }
+          }
+        )
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-delete-division]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            const id =
+              Number(
+                button.dataset
+                  .deleteDivision
+              )
+
+            if (
+              !Number.isNaN(id)
+            ) {
+              removeDivision(
+                id
+              )
+            }
+          }
+        )
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-remove-team]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            const id =
+              Number(
+                button.dataset
+                  .removeTeam
+              )
+
+            if (
+              !Number.isNaN(id)
+            ) {
+              removeTeamFromDivision(
+                id
+              )
+            }
+          }
+        )
+      }
+    )
+
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
 
   document
     .querySelector<HTMLInputElement>(
@@ -1025,7 +3044,7 @@ function wireMeetSetup(): void {
           event.currentTarget as
             HTMLInputElement
 
-        meetState.meet.name =
+        meet.state.meet.name =
           target.value
 
         const currentMeet =
@@ -1055,7 +3074,7 @@ function wireMeetSetup(): void {
           event.currentTarget as
             HTMLInputElement
 
-        meetState.meet.date =
+        meet.state.meet.date =
           target.value
       }
     )
@@ -1073,30 +3092,10 @@ function wireMeetSetup(): void {
           event.currentTarget as
             HTMLInputElement
 
-        meetState.meet.location =
+        meet.state.meet.location =
           target.value
       }
     )
-
-
-  document
-    .querySelector<HTMLSelectElement>(
-      '#meetAssociation'
-    )
-    ?.addEventListener(
-      'change',
-      event => {
-
-        const target =
-          event.currentTarget as
-            HTMLSelectElement
-
-        meetState.meet.association =
-          target.value as
-            Association
-      }
-    )
-
 
   document
     .querySelector<HTMLSelectElement>(
@@ -1110,219 +3109,195 @@ function wireMeetSetup(): void {
           event.currentTarget as
             HTMLSelectElement
 
-        meetState.meet.resultEntryMode =
+        meet.state.meet.resultEntryMode =
           target.value as
             ResultEntryMode
       }
     )
+}
 
 
-  document
-    .querySelector<HTMLButtonElement>(
-      '#addDivision'
-    )
-    ?.addEventListener(
-      'click',
-      startDivisionEntry
-    )
-
+function wireRegistration():
+  void {
 
   document
-    .querySelector<HTMLButtonElement>(
-      '#addTeam'
+    .querySelector<HTMLSelectElement>(
+      '#entryDivision'
     )
     ?.addEventListener(
-      'click',
-      startTeamEntry
+      'change',
+      updateEntryTeams
     )
 
 
   document
-    .querySelector<HTMLInputElement>(
-      '#newDivisionName'
+    .querySelector<HTMLSelectElement>(
+      '#entryTeam'
     )
     ?.addEventListener(
-      'keydown',
+      'change',
       event => {
 
-        if (
-          event.key === 'Enter'
-        ) {
-          event.preventDefault()
-          commitNewDivision()
-        }
+        const target =
+          event.currentTarget as
+            HTMLSelectElement
+
+        registrationDefaults.teamId =
+          target.value === ''
+            ? null
+            : Number(
+                target.value
+              )
       }
     )
 
 
   document
     .querySelector<HTMLInputElement>(
-      '#newTeamName'
+      '#entryBodyWeight'
     )
     ?.addEventListener(
-      'keydown',
+      'change',
+      updateEntryWeightClasses
+    )
+
+
+  document
+    .querySelector<HTMLSelectElement>(
+      '#entryEquipment'
+    )
+    ?.addEventListener(
+      'change',
       event => {
 
-        if (
-          event.key === 'Enter'
-        ) {
-          event.preventDefault()
-          commitNewTeam()
-        }
+        const target =
+          event.currentTarget as
+            HTMLSelectElement
+
+        registrationDefaults
+          .equipmentType =
+            target.value as
+              Lifter['equipmentType']
       }
     )
 
 
   document
-    .querySelectorAll<HTMLInputElement>(
-      '[data-division-name]'
+    .querySelector<HTMLButtonElement>(
+      '#addLifter'
     )
-    .forEach(
-      input => {
+    ?.addEventListener(
+      'click',
+      commitNewLifter
+    )
 
-        input.addEventListener(
-          'input',
-          () => {
 
-            const id =
-              Number(
-                input.dataset
-                  .divisionName
-              )
+document
+  .querySelector<HTMLElement>(
+    '.registration-entry-row'
+  )
+  ?.addEventListener(
+    'keydown',
+    event => {
 
-            const division =
-              meetState.divisions.find(
-                item =>
-                  item.id === id
-              )
-
-            if (
-              division !== undefined
-            ) {
-              division.name =
-                input.value
-            }
-          }
-        )
-
-        input.addEventListener(
-          'keydown',
-          event => {
-
-            if (
-              event.key === 'Enter'
-            ) {
-              event.preventDefault()
-              startDivisionEntry()
-            }
-          }
-        )
+      if (
+        event.key !==
+        'Enter'
+      ) {
+        return
       }
-    )
 
+      const target =
+        event.target as
+          HTMLElement
 
-  document
-    .querySelectorAll<HTMLButtonElement>(
-      '[data-delete-division]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          () => {
-
-            const id =
-              Number(
-                button.dataset
-                  .deleteDivision
-              )
-
-            if (
-              !Number.isNaN(id)
-            ) {
-              removeDivision(id)
-            }
-          }
-        )
+      if (
+        target.tagName ===
+        'SELECT'
+      ) {
+        return
       }
+
+      event.preventDefault()
+
+      commitNewLifter()
+    }
+  )
+}
+
+
+function renderApp(): void {
+
+  const app =
+    document.querySelector<HTMLDivElement>(
+      '#app'
     )
 
+  if (
+    app === null
+  ) {
+    return
+  }
 
-  document
-    .querySelectorAll<HTMLInputElement>(
-      '[data-team-name]'
-    )
-    .forEach(
-      input => {
+  const meet =
+    getSelectedMeet()
 
-        input.addEventListener(
-          'input',
-          () => {
+  app.innerHTML = `
+    <div class="powerscore">
 
-            const id =
-              Number(
-                input.dataset
-                  .teamName
-              )
+      <header class="app-header">
 
-            const team =
-              meetState.teams.find(
-                item =>
-                  item.id === id
-              )
+        <div class="brand">
+          <strong>PowerScore</strong>
 
-            if (
-              team !== undefined
-            ) {
-              team.name =
-                input.value
-            }
+          <span>
+            Powerlifting Meet Management
+          </span>
+        </div>
+
+        <div class="current-meet">
+          ${
+            meet === undefined
+              ? 'No Meet Selected'
+              : escapeHtml(
+                  meet.state.meet.name
+                )
           }
-        )
+        </div>
 
-        input.addEventListener(
-          'keydown',
-          event => {
+        <div class="version">
+          Development Version
+        </div>
 
-            if (
-              event.key === 'Enter'
-            ) {
-              event.preventDefault()
-              startTeamEntry()
-            }
-          }
-        )
+      </header>
+
+      ${renderNavigation()}
+
+      ${
+        currentPage ===
+        'setup'
+          ? renderMeetSetup()
+          : renderRegistration()
       }
-    )
 
+    </div>
+  `
 
-  document
-    .querySelectorAll<HTMLButtonElement>(
-      '[data-delete-team]'
-    )
-    .forEach(
-      button => {
+  wireNavigation()
 
-        button.addEventListener(
-          'click',
-          () => {
+  if (
+    currentPage ===
+    'setup'
+  ) {
+    wireMeetSetup()
+  }
 
-            const id =
-              Number(
-                button.dataset
-                  .deleteTeam
-              )
-
-            if (
-              !Number.isNaN(id)
-            ) {
-              removeTeam(id)
-            }
-          }
-        )
-      }
-    )
+  if (
+    currentPage ===
+    'registration'
+  ) {
+    wireRegistration()
+  }
 }
 
 

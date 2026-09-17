@@ -38,7 +38,6 @@ function createMeetState(): MeetState {
       name: 'Test Meet',
       date: '2026-09-16',
       location: 'Test Gym',
-      association: 'THSPA',
       resultEntryMode: 'best-lift-only',
     },
 
@@ -47,11 +46,13 @@ function createMeetState(): MeetState {
         id: 1,
         meetId: 'meet-1',
         name: 'Boys Equipped',
+        ruleSet: 'THSPA',
       },
       {
         id: 2,
         meetId: 'meet-1',
         name: 'Boys Unequipped',
+        ruleSet: 'THSPA',
       },
     ],
 

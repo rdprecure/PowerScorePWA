@@ -31,7 +31,6 @@ function createEmptyMeetState():
       id: 'meet-1',
       name: 'Test Meet',
       date: '2026-09-16',
-      association: 'THSPA',
       resultEntryMode: 'best-lift-only',
       location: 'Test Gym',
     },
@@ -41,6 +40,7 @@ function createEmptyMeetState():
         id: 10,
         meetId: 'meet-1',
         name: 'Division 1',
+        ruleSet: 'THSPA',
       },
     ],
 
