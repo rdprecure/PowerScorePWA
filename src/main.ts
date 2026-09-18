@@ -57,6 +57,40 @@ interface RegistrationDefaults {
 }
 
 
+
+function createDevelopmentLifter(
+  id: number,
+  lifterNumber: number,
+  firstName: string,
+  lastName: string,
+  divisionId: number,
+  teamId: number,
+  equipmentType: Lifter['equipmentType'] =
+    'equipped',
+): Lifter {
+
+  return {
+    id,
+    lifterNumber,
+    firstName,
+    lastName,
+    divisionId,
+    teamId,
+    bodyWeight: null,
+    weightClass: null,
+    weightClassSource:
+      'automatic',
+    equipmentType,
+    age: null,
+    grade: null,
+    status: 'active',
+    isGuest: false,
+    isExtraLifter: false,
+    declaredDeadliftOpener: null,
+  }
+}
+
+
 const localMeets: LocalMeet[] = [
   {
     state: {
@@ -121,31 +155,120 @@ const localMeets: LocalMeet[] = [
           region: null,
           classification: null,
         },
+
+        {
+          id: 4,
+          meetId:
+            'development-meet',
+          name:
+            'Muleshoe',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 5,
+          meetId:
+            'development-meet',
+          name:
+            'Friona',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 6,
+          meetId:
+            'development-meet',
+          name:
+            'Denver City',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 7,
+          meetId:
+            'development-meet',
+          name:
+            'Morton',
+          region: null,
+          classification: null,
+        },
       ],
 
-      lifters: [],
+      lifters: [
+        createDevelopmentLifter(1, 1, 'Ethan', 'Garcia', 1, 1, 'equipped'),
+        createDevelopmentLifter(2, 2, 'Mason', 'Rodriguez', 1, 1, 'equipped'),
+        createDevelopmentLifter(3, 3, 'Caleb', 'Martinez', 1, 1, 'equipped'),
+        createDevelopmentLifter(4, 4, 'Dylan', 'Hernandez', 1, 1, 'equipped'),
+        createDevelopmentLifter(5, 5, 'Noah', 'Flores', 1, 1, 'equipped'),
+        createDevelopmentLifter(6, 6, 'Logan', 'Torres', 1, 2, 'equipped'),
+        createDevelopmentLifter(7, 7, 'Aiden', 'Ramirez', 1, 2, 'unequipped'),
+        createDevelopmentLifter(8, 8, 'Jacob', 'Sanchez', 1, 2, 'equipped'),
+        createDevelopmentLifter(9, 9, 'Luke', 'Castillo', 1, 2, 'equipped'),
+        createDevelopmentLifter(10, 10, 'Owen', 'Reyes', 1, 2, 'equipped'),
+        createDevelopmentLifter(11, 11, 'Wyatt', 'Lopez', 1, 4, 'equipped'),
+        createDevelopmentLifter(12, 12, 'Carter', 'Gonzales', 1, 4, 'equipped'),
+        createDevelopmentLifter(13, 13, 'Isaac', 'Mendoza', 1, 4, 'equipped'),
+        createDevelopmentLifter(14, 14, 'Nathan', 'Ortiz', 1, 4, 'unequipped'),
+        createDevelopmentLifter(15, 15, 'Levi', 'Salazar', 1, 4, 'equipped'),
+        createDevelopmentLifter(16, 16, 'Jackson', 'Morales', 1, 5, 'equipped'),
+        createDevelopmentLifter(17, 17, 'Cooper', 'Vasquez', 1, 5, 'equipped'),
+        createDevelopmentLifter(18, 18, 'Gabriel', 'Ramos', 1, 5, 'equipped'),
+        createDevelopmentLifter(19, 19, 'Hunter', 'Gomez', 1, 5, 'equipped'),
+        createDevelopmentLifter(20, 20, 'Ryan', 'Chavez', 1, 5, 'equipped'),
+        createDevelopmentLifter(21, 21, 'Colton', 'Perez', 1, 6, 'unequipped'),
+        createDevelopmentLifter(22, 22, 'Brayden', 'Gutierrez', 1, 6, 'equipped'),
+        createDevelopmentLifter(23, 23, 'Easton', 'Dominguez', 1, 6, 'equipped'),
+        createDevelopmentLifter(24, 24, 'Jace', 'Herrera', 1, 6, 'equipped'),
+        createDevelopmentLifter(25, 25, 'Adrian', 'Ruiz', 1, 6, 'equipped'),
+        createDevelopmentLifter(26, 26, 'Connor', 'Alvarez', 1, 7, 'equipped'),
+        createDevelopmentLifter(27, 27, 'Landon', 'Medina', 1, 7, 'equipped'),
+        createDevelopmentLifter(28, 28, 'Eli', 'Cruz', 1, 7, 'unequipped'),
+        createDevelopmentLifter(29, 29, 'Tyler', 'Vega', 1, 7, 'equipped'),
+        createDevelopmentLifter(30, 30, 'Austin', 'Navarro', 1, 7, 'equipped'),
+        createDevelopmentLifter(31, 31, 'Emma', 'Garcia', 2, 1, 'equipped'),
+        createDevelopmentLifter(32, 32, 'Sofia', 'Rodriguez', 2, 1, 'equipped'),
+        createDevelopmentLifter(33, 33, 'Ava', 'Martinez', 2, 1, 'equipped'),
+        createDevelopmentLifter(34, 34, 'Mia', 'Hernandez', 2, 1, 'equipped'),
+        createDevelopmentLifter(35, 35, 'Isabella', 'Flores', 2, 3, 'unequipped'),
+        createDevelopmentLifter(36, 36, 'Camila', 'Torres', 2, 3, 'equipped'),
+        createDevelopmentLifter(37, 37, 'Luna', 'Ramirez', 2, 3, 'equipped'),
+        createDevelopmentLifter(38, 38, 'Harper', 'Sanchez', 2, 3, 'equipped'),
+        createDevelopmentLifter(39, 39, 'Elena', 'Castillo', 2, 4, 'equipped'),
+        createDevelopmentLifter(40, 40, 'Natalie', 'Reyes', 2, 4, 'equipped'),
+        createDevelopmentLifter(41, 41, 'Grace', 'Lopez', 2, 4, 'equipped'),
+        createDevelopmentLifter(42, 42, 'Chloe', 'Gonzales', 2, 4, 'unequipped'),
+        createDevelopmentLifter(43, 43, 'Zoey', 'Mendoza', 2, 5, 'equipped'),
+        createDevelopmentLifter(44, 44, 'Layla', 'Ortiz', 2, 5, 'equipped'),
+        createDevelopmentLifter(45, 45, 'Victoria', 'Salazar', 2, 5, 'equipped'),
+        createDevelopmentLifter(46, 46, 'Nora', 'Morales', 2, 5, 'equipped'),
+        createDevelopmentLifter(47, 47, 'Addison', 'Vasquez', 2, 6, 'equipped'),
+        createDevelopmentLifter(48, 48, 'Claire', 'Ramos', 2, 6, 'equipped'),
+        createDevelopmentLifter(49, 49, 'Lucy', 'Gomez', 2, 6, 'unequipped'),
+        createDevelopmentLifter(50, 50, 'Stella', 'Chavez', 2, 6, 'equipped'),
+        createDevelopmentLifter(51, 51, 'Audrey', 'Perez', 2, 7, 'equipped'),
+        createDevelopmentLifter(52, 52, 'Ruby', 'Gutierrez', 2, 7, 'equipped'),
+        createDevelopmentLifter(53, 53, 'Alice', 'Dominguez', 2, 7, 'equipped'),
+        createDevelopmentLifter(54, 54, 'Sadie', 'Herrera', 2, 7, 'equipped'),
+      ],
     },
 
     divisionTeams: [
-      {
-        divisionId: 1,
-        teamId: 1,
-      },
+      { divisionId: 1, teamId: 1 },
+      { divisionId: 1, teamId: 2 },
+      { divisionId: 1, teamId: 4 },
+      { divisionId: 1, teamId: 5 },
+      { divisionId: 1, teamId: 6 },
+      { divisionId: 1, teamId: 7 },
 
-      {
-        divisionId: 1,
-        teamId: 2,
-      },
-
-      {
-        divisionId: 2,
-        teamId: 1,
-      },
-
-      {
-        divisionId: 2,
-        teamId: 3,
-      },
+      { divisionId: 2, teamId: 1 },
+      { divisionId: 2, teamId: 3 },
+      { divisionId: 2, teamId: 4 },
+      { divisionId: 2, teamId: 5 },
+      { divisionId: 2, teamId: 6 },
+      { divisionId: 2, teamId: 7 },
     ],
   },
 
@@ -231,6 +354,28 @@ let activeEditOriginalSnapshot:
 
 
 let editLifterWeightClassManuallyChanged =
+  false
+
+
+let isBulkEditing =
+  false
+
+
+let bulkEditOriginalSnapshot:
+  string | null =
+    null
+
+
+let bulkSortColumn:
+  'lifterNumber' | 'team' =
+    'lifterNumber'
+
+
+let bulkSortAscending =
+  true
+
+
+let bulkMissingBodyweightsOnly =
   false
 
 
@@ -344,8 +489,7 @@ function getFirstLifterForSelection(
     selectedTeamId
 
   if (
-    divisionId === null ||
-    teamId === null
+    divisionId === null
   ) {
     return undefined
   }
@@ -355,8 +499,11 @@ function getFirstLifterForSelection(
       lifter =>
         lifter.divisionId ===
           divisionId &&
-        lifter.teamId ===
-          teamId
+        (
+          teamId === null ||
+          lifter.teamId ===
+            teamId
+        )
     )
     .sort(
       (a, b) =>
@@ -383,11 +530,9 @@ function selectFirstTeamForDivision(
   divisionId: number,
 ): void {
 
+  void divisionId
+
   selectedTeamId =
-    getTeamsForDivision(
-      meet,
-      divisionId
-    )[0]?.id ??
     null
 
   selectFirstLifterForSelection(
@@ -462,6 +607,14 @@ function selectMeet(
 ): void {
 
   if (
+    !finishBulkEdit(
+      true
+    )
+  ) {
+    return
+  }
+
+  if (
     !finishActiveEdit(
       true,
       false
@@ -510,6 +663,14 @@ function selectDivision(
 ): void {
 
   if (
+    !finishBulkEdit(
+      true
+    )
+  ) {
+    return
+  }
+
+  if (
     !finishActiveEdit(
       true,
       false
@@ -552,6 +713,14 @@ function selectTeam(
 ): void {
 
   if (
+    !finishBulkEdit(
+      true
+    )
+  ) {
+    return
+  }
+
+  if (
     !finishActiveEdit(
       true,
       false
@@ -592,9 +761,64 @@ function selectTeam(
 }
 
 
+function selectAllTeams():
+  void {
+
+  if (
+    !finishBulkEdit(
+      true
+    )
+  ) {
+    return
+  }
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return
+  }
+
+  selectedTeamId =
+    null
+
+  selectFirstLifterForSelection(
+    meet
+  )
+
+  renderApp()
+}
+
+
 function selectLifter(
   lifterId: number,
 ): void {
+
+  if (
+    !finishBulkEdit(
+      true
+    )
+  ) {
+    return
+  }
 
   if (
     !finishActiveEdit(
@@ -624,8 +848,11 @@ function selectLifter(
           lifterId &&
         item.divisionId ===
           selectedDivisionId &&
-        item.teamId ===
-          selectedTeamId
+        (
+          selectedTeamId === null ||
+          item.teamId ===
+            selectedTeamId
+        )
     )
 
   if (
@@ -1959,8 +2186,11 @@ function startEdit(
               numericId &&
             item.divisionId ===
               selectedDivisionId &&
-            item.teamId ===
-              selectedTeamId
+            (
+              selectedTeamId === null ||
+              item.teamId ===
+                selectedTeamId
+            )
         )
 
       if (
@@ -3536,7 +3766,43 @@ function renderTeamRows():
       )
       .join('')
 
+  const allTeamsSelected =
+    selectedTeamId ===
+    null
+
+  const allTeamsLifterCount =
+    meet.state.lifters.filter(
+      lifter =>
+        lifter.divisionId ===
+        division.id
+    ).length
+
   return `
+    <div
+      class="selector-row selector-row-with-actions all-teams-row ${
+        allTeamsSelected
+          ? 'selected'
+          : ''
+      }"
+      data-all-teams-row
+    >
+      <button
+        type="button"
+        class="selector-button"
+        data-select-all-teams
+      >
+        <span class="team-name">
+          All Teams
+        </span>
+        <span class="selector-button-detail">
+          ${allTeamsLifterCount} lifters
+        </span>
+      </button>
+
+      <div></div>
+      <div></div>
+    </div>
+
     ${rows}
 
     ${
@@ -3761,7 +4027,10 @@ function getLifterSelectionLabel(
   if (
     division !== undefined
   ) {
-    return division.name
+    return (
+      'All Teams · ' +
+      division.name
+    )
   }
 
   return meet.state.meet.name
@@ -3807,14 +4076,53 @@ function getVisibleLifters(
 }
 
 
+function shouldShowLifterTeamColumn():
+  boolean {
+
+  return (
+    selectedDivisionId !== null &&
+    selectedTeamId === null
+  )
+}
+
+
+function getLifterTeamName(
+  meet: LocalMeet,
+  lifter: Lifter,
+): string {
+
+  if (
+    lifter.teamId === null
+  ) {
+    return 'Unattached'
+  }
+
+  return (
+    meet.state.teams.find(
+      team =>
+        team.id ===
+        lifter.teamId
+    )?.name ??
+    'Unattached'
+  )
+}
+
+
 function renderLifterEditRow(
   meet: LocalMeet,
   lifter: Lifter,
 ): string {
 
+  const showTeamColumn =
+    shouldShowLifterTeamColumn()
+
   return `
     <div
-      class="registration-row registered-row selected editing-row"
+      class="registration-row registered-row selected editing-row ${
+        showTeamColumn
+          ? 'with-team-column'
+          : ''
+      }"
       data-lifter-row="${lifter.id}"
       data-edit-row="lifter"
     >
@@ -3845,6 +4153,19 @@ function renderLifterEditRow(
         autocomplete="off"
         aria-label="Last name"
       >
+
+      ${
+        showTeamColumn
+          ? `
+            <div
+              class="entry-fixed-cell"
+              title="${escapeHtml(getLifterTeamName(meet, lifter))}"
+            >
+              ${escapeHtml(getLifterTeamName(meet, lifter))}
+            </div>
+          `
+          : ''
+      }
 
       <input
         id="editLifterBodyWeight"
@@ -3949,7 +4270,10 @@ function renderLifterEditRow(
         >
       </label>
 
-      <div class="readiness editing-status">
+      <div
+        id="editLifterValidationStatus"
+        class="readiness editing-status"
+      >
         Editing
       </div>
 
@@ -3964,6 +4288,9 @@ function renderLifterEditRow(
 function renderRegisteredLifterRows(
   meet: LocalMeet,
 ): string {
+
+  const showTeamColumn =
+    shouldShowLifterTeamColumn()
 
   const lifters =
     getVisibleLifters(
@@ -4007,6 +4334,10 @@ function renderRegisteredLifterRows(
         return `
           <div
             class="registration-row registered-row ${
+              showTeamColumn
+                ? 'with-team-column'
+                : ''
+            } ${
               lifter.id ===
               selectedLifterId
                 ? 'selected'
@@ -4028,6 +4359,19 @@ function renderRegisteredLifterRows(
             <div class="cell-name">
               ${escapeHtml(lifter.lastName)}
             </div>
+
+            ${
+              showTeamColumn
+                ? `
+                  <div
+                    class="cell-text"
+                    title="${escapeHtml(getLifterTeamName(meet, lifter))}"
+                  >
+                    ${escapeHtml(getLifterTeamName(meet, lifter))}
+                  </div>
+                `
+                : ''
+            }
 
             <div class="cell-number">
               ${
@@ -4354,11 +4698,1946 @@ function renderEntryWeightClassOptions(
 }
 
 
+
+function getBulkEditLifters(
+  meet: LocalMeet,
+): Lifter[] {
+
+  return [...getVisibleLifters(
+    meet
+  )].sort(
+    (a, b) =>
+      a.lifterNumber -
+      b.lifterNumber
+  )
+}
+
+
+function getBulkEditModelSnapshot(
+  meet: LocalMeet,
+): string {
+
+  return JSON.stringify(
+    getBulkEditLifters(
+      meet
+    ).map(
+      lifter => ({
+        id:
+          lifter.id,
+        lifterNumber:
+          lifter.lifterNumber,
+        firstName:
+          lifter.firstName,
+        lastName:
+          lifter.lastName,
+        bodyWeight:
+          lifter.bodyWeight,
+        weightClass:
+          lifter.weightClass ??
+          '',
+        grade:
+          lifter.grade,
+        equipmentType:
+          lifter.equipmentType,
+        isGuest:
+          lifter.isGuest,
+        isExtraLifter:
+          lifter.isExtraLifter,
+      })
+    ).sort(
+      (a, b) =>
+        a.id -
+        b.id
+    )
+  )
+}
+
+
+function getBulkEditFormSnapshot():
+  string | null {
+
+  const rows =
+    document.querySelectorAll<HTMLElement>(
+      '[data-bulk-lifter-id]'
+    )
+
+  if (
+    rows.length ===
+    0
+  ) {
+    return '[]'
+  }
+
+  const values:
+    Array<Record<string, unknown>> =
+      []
+
+  for (
+    const row of
+    Array.from(rows)
+  ) {
+    const id =
+      Number(
+        row.dataset
+          .bulkLifterId
+      )
+
+    const number =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="lifterNumber"]'
+      )
+
+    const first =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="firstName"]'
+      )
+
+    const last =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="lastName"]'
+      )
+
+    const bodyWeight =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="bodyWeight"]'
+      )
+
+    const weightClass =
+      row.querySelector<HTMLSelectElement>(
+        '[data-bulk-field="weightClass"]'
+      )
+
+    const grade =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="grade"]'
+      )
+
+    const equipment =
+      row.querySelector<HTMLSelectElement>(
+        '[data-bulk-field="equipmentType"]'
+      )
+
+    const guest =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="isGuest"]'
+      )
+
+    const extra =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="isExtraLifter"]'
+      )
+
+    if (
+      Number.isNaN(id) ||
+      number === null ||
+      first === null ||
+      last === null ||
+      bodyWeight === null ||
+      weightClass === null ||
+      grade === null ||
+      equipment === null ||
+      guest === null ||
+      extra === null
+    ) {
+      return null
+    }
+
+    values.push({
+      id,
+      lifterNumber:
+        Number(
+          number.value
+        ),
+      firstName:
+        first.value.trim(),
+      lastName:
+        last.value.trim(),
+      bodyWeight:
+        bodyWeight.value.trim() ===
+        ''
+          ? null
+          : Number(
+              bodyWeight.value
+            ),
+      weightClass:
+        weightClass.value,
+      grade:
+        grade.value.trim() ===
+        ''
+          ? null
+          : Number(
+              grade.value
+            ),
+      equipmentType:
+        equipment.value,
+      isGuest:
+        guest.checked,
+      isExtraLifter:
+        extra.checked,
+    })
+  }
+
+  values.sort(
+    (a, b) =>
+      Number(
+        a.id
+      ) -
+      Number(
+        b.id
+      )
+  )
+
+  return JSON.stringify(
+    values
+  )
+}
+
+
+function hasBulkEditChanges():
+  boolean {
+
+  if (
+    !isBulkEditing ||
+    bulkEditOriginalSnapshot ===
+      null
+  ) {
+    return false
+  }
+
+  const current =
+    getBulkEditFormSnapshot()
+
+  return (
+    current !== null &&
+    current !==
+      bulkEditOriginalSnapshot
+  )
+}
+
+
+function startBulkEdit():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined ||
+    getVisibleLifters(
+      meet
+    ).length ===
+      0
+  ) {
+    return
+  }
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  isBulkEditing =
+    true
+
+  bulkSortColumn =
+    'lifterNumber'
+
+  bulkSortAscending =
+    true
+
+  bulkMissingBodyweightsOnly =
+    false
+
+  bulkEditOriginalSnapshot =
+    getBulkEditModelSnapshot(
+      meet
+    )
+
+  renderApp()
+
+  focusElement(
+    '[data-bulk-field="bodyWeight"]'
+  )
+}
+
+
+function clearBulkEdit():
+  void {
+
+  isBulkEditing =
+    false
+
+  bulkEditOriginalSnapshot =
+    null
+
+  bulkSortColumn =
+    'lifterNumber'
+
+  bulkSortAscending =
+    true
+
+  bulkMissingBodyweightsOnly =
+    false
+}
+
+
+function cancelBulkEdit():
+  void {
+
+  if (
+    !isBulkEditing
+  ) {
+    return
+  }
+
+  if (
+    hasBulkEditChanges() &&
+    !window.confirm(
+      'Discard the unsaved bulk-edit changes?'
+    )
+  ) {
+    return
+  }
+
+  clearBulkEdit()
+  renderApp()
+}
+
+
+function finishBulkEdit(
+  promptIfChanged: boolean,
+): boolean {
+
+  if (
+    !isBulkEditing
+  ) {
+    return true
+  }
+
+  if (
+    promptIfChanged &&
+    hasBulkEditChanges()
+  ) {
+    const saveChanges =
+      window.confirm(
+        'Save the bulk-edit changes before leaving? Select OK to save or Cancel to discard the changes.'
+      )
+
+    if (
+      saveChanges
+    ) {
+      return saveBulkEdit(
+        false
+      )
+    }
+  }
+
+  clearBulkEdit()
+
+  return true
+}
+
+
+function renderBulkEditRow(
+  meet: LocalMeet,
+  lifter: Lifter,
+  rowIndex: number,
+): string {
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        lifter.divisionId
+    )
+
+  const team =
+    lifter.teamId ===
+    null
+      ? undefined
+      : meet.state.teams.find(
+          item =>
+            item.id ===
+            lifter.teamId
+        )
+
+  return `
+    <div
+      class="bulk-edit-row"
+      data-bulk-lifter-id="${lifter.id}"
+      data-bulk-row-index="${rowIndex}"
+    >
+      <input
+        class="bulk-edit-input number-input"
+        type="number"
+        min="1"
+        value="${lifter.lifterNumber}"
+        data-bulk-field="lifterNumber"
+        data-bulk-col="0"
+        aria-label="Lifter number for ${escapeHtml(lifter.firstName)} ${escapeHtml(lifter.lastName)}"
+      >
+
+      <input
+        class="bulk-edit-input"
+        type="text"
+        value="${escapeHtml(lifter.firstName)}"
+        data-bulk-field="firstName"
+        data-bulk-col="1"
+        aria-label="First name"
+      >
+
+      <input
+        class="bulk-edit-input"
+        type="text"
+        value="${escapeHtml(lifter.lastName)}"
+        data-bulk-field="lastName"
+        data-bulk-col="2"
+        aria-label="Last name"
+      >
+
+      <div
+        class="bulk-team-cell"
+        title="${escapeHtml(team?.name ?? 'Unattached')}"
+      >
+        ${escapeHtml(team?.name ?? 'Unattached')}
+      </div>
+
+      <input
+        class="bulk-edit-input number-input bulk-bodyweight"
+        type="number"
+        min="0"
+        step="0.1"
+        value="${lifter.bodyWeight ?? ''}"
+        data-bulk-field="bodyWeight"
+        data-bulk-col="3"
+        aria-label="Body weight"
+      >
+
+      <select
+        class="bulk-edit-select"
+        data-bulk-field="weightClass"
+        data-bulk-col="4"
+        data-original-source="${lifter.weightClassSource}"
+        data-manual-changed="false"
+        aria-label="Weight class"
+      >
+        ${
+          renderEntryWeightClassOptions(
+            meet,
+            division?.id ??
+              null,
+            lifter.weightClass ??
+              ''
+          )
+        }
+      </select>
+
+      <input
+        class="bulk-edit-input number-input"
+        type="number"
+        min="1"
+        max="12"
+        value="${lifter.grade ?? ''}"
+        data-bulk-field="grade"
+        data-bulk-col="5"
+        aria-label="Grade"
+      >
+
+      <select
+        class="bulk-edit-select"
+        data-bulk-field="equipmentType"
+        data-bulk-col="6"
+        aria-label="Equipment"
+      >
+        <option
+          value="equipped"
+          ${
+            lifter.equipmentType ===
+            'equipped'
+              ? 'selected'
+              : ''
+          }
+        >
+          Eq
+        </option>
+
+        <option
+          value="unequipped"
+          ${
+            lifter.equipmentType ===
+            'unequipped'
+              ? 'selected'
+              : ''
+          }
+        >
+          UnEq
+        </option>
+      </select>
+
+      <label class="bulk-check">
+        <input
+          type="checkbox"
+          data-bulk-field="isGuest"
+          data-bulk-col="7"
+          aria-label="Guest lifter"
+          ${
+            lifter.isGuest
+              ? 'checked'
+              : ''
+          }
+        >
+      </label>
+
+      <label class="bulk-check">
+        <input
+          type="checkbox"
+          data-bulk-field="isExtraLifter"
+          data-bulk-col="8"
+          aria-label="Extra lifter"
+          ${
+            lifter.isExtraLifter
+              ? 'checked'
+              : ''
+          }
+        >
+      </label>
+    </div>
+  `
+}
+
+
+function renderBulkEditGrid(
+  meet: LocalMeet,
+): string {
+
+  const lifters =
+    getBulkEditLifters(
+      meet
+    )
+
+  return `
+    <div class="bulk-edit-grid">
+      <div class="bulk-edit-row bulk-edit-header">
+        <button
+          type="button"
+          class="bulk-sort-button active"
+          data-bulk-sort="lifterNumber"
+        >
+          # <span data-bulk-sort-indicator="lifterNumber">▲</span>
+        </button>
+        <div>First</div>
+        <div>Last</div>
+        <button
+          type="button"
+          class="bulk-sort-button"
+          data-bulk-sort="team"
+        >
+          Team <span data-bulk-sort-indicator="team"></span>
+        </button>
+        <div>BW</div>
+        <div>Class</div>
+        <div>Grade</div>
+        <div>Equip</div>
+        <div>G</div>
+        <div>X</div>
+      </div>
+
+      <div class="bulk-edit-body">
+        ${
+          lifters
+            .map(
+              (
+                lifter,
+                index,
+              ) =>
+                renderBulkEditRow(
+                  meet,
+                  lifter,
+                  index
+                )
+            )
+            .join('')
+        }
+      </div>
+    </div>
+  `
+}
+
+
+function updateBulkWeightClass(
+  bodyWeightInput:
+    HTMLInputElement,
+): void {
+
+  const row =
+    bodyWeightInput.closest<HTMLElement>(
+      '[data-bulk-lifter-id]'
+    )
+
+  if (
+    row === null
+  ) {
+    return
+  }
+
+  const classInput =
+    row.querySelector<HTMLSelectElement>(
+      '[data-bulk-field="weightClass"]'
+    )
+
+  if (
+    classInput === null ||
+    classInput.dataset
+      .manualChanged ===
+      'true' ||
+    classInput.dataset
+      .originalSource ===
+      'manual'
+  ) {
+    return
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return
+  }
+
+  const bodyWeight =
+    bodyWeightInput.value.trim() ===
+    ''
+      ? null
+      : Number(
+          bodyWeightInput.value
+        )
+
+  try {
+    const rules =
+      getDivisionRules(
+        division
+      )
+
+    classInput.value =
+      getAutomaticWeightClass(
+        bodyWeight,
+        rules.weightClasses
+      ) ??
+      ''
+  } catch {
+    // Keep the existing selection when rules cannot be resolved.
+  }
+}
+
+
+function updateBulkRowIndices():
+  void {
+
+  const rows =
+    Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[data-bulk-lifter-id]'
+      )
+    )
+
+  let visibleIndex =
+    0
+
+  for (
+    const row of
+    rows
+  ) {
+    if (
+      row.hidden
+    ) {
+      row.dataset
+        .bulkRowIndex =
+          '-1'
+
+      continue
+    }
+
+    row.dataset
+      .bulkRowIndex =
+        String(
+          visibleIndex
+        )
+
+    visibleIndex += 1
+  }
+}
+
+
+function updateBulkSortIndicators():
+  void {
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-bulk-sort]'
+    )
+    .forEach(
+      button => {
+
+        const key =
+          button.dataset
+            .bulkSort
+
+        const active =
+          key ===
+          bulkSortColumn
+
+        button.classList
+          .toggle(
+            'active',
+            active
+          )
+
+        const indicator =
+          button.querySelector<HTMLElement>(
+            '[data-bulk-sort-indicator]'
+          )
+
+        if (
+          indicator !== null
+        ) {
+          indicator.textContent =
+            active
+              ? (
+                  bulkSortAscending
+                    ? '▲'
+                    : '▼'
+                )
+              : ''
+        }
+      }
+    )
+}
+
+
+function sortBulkRows(
+  column:
+    'lifterNumber' | 'team',
+): void {
+
+  const body =
+    document.querySelector<HTMLElement>(
+      '.bulk-edit-body'
+    )
+
+  if (
+    body === null
+  ) {
+    return
+  }
+
+  if (
+    bulkSortColumn ===
+    column
+  ) {
+    bulkSortAscending =
+      !bulkSortAscending
+  } else {
+    bulkSortColumn =
+      column
+
+    bulkSortAscending =
+      true
+  }
+
+  const rows =
+    Array.from(
+      body.querySelectorAll<HTMLElement>(
+        '[data-bulk-lifter-id]'
+      )
+    )
+
+  rows.sort(
+    (a, b) => {
+
+      let comparison =
+        0
+
+      if (
+        column ===
+        'lifterNumber'
+      ) {
+        const aInput =
+          a.querySelector<HTMLInputElement>(
+            '[data-bulk-field="lifterNumber"]'
+          )
+
+        const bInput =
+          b.querySelector<HTMLInputElement>(
+            '[data-bulk-field="lifterNumber"]'
+          )
+
+        const aValue =
+          Number(
+            aInput?.value ??
+            ''
+          )
+
+        const bValue =
+          Number(
+            bInput?.value ??
+            ''
+          )
+
+        comparison =
+          aValue -
+          bValue
+      } else {
+        const aValue =
+          (
+            a.querySelector<HTMLElement>(
+              '.bulk-team-cell'
+            )?.textContent ??
+            ''
+          )
+            .trim()
+            .toLocaleLowerCase()
+
+        const bValue =
+          (
+            b.querySelector<HTMLElement>(
+              '.bulk-team-cell'
+            )?.textContent ??
+            ''
+          )
+            .trim()
+            .toLocaleLowerCase()
+
+        comparison =
+          aValue.localeCompare(
+            bValue
+          )
+
+        if (
+          comparison ===
+          0
+        ) {
+          const aNumber =
+            Number(
+              a.querySelector<HTMLInputElement>(
+                '[data-bulk-field="lifterNumber"]'
+              )?.value ??
+              ''
+            )
+
+          const bNumber =
+            Number(
+              b.querySelector<HTMLInputElement>(
+                '[data-bulk-field="lifterNumber"]'
+              )?.value ??
+              ''
+            )
+
+          comparison =
+            aNumber -
+            bNumber
+        }
+      }
+
+      return bulkSortAscending
+        ? comparison
+        : -comparison
+    }
+  )
+
+  for (
+    const row of
+    rows
+  ) {
+    body.appendChild(
+      row
+    )
+  }
+
+  updateBulkRowIndices()
+  updateBulkSortIndicators()
+}
+
+
+function applyBulkMissingBodyweightFilter():
+  void {
+
+  const rows =
+    document.querySelectorAll<HTMLElement>(
+      '[data-bulk-lifter-id]'
+    )
+
+  rows.forEach(
+    row => {
+      const bodyWeight =
+        row.querySelector<HTMLInputElement>(
+          '[data-bulk-field="bodyWeight"]'
+        )
+
+      row.hidden =
+        bulkMissingBodyweightsOnly &&
+        (
+          bodyWeight === null ||
+          bodyWeight.value.trim() !==
+            ''
+        )
+    }
+  )
+
+  updateBulkRowIndices()
+}
+
+
+function setBulkValidationMessage(
+  message: string,
+): void {
+
+  const element =
+    document.querySelector<HTMLElement>(
+      '#bulkValidationMessage'
+    )
+
+  if (
+    element !== null
+  ) {
+    element.textContent =
+      message
+  }
+}
+
+
+function validateBulkLifterNumbers():
+  boolean {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return true
+  }
+
+  const rows =
+    Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[data-bulk-lifter-id]'
+      )
+    )
+
+  const editedIds =
+    new Set(
+      rows.map(
+        row =>
+          Number(
+            row.dataset
+              .bulkLifterId
+          )
+      )
+    )
+
+  const outsideNumbers =
+    new Set(
+      meet.state.lifters
+        .filter(
+          lifter =>
+            !editedIds.has(
+              lifter.id
+            )
+        )
+        .map(
+          lifter =>
+            lifter.lifterNumber
+        )
+    )
+
+  const seen =
+    new Map<
+      number,
+      HTMLInputElement
+    >()
+
+  let firstDuplicate:
+    HTMLInputElement | null =
+      null
+
+  let duplicateNumber:
+    number | null =
+      null
+
+  for (
+    const row of
+    rows
+  ) {
+    const input =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="lifterNumber"]'
+      )
+
+    if (
+      input === null
+    ) {
+      continue
+    }
+
+    input.classList.remove(
+      'duplicate-number-warning'
+    )
+
+    input.removeAttribute(
+      'aria-invalid'
+    )
+
+    input.setCustomValidity(
+      ''
+    )
+  }
+
+  for (
+    const row of
+    rows
+  ) {
+    const input =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="lifterNumber"]'
+      )
+
+    if (
+      input === null
+    ) {
+      continue
+    }
+
+    const value =
+      Number(
+        input.value
+      )
+
+    if (
+      !Number.isInteger(
+        value
+      ) ||
+      value <= 0
+    ) {
+      continue
+    }
+
+    const prior =
+      seen.get(
+        value
+      )
+
+    const duplicate =
+      outsideNumbers.has(
+        value
+      ) ||
+      prior !==
+        undefined
+
+    if (
+      duplicate
+    ) {
+      input.classList.add(
+        'duplicate-number-warning'
+      )
+
+      input.setAttribute(
+        'aria-invalid',
+        'true'
+      )
+
+      input.setCustomValidity(
+        `Lifter number ${value} is already in use.`
+      )
+
+      if (
+        prior !== undefined
+      ) {
+        prior.classList.add(
+          'duplicate-number-warning'
+        )
+
+        prior.setAttribute(
+          'aria-invalid',
+          'true'
+        )
+
+        prior.setCustomValidity(
+          `Lifter number ${value} is already in use.`
+        )
+      }
+
+      if (
+        firstDuplicate ===
+        null
+      ) {
+        firstDuplicate =
+          input
+
+        duplicateNumber =
+          value
+      }
+    } else {
+      seen.set(
+        value,
+        input
+      )
+    }
+  }
+
+  if (
+    firstDuplicate !==
+    null &&
+    duplicateNumber !==
+    null
+  ) {
+    setBulkValidationMessage(
+      `Lifter number ${duplicateNumber} is already in use.`
+    )
+
+    return false
+  }
+
+  setBulkValidationMessage(
+    ''
+  )
+
+  return true
+}
+
+
+function validateEditLifterNumberImmediate():
+  boolean {
+
+  const meet =
+    getSelectedMeet()
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterNumber'
+    )
+
+  const status =
+    document.querySelector<HTMLElement>(
+      '#editLifterValidationStatus'
+    )
+
+  if (
+    meet === undefined ||
+    input === null ||
+    activeEdit?.type !==
+      'lifter'
+  ) {
+    return true
+  }
+
+  const lifterId =
+    Number(
+      activeEdit.id
+    )
+
+  const value =
+    Number(
+      input.value
+    )
+
+  const duplicate =
+    Number.isInteger(
+      value
+    ) &&
+    value > 0 &&
+    meet.state.lifters.some(
+      lifter =>
+        lifter.id !==
+          lifterId &&
+        lifter.lifterNumber ===
+          value
+    )
+
+  input.classList.toggle(
+    'duplicate-number-warning',
+    duplicate
+  )
+
+  if (
+    duplicate
+  ) {
+    input.setAttribute(
+      'aria-invalid',
+      'true'
+    )
+
+    input.setCustomValidity(
+      `Lifter number ${value} is already in use.`
+    )
+
+    if (
+      status !== null
+    ) {
+      status.className =
+        'readiness attention'
+
+      status.textContent =
+        `#${value} in use`
+    }
+
+    return false
+  }
+
+  input.removeAttribute(
+    'aria-invalid'
+  )
+
+  input.setCustomValidity(
+    ''
+  )
+
+  if (
+    status !== null
+  ) {
+    status.className =
+      'readiness editing-status'
+
+    status.textContent =
+      'Editing'
+  }
+
+  return true
+}
+
+
+function wireSelectAllOnEditableInputs():
+  void {
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      [
+        '[data-edit-row] input:not([type="checkbox"])',
+        '.bulk-edit-input',
+      ].join(',')
+    )
+    .forEach(
+      input => {
+
+        input.addEventListener(
+          'focus',
+          () => {
+            window.requestAnimationFrame(
+              () => {
+                try {
+                  input.select()
+                } catch {
+                  // Some input types do not support select().
+                }
+              }
+            )
+          }
+        )
+
+        input.addEventListener(
+          'mouseup',
+          event => {
+            event.preventDefault()
+          }
+        )
+      }
+    )
+}
+
+
+function saveBulkEdit(
+  renderAfter: boolean = true,
+): boolean {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return false
+  }
+
+  if (
+    !validateBulkLifterNumbers()
+  ) {
+    document
+      .querySelector<HTMLInputElement>(
+        '.duplicate-number-warning'
+      )
+      ?.focus()
+
+    return false
+  }
+
+  const rows =
+    Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[data-bulk-lifter-id]'
+      )
+    )
+
+  const editedIds =
+    new Set(
+      rows.map(
+        row =>
+          Number(
+            row.dataset
+              .bulkLifterId
+          )
+      )
+    )
+
+  const usedNumbers =
+    new Set(
+      meet.state.lifters
+        .filter(
+          lifter =>
+            !editedIds.has(
+              lifter.id
+            )
+        )
+        .map(
+          lifter =>
+            lifter.lifterNumber
+        )
+    )
+
+  const updates:
+    Array<{
+      lifter: Lifter
+      updated: Lifter
+    }> =
+      []
+
+  for (
+    const row of
+    rows
+  ) {
+    const lifterId =
+      Number(
+        row.dataset
+          .bulkLifterId
+      )
+
+    const lifter =
+      meet.state.lifters.find(
+        item =>
+          item.id ===
+          lifterId
+      )
+
+    const numberInput =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="lifterNumber"]'
+      )
+
+    const firstInput =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="firstName"]'
+      )
+
+    const lastInput =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="lastName"]'
+      )
+
+    const bodyWeightInput =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="bodyWeight"]'
+      )
+
+    const classInput =
+      row.querySelector<HTMLSelectElement>(
+        '[data-bulk-field="weightClass"]'
+      )
+
+    const gradeInput =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="grade"]'
+      )
+
+    const equipmentInput =
+      row.querySelector<HTMLSelectElement>(
+        '[data-bulk-field="equipmentType"]'
+      )
+
+    const guestInput =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="isGuest"]'
+      )
+
+    const extraInput =
+      row.querySelector<HTMLInputElement>(
+        '[data-bulk-field="isExtraLifter"]'
+      )
+
+    if (
+      lifter === undefined ||
+      numberInput === null ||
+      firstInput === null ||
+      lastInput === null ||
+      bodyWeightInput === null ||
+      classInput === null ||
+      gradeInput === null ||
+      equipmentInput === null ||
+      guestInput === null ||
+      extraInput === null
+    ) {
+      return false
+    }
+
+    const lifterNumber =
+      Number(
+        numberInput.value
+      )
+
+    if (
+      !Number.isInteger(
+        lifterNumber
+      ) ||
+      lifterNumber <= 0
+    ) {
+      window.alert(
+        'Enter a valid lifter number.'
+      )
+
+      numberInput.focus()
+
+      return false
+    }
+
+    if (
+      usedNumbers.has(
+        lifterNumber
+      )
+    ) {
+      window.alert(
+        `Lifter number ${lifterNumber} is already in use.`
+      )
+
+      numberInput.focus()
+
+      return false
+    }
+
+    usedNumbers.add(
+      lifterNumber
+    )
+
+    const firstName =
+      firstInput.value.trim()
+
+    const lastName =
+      lastInput.value.trim()
+
+    if (
+      firstName === ''
+    ) {
+      window.alert(
+        'Enter the lifter first name.'
+      )
+
+      firstInput.focus()
+
+      return false
+    }
+
+    if (
+      lastName === ''
+    ) {
+      window.alert(
+        'Enter the lifter last name.'
+      )
+
+      lastInput.focus()
+
+      return false
+    }
+
+    const bodyWeight =
+      bodyWeightInput.value.trim() ===
+      ''
+        ? null
+        : Number(
+            bodyWeightInput.value
+          )
+
+    if (
+      bodyWeight !== null &&
+      (
+        !Number.isFinite(
+          bodyWeight
+        ) ||
+        bodyWeight <= 0
+      )
+    ) {
+      window.alert(
+        'Enter a valid body weight.'
+      )
+
+      bodyWeightInput.focus()
+
+      return false
+    }
+
+    const grade =
+      gradeInput.value.trim() ===
+      ''
+        ? null
+        : Number(
+            gradeInput.value
+          )
+
+    if (
+      grade !== null &&
+      (
+        !Number.isInteger(
+          grade
+        ) ||
+        grade < 1 ||
+        grade > 12
+      )
+    ) {
+      window.alert(
+        'Grade must be between 1 and 12.'
+      )
+
+      gradeInput.focus()
+
+      return false
+    }
+
+    const division =
+      meet.state.divisions.find(
+        item =>
+          item.id ===
+          lifter.divisionId
+      )
+
+    if (
+      division === undefined
+    ) {
+      window.alert(
+        'Unable to locate the lifter division.'
+      )
+
+      return false
+    }
+
+    let rules
+
+    try {
+      rules =
+        getDivisionRules(
+          division
+        )
+    } catch (
+      error
+    ) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Unable to determine division rules.'
+      )
+
+      return false
+    }
+
+    let updated:
+      Lifter = {
+        ...lifter,
+        lifterNumber,
+        firstName,
+        lastName,
+        bodyWeight,
+        grade,
+        equipmentType:
+          equipmentInput.value as
+            Lifter['equipmentType'],
+        isGuest:
+          guestInput.checked,
+        isExtraLifter:
+          extraInput.checked,
+      }
+
+    const selectedClass =
+      classInput.value
+
+    const automaticClass =
+      getAutomaticWeightClass(
+        bodyWeight,
+        rules.weightClasses
+      )
+
+    try {
+      if (
+        selectedClass === '' ||
+        (
+          classInput.dataset
+            .manualChanged !==
+            'true' &&
+          lifter.weightClassSource ===
+            'automatic'
+        )
+      ) {
+        updated.weightClass =
+          automaticClass
+
+        updated.weightClassSource =
+          'automatic'
+      } else {
+        updated =
+          assignRegisteredLifterWeightClass(
+            updated,
+            selectedClass,
+            rules
+          )
+      }
+    } catch (
+      error
+    ) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Unable to assign the weight class.'
+      )
+
+      classInput.focus()
+
+      return false
+    }
+
+    updates.push({
+      lifter,
+      updated,
+    })
+  }
+
+  for (
+    const update of
+    updates
+  ) {
+    Object.assign(
+      update.lifter,
+      update.updated
+    )
+  }
+
+  clearBulkEdit()
+
+  if (
+    renderAfter
+  ) {
+    renderApp()
+  }
+
+  return true
+}
+
+
+function focusBulkCell(
+  rowIndex: number,
+  columnIndex: number,
+): void {
+
+  document
+    .querySelector<HTMLElement>(
+      `[data-bulk-row-index="${rowIndex}"] [data-bulk-col="${columnIndex}"]`
+    )
+    ?.focus()
+}
+
+
+function wireBulkEdit():
+  void {
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#bulkEditLifters'
+    )
+    ?.addEventListener(
+      'click',
+      startBulkEdit
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#saveBulkEdit'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        saveBulkEdit()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#cancelBulkEdit'
+    )
+    ?.addEventListener(
+      'click',
+      cancelBulkEdit
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-bulk-sort]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const key =
+              button.dataset
+                .bulkSort
+
+            if (
+              key ===
+                'lifterNumber' ||
+              key ===
+                'team'
+            ) {
+              sortBulkRows(
+                key
+              )
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#bulkMissingBodyweightsOnly'
+    )
+    ?.addEventListener(
+      'change',
+      event => {
+        bulkMissingBodyweightsOnly =
+          (
+            event.currentTarget as
+              HTMLInputElement
+          ).checked
+
+        applyBulkMissingBodyweightFilter()
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-bulk-field="lifterNumber"]'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'input',
+          validateBulkLifterNumbers
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLElement>(
+      '.bulk-edit-grid'
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+        if (
+          (
+            event.ctrlKey ||
+            event.metaKey
+          ) &&
+          event.key
+            .toLocaleLowerCase() ===
+            's'
+        ) {
+          event.preventDefault()
+          saveBulkEdit()
+        }
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '.bulk-bodyweight'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'input',
+          () => {
+            updateBulkWeightClass(
+              input
+            )
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLSelectElement>(
+      '[data-bulk-field="weightClass"]'
+    )
+    .forEach(
+      select => {
+        select.addEventListener(
+          'change',
+          () => {
+            select.dataset
+              .manualChanged =
+                'true'
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLElement>(
+      '[data-bulk-col]'
+    )
+    .forEach(
+      control => {
+
+        control.addEventListener(
+          'input',
+          () => {
+            control
+              .closest(
+                '.bulk-edit-row'
+              )
+              ?.classList
+              .add(
+                'bulk-row-changed'
+              )
+          }
+        )
+
+        control.addEventListener(
+          'change',
+          () => {
+            control
+              .closest(
+                '.bulk-edit-row'
+              )
+              ?.classList
+              .add(
+                'bulk-row-changed'
+              )
+          }
+        )
+
+        control.addEventListener(
+          'keydown',
+          event => {
+
+            const row =
+              control.closest<HTMLElement>(
+                '[data-bulk-row-index]'
+              )
+
+            const rowIndex =
+              Number(
+                row?.dataset
+                  .bulkRowIndex
+              )
+
+            const columnIndex =
+              Number(
+                control.dataset
+                  .bulkCol
+              )
+
+            if (
+              Number.isNaN(
+                rowIndex
+              ) ||
+              Number.isNaN(
+                columnIndex
+              )
+            ) {
+              return
+            }
+
+            let targetRow =
+              rowIndex
+
+            let targetColumn =
+              columnIndex
+
+            switch (
+              event.key
+            ) {
+              case 'ArrowUp':
+                targetRow -= 1
+                break
+
+              case 'ArrowDown':
+              case 'Enter':
+                targetRow += 1
+                break
+
+              case 'ArrowLeft':
+                targetColumn -= 1
+                break
+
+              case 'ArrowRight':
+                targetColumn += 1
+                break
+
+              case 'Escape':
+                event.preventDefault()
+                cancelBulkEdit()
+                return
+
+              default:
+                return
+            }
+
+            event.preventDefault()
+
+            focusBulkCell(
+              targetRow,
+              targetColumn
+            )
+          }
+        )
+      }
+    )
+
+  updateBulkSortIndicators()
+  applyBulkMissingBodyweightFilter()
+  validateBulkLifterNumbers()
+}
+
 function renderRegistration():
   string {
 
   const meet =
     getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
 
   const selectedTeam =
     getSelectedTeam()
@@ -4371,7 +6650,11 @@ function renderRegistration():
         ).length
 
   return `
-    <main class="workspace registration-workspace">
+    <main class="workspace registration-workspace ${
+      isBulkEditing
+        ? 'bulk-editing'
+        : ''
+    }">
 
       <div class="registration-layout">
 
@@ -4428,74 +6711,164 @@ function renderRegistration():
                   </div>
 
                   <div class="registration-actions">
-                    <span class="registration-help">
-                      ${
-                        selectedTeam ===
-                        undefined
-                          ? 'Select a team to add lifters'
-                          : activeEntry ===
-                            'lifter'
-                            ? 'Tab moves fields · Enter adds · Esc cancels'
-                            : ''
-                      }
-                    </span>
+                    ${
+                      isBulkEditing
+                        ? `
+                          <button
+                            id="cancelBulkEdit"
+                            type="button"
+                            class="compact-button secondary-button"
+                          >
+                            Cancel
+                          </button>
 
-                    <button
-                      id="addLifter"
-                      type="button"
-                      class="compact-button"
-                      data-open-entry="lifter"
-                      ${
-                        selectedTeam ===
-                        undefined
-                          ? 'disabled'
-                          : ''
-                      }
-                    >
-                      + Add
-                    </button>
+                          <button
+                            id="saveBulkEdit"
+                            type="button"
+                            class="compact-button"
+                          >
+                            Save Changes
+                          </button>
+                        `
+                        : `
+                          <span class="registration-help">
+                            ${
+                              selectedTeam ===
+                              undefined
+                                ? (
+                                    division ===
+                                    undefined
+                                      ? 'Select a division'
+                                      : 'All Teams selected · choose a team to add lifters'
+                                  )
+                                : activeEntry ===
+                                  'lifter'
+                                  ? 'Tab moves fields · Enter adds · Esc cancels'
+                                  : ''
+                            }
+                          </span>
+
+                          <button
+                            id="bulkEditLifters"
+                            type="button"
+                            class="compact-button secondary-button"
+                            ${
+                              division ===
+                                undefined ||
+                              visibleLifterCount ===
+                                0
+                                ? 'disabled'
+                                : ''
+                            }
+                          >
+                            Bulk Edit
+                          </button>
+
+                          <button
+                            id="addLifter"
+                            type="button"
+                            class="compact-button"
+                            data-open-entry="lifter"
+                            ${
+                              selectedTeam ===
+                              undefined
+                                ? 'disabled'
+                                : ''
+                            }
+                          >
+                            + Add
+                          </button>
+                        `
+                    }
                   </div>
 
                 </div>
 
+                ${
+                  isBulkEditing
+                    ? `
+                      <div class="bulk-options-bar">
+                        <label class="bulk-filter-option">
+                          <input
+                            id="bulkMissingBodyweightsOnly"
+                            type="checkbox"
+                            ${
+                              bulkMissingBodyweightsOnly
+                                ? 'checked'
+                                : ''
+                            }
+                          >
+                          Show Missing Bodyweights Only
+                        </label>
 
-                <div class="registration-grid">
+                        <span
+                          id="bulkValidationMessage"
+                          class="bulk-validation-message"
+                          aria-live="polite"
+                        ></span>
 
-                  <div
-                    class="registration-row registration-header"
-                  >
-                    <div>#</div>
-                    <div>First</div>
-                    <div>Last</div>
-                    <div>BW</div>
-                    <div>Class</div>
-                    <div>Grade</div>
-                    <div>Equip</div>
-                    <div>G</div>
-                    <div>X</div>
-                    <div>Status</div>
-                    <div></div>
-                    <div></div>
-                  </div>
+                        <span class="bulk-keyboard-help">
+                          Arrow keys move cells · Enter moves down · Ctrl+S saves
+                        </span>
+                      </div>
+                    `
+                    : ''
+                }
 
-                  <div class="registration-body">
-                    ${
-                      renderRegisteredLifterRows(
+                ${
+                  isBulkEditing
+                    ? renderBulkEditGrid(
                         meet
                       )
-                    }
+                    : `
+                      <div class="registration-grid">
 
-                    ${
-                      activeEntry ===
-                      'lifter'
-                        ? renderRegistrationEntryRow(
-                            meet
-                          )
-                        : ''
-                    }
-                  </div>
+                        <div
+                          class="registration-row registration-header ${
+                            shouldShowLifterTeamColumn()
+                              ? 'with-team-column'
+                              : ''
+                          }"
+                        >
+                          <div>#</div>
+                          <div>First</div>
+                          <div>Last</div>
+                          ${
+                            shouldShowLifterTeamColumn()
+                              ? '<div>Team</div>'
+                              : ''
+                          }
+                          <div>BW</div>
+                          <div>Class</div>
+                          <div>Grade</div>
+                          <div>Equip</div>
+                          <div>G</div>
+                          <div>X</div>
+                          <div>Status</div>
+                          <div></div>
+                          <div></div>
+                        </div>
 
-                </div>
+                        <div class="registration-body">
+                          ${
+                            renderRegisteredLifterRows(
+                              meet
+                            )
+                          }
+
+                          ${
+                            activeEntry ===
+                            'lifter'
+                              ? renderRegistrationEntryRow(
+                                  meet
+                                )
+                              : ''
+                          }
+                        </div>
+
+                      </div>
+                    `
+                }
 
               </section>
             `
@@ -4506,7 +6879,6 @@ function renderRegistration():
     </main>
   `
 }
-
 
 function readNumberInput(
   selector: string,
@@ -5293,6 +7665,16 @@ function wireRegistrationSetup(): void {
 
 
   document
+    .querySelector<HTMLButtonElement>(
+      '[data-select-all-teams]'
+    )
+    ?.addEventListener(
+      'click',
+      selectAllTeams
+    )
+
+
+  document
     .querySelectorAll<HTMLButtonElement>(
       '[data-select-team]'
     )
@@ -5502,7 +7884,7 @@ function wireRegistration():
       '#entryBodyWeight'
     )
     ?.addEventListener(
-      'change',
+      'input',
       updateEntryWeightClasses
     )
 
@@ -5529,10 +7911,20 @@ function wireRegistration():
 
   document
     .querySelector<HTMLInputElement>(
+      '#editLifterNumber'
+    )
+    ?.addEventListener(
+      'input',
+      validateEditLifterNumberImmediate
+    )
+
+
+  document
+    .querySelector<HTMLInputElement>(
       '#editLifterBodyWeight'
     )
     ?.addEventListener(
-      'change',
+      'input',
       updateEditLifterWeightClasses
     )
 
@@ -5555,6 +7947,7 @@ function wireRegistration():
     commitNewLifter
   )
 
+  wireBulkEdit()
   wireOutsideEntryDismissal()
 }
 
@@ -5614,6 +8007,7 @@ function renderApp(): void {
   wireNavigation()
   wireRegistrationSetup()
   wireRegistration()
+  wireSelectAllOnEditableInputs()
 }
 
 
