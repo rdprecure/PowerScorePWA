@@ -238,42 +238,32 @@ select {
 }
 
 
-/* Meet Setup browser */
+/* Registration sidebar structure */
 
-.setup-browser {
+.registration-sidebar {
+  min-width: 0;
+  min-height: 0;
+
   display: grid;
 
-  grid-template-columns:
-    minmax(250px, 1fr)
-    minmax(220px, 0.85fr)
-    minmax(300px, 1.25fr);
+  grid-template-rows:
+    minmax(130px, 0.55fr)
+    minmax(130px, 0.55fr)
+    minmax(280px, 2.4fr);
 
-  min-height:
-    calc(100vh - 285px);
-
-  background: white;
-
-  border:
-    1px solid #cbd5e1;
-
-  border-radius: 4px;
-
-  overflow: hidden;
+  gap: 8px;
 }
 
-.setup-column {
+.registration-sidebar-panel {
   min-width: 0;
+  min-height: 0;
 
-  border-right:
-    1px solid #cbd5e1;
-}
-
-.setup-column:last-child {
-  border-right: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .column-heading {
-  height: 39px;
+  min-height: 39px;
 
   display: flex;
   align-items: center;
@@ -283,10 +273,10 @@ select {
 
   padding: 5px 7px;
 
-  background: #f8fafc;
+  background: #c9d9ec;
 
   border-bottom:
-    1px solid #cbd5e1;
+    1px solid #9fb5cf;
 }
 
 .column-heading > div {
@@ -296,7 +286,7 @@ select {
 }
 
 .column-heading strong {
-  color: #334155;
+  color: #243b59;
 
   font-size: 12px;
 
@@ -304,37 +294,18 @@ select {
   letter-spacing: 0.03em;
 }
 
-.column-context {
-  height: 25px;
-
-  display: flex;
-  align-items: center;
-
-  overflow: hidden;
-
-  padding: 0 7px;
-
-  background: #eef2f6;
-
-  border-bottom:
-    1px solid #d7dee7;
-
-  color: #64748b;
-
-  font-size: 10px;
-
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
 
 .selector-list {
-  height:
-    calc(100% - 64px);
-
-  max-height:
-    calc(100vh - 250px);
+  min-height: 0;
 
   overflow-y: auto;
+}
+
+.registration-sidebar .selector-list {
+  flex: 1;
+
+  height: auto;
+  max-height: none;
 }
 
 
@@ -395,11 +366,12 @@ select {
   font-size: 9px;
 }
 
-.selector-row-with-delete {
+.selector-row-with-actions {
   display: grid;
 
   grid-template-columns:
     minmax(0, 1fr)
+    26px
     26px;
 
   align-items: center;
@@ -456,6 +428,35 @@ select {
   text-overflow: ellipsis;
 }
 
+.row-edit {
+  width: 24px;
+  height: 24px;
+
+  padding: 0;
+
+  border:
+    1px solid transparent;
+
+  border-radius: 3px;
+
+  background: transparent;
+
+  color: #64748b;
+
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.row-edit:hover {
+  border-color: #bfdbfe;
+
+  background: #eff6ff;
+
+  color: #1e3a5f;
+}
+
+
 .row-delete {
   width: 24px;
   height: 24px;
@@ -471,7 +472,7 @@ select {
 
   color: #94a3b8;
 
-  font-size: 18px;
+  font-size: 13px;
   line-height: 20px;
 }
 
@@ -481,6 +482,52 @@ select {
   background: #fef2f2;
 
   color: #b91c1c;
+}
+
+
+.editing-row {
+  background: #f8fafc !important;
+
+  box-shadow:
+    inset 4px 0 0 #6b84a3;
+}
+
+.edit-fields {
+  min-width: 0;
+}
+
+.edit-fields input,
+.edit-fields select,
+.row-edit-input {
+  width: 100%;
+  height: 27px;
+
+  min-width: 0;
+
+  padding: 3px 6px;
+
+  border:
+    1px solid #94a3b8;
+
+  border-radius: 3px;
+
+  background: white;
+
+  color: #111827;
+
+  font-size: 11px;
+}
+
+.edit-fields input:focus,
+.edit-fields select:focus,
+.row-edit-input:focus {
+  outline:
+    2px solid #64748b;
+
+  outline-offset: -1px;
+
+  border-color:
+    #64748b;
 }
 
 
@@ -546,6 +593,58 @@ select {
   gap: 4px;
 }
 
+.meet-entry-fields {
+  display: grid;
+
+  grid-template-columns:
+    minmax(130px, 1.35fr)
+    104px
+    minmax(105px, 1fr)
+    92px;
+
+  gap: 4px;
+}
+
+.meet-selector-row {
+  min-height: 34px;
+}
+
+.meet-selector-button {
+  display: grid;
+
+  grid-template-columns:
+    minmax(115px, 1.35fr)
+    78px
+    minmax(90px, 1fr)
+    82px;
+
+  gap: 5px;
+
+  align-items: center;
+}
+
+.meet-selector-button > span {
+  min-width: 0;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.meet-row-name {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.meet-row-date,
+.meet-row-location,
+.meet-row-mode {
+  color: #64748b;
+
+  font-size: 9px;
+}
+
 .entry-accepted {
   background: #ecfdf5 !important;
 }
@@ -561,115 +660,40 @@ select {
 }
 
 
-/* Meet details */
-
-.detail-heading {
-  padding:
-    7px 9px 0;
-
-  color: #334155;
-
-  font-size: 11px;
-  font-weight: 700;
-
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.meet-details {
-  display: grid;
-
-  grid-template-columns:
-    minmax(220px, 2fr)
-    minmax(130px, 0.8fr)
-    minmax(180px, 1.3fr)
-    minmax(120px, 0.8fr)
-    minmax(145px, 1fr);
-
-  gap: 8px;
-
-  padding: 7px 9px 9px;
-}
-
-.meet-details-empty {
-  padding: 16px;
-
-  color: #94a3b8;
-
-  font-size: 11px;
-
-  text-align: center;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-
-  min-width: 0;
-}
-
-.field span {
-  color: #64748b;
-
-  font-size: 9px;
-  font-weight: 700;
-
-  text-transform: uppercase;
-}
-
-.field input,
-.field select {
-  width: 100%;
-  height: 28px;
-
-  padding: 3px 6px;
-
-  border:
-    1px solid #b8c2cf;
-
-  border-radius: 3px;
-
-  background: white;
-
-  color: #111827;
-
-  font-size: 12px;
-}
-
-.field input:focus,
-.field select:focus {
-  outline:
-    2px solid #64748b;
-
-  outline-offset: -1px;
-
-  border-color:
-    #64748b;
-}
-
-.setup-note {
-  color: #64748b;
-
-  font-size: 10px;
-
-  text-align: right;
-}
-
-
 /* Registration */
 
 .registration-workspace {
   padding: 8px;
 }
 
-.registration-panel {
-  min-height:
+.registration-layout {
+  height:
     calc(100vh - 100px);
+
+  min-height: 540px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(470px, 38%)
+    minmax(0, 1fr);
+
+  gap: 8px;
+
+  align-items: stretch;
+}
+
+.registration-panel {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
 }
 
 .registration-toolbar {
-  height: 38px;
+  min-height: 38px;
 
   display: grid;
 
@@ -682,10 +706,10 @@ select {
 
   padding: 0 8px;
 
-  background: #f8fafc;
+  background: #c9d9ec;
 
   border-bottom:
-    1px solid #cbd5e1;
+    1px solid #9fb5cf;
 }
 
 .registration-toolbar > div:first-child {
@@ -716,14 +740,41 @@ select {
   text-align: right;
 }
 
+.registration-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.registration-actions .registration-help {
+  overflow: hidden;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.registration-actions .compact-button {
+  flex: 0 0 auto;
+}
+
 .registration-grid {
+  min-height: 0;
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
   width: 100%;
 
   overflow-x: auto;
 }
 
 .registration-row {
-  min-width: 1040px;
+  min-width: 780px;
 
   display: grid;
 
@@ -731,15 +782,15 @@ select {
     55px
     minmax(95px, 1fr)
     minmax(110px, 1.1fr)
-    minmax(105px, 1fr)
-    minmax(130px, 1.25fr)
     72px
     72px
     55px
     68px
     34px
     34px
-    105px;
+    105px
+    30px
+    30px;
 
   align-items: center;
 
@@ -770,8 +821,9 @@ select {
 }
 
 .registration-body {
-  max-height:
-    calc(100vh - 190px);
+  min-height: 0;
+
+  flex: 1;
 
   overflow-y: auto;
 }
@@ -793,6 +845,24 @@ select {
   background: #f1f5f9;
 }
 
+.registered-row.selected {
+  background: #e3edf8;
+
+  box-shadow:
+    inset 4px 0 0 #334155;
+}
+
+.registered-row.selected:hover {
+  background: #e3edf8;
+}
+
+.registered-row:focus {
+  outline:
+    2px solid #64748b;
+
+  outline-offset: -2px;
+}
+
 .cell-number,
 .cell-class,
 .cell-flag {
@@ -811,20 +881,29 @@ select {
   font-weight: 600;
 }
 
-.registration-entry {
-  position: sticky;
-  bottom: 0;
-
-  background: #e9eef4;
-
-  border-top:
-    2px solid #94a3b8;
-}
-
 .registration-entry-row {
-  min-height: 34px;
+  min-height: 31px;
 
   background: #f8fafc;
+
+  border-top:
+    1px dashed #94a3b8;
+
+  border-bottom:
+    1px solid #e2e8f0;
+}
+
+.entry-fixed-cell {
+  overflow: hidden;
+
+  padding: 0 4px;
+
+  color: #475569;
+
+  font-size: 10px;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .grid-input,
@@ -874,23 +953,14 @@ select {
   margin: 0;
 }
 
-.entry-add-button {
-  height: 26px;
-
-  border:
-    1px solid #475569;
-
-  border-radius: 3px;
-
-  background: #334155;
-  color: white;
-
-  font-size: 10px;
-  font-weight: 700;
+.lifter-edit,
+.lifter-delete {
+  justify-self: center;
 }
 
-.entry-add-button:hover {
-  background: #1e293b;
+.editing-status {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .readiness {
@@ -924,7 +994,7 @@ select {
 }
 
 .registration-empty {
-  min-width: 1040px;
+  min-width: 780px;
 
   padding: 35px 10px;
 
@@ -936,10 +1006,10 @@ select {
 }
 
 .registration-placeholder {
-  min-height:
-    calc(100vh - 150px);
+  min-height: 0;
 
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -963,7 +1033,7 @@ select {
 /* Responsive / browser zoom */
 
 @media (
-  max-width: 1000px
+  max-width: 1100px
 ) {
 
   .brand span {
@@ -977,19 +1047,48 @@ select {
       minmax(120px, 0.7fr);
   }
 
-  .setup-browser {
+  .registration-layout {
     grid-template-columns:
-      minmax(200px, 1fr)
-      minmax(180px, 0.8fr)
-      minmax(220px, 1fr);
+      minmax(470px, 44%)
+      minmax(0, 1fr);
+  }
+}
+
+
+@media (
+  max-width: 900px
+) {
+
+  .registration-layout {
+    height: auto;
+    min-height: 0;
+
+    grid-template-columns:
+      1fr;
   }
 
-  .meet-details {
+  .registration-sidebar {
+    min-height: 700px;
+  }
+
+  .registration-panel {
+    min-height:
+      calc(100vh - 100px);
+  }
+}
+
+
+@media (
+  max-width: 900px
+) {
+
+  .meet-entry-fields,
+  .meet-selector-button {
     grid-template-columns:
-      repeat(
-        3,
-        minmax(140px, 1fr)
-      );
+      minmax(120px, 1.4fr)
+      90px
+      minmax(100px, 1fr)
+      88px;
   }
 }
 
@@ -1020,27 +1119,8 @@ select {
     min-width: 95px;
   }
 
-  .setup-browser {
-    grid-template-columns:
-      1fr;
-  }
 
-  .setup-column {
-    border-right: 0;
-
-    border-bottom:
-      1px solid #cbd5e1;
-  }
-
-  .selector-list {
-    max-height: 220px;
-  }
-
-  .meet-details {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(130px, 1fr)
-      );
+  .registration-sidebar {
+    min-height: 820px;
   }
 }

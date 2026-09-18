@@ -39,11 +39,6 @@ import {
 } from './rules/divisionRules'
 
 
-type AppPage =
-  | 'setup'
-  | 'registration'
-
-
 interface DivisionTeam {
   divisionId: number
   teamId: number
@@ -57,8 +52,6 @@ interface LocalMeet {
 
 
 interface RegistrationDefaults {
-  divisionId: number | null
-  teamId: number | null
   equipmentType:
     Lifter['equipmentType']
 }
@@ -189,34 +182,65 @@ const localMeets: LocalMeet[] = [
 ]
 
 
-let currentPage:
-  AppPage =
-    'setup'
-
-
 let selectedMeetId:
   string | null =
-    localMeets[0]?.state.meet.id ??
     null
 
 
 let selectedDivisionId:
   number | null =
-    getSelectedMeet()
-      ?.state.divisions[0]
-      ?.id ??
+    null
+
+
+let selectedTeamId:
+  number | null =
+    null
+
+
+let selectedLifterId:
+  number | null =
+    null
+
+
+type RegistrationEntry =
+  | 'meet'
+  | 'division'
+  | 'team'
+  | 'lifter'
+
+
+interface EditTarget {
+  type: RegistrationEntry
+  id: string | number
+}
+
+
+let activeEntry:
+  RegistrationEntry | null =
+    null
+
+
+let activeEdit:
+  EditTarget | null =
+    null
+
+
+let activeEditOriginalSnapshot:
+  string | null =
+    null
+
+
+let editLifterWeightClassManuallyChanged =
+  false
+
+
+let outsideEntryClickHandler:
+  ((event: MouseEvent) => void) | null =
     null
 
 
 let registrationDefaults:
   RegistrationDefaults = {
-
-    divisionId:
-      selectedDivisionId,
-
-    teamId:
-      null,
-
     equipmentType:
       'equipped',
   }
@@ -281,30 +305,200 @@ function getSelectedDivision():
 }
 
 
-function selectMeet(
-  meetId: string,
-): void {
-
-  selectedMeetId =
-    meetId
+function getSelectedTeam():
+  Team | undefined {
 
   const meet =
     getSelectedMeet()
 
-  selectedDivisionId =
-    meet?.state.divisions[0]
-      ?.id ??
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined ||
+    selectedTeamId === null
+  ) {
+    return undefined
+  }
+
+  return getTeamsForDivision(
+    meet,
+    division.id
+  ).find(
+    team =>
+      team.id ===
+      selectedTeamId
+  )
+}
+
+
+function getFirstLifterForSelection(
+  meet: LocalMeet,
+): Lifter | undefined {
+
+  const divisionId =
+    selectedDivisionId
+
+  const teamId =
+    selectedTeamId
+
+  if (
+    divisionId === null ||
+    teamId === null
+  ) {
+    return undefined
+  }
+
+  return [...meet.state.lifters]
+    .filter(
+      lifter =>
+        lifter.divisionId ===
+          divisionId &&
+        lifter.teamId ===
+          teamId
+    )
+    .sort(
+      (a, b) =>
+        a.lifterNumber -
+        b.lifterNumber
+    )[0]
+}
+
+
+function selectFirstLifterForSelection(
+  meet: LocalMeet,
+): void {
+
+  selectedLifterId =
+    getFirstLifterForSelection(
+      meet
+    )?.id ??
+    null
+}
+
+
+function selectFirstTeamForDivision(
+  meet: LocalMeet,
+  divisionId: number,
+): void {
+
+  selectedTeamId =
+    getTeamsForDivision(
+      meet,
+      divisionId
+    )[0]?.id ??
     null
 
+  selectFirstLifterForSelection(
+    meet
+  )
+}
+
+
+function selectFirstDivisionForMeet(
+  meet: LocalMeet,
+): void {
+
+  const division =
+    meet.state.divisions[0]
+
+  selectedDivisionId =
+    division?.id ??
+    null
+
+  if (
+    division === undefined
+  ) {
+    selectedTeamId =
+      null
+
+    selectedLifterId =
+      null
+
+    return
+  }
+
+  selectFirstTeamForDivision(
+    meet,
+    division.id
+  )
+}
+
+
+function selectFirstHierarchy():
+  void {
+
+  const meet =
+    localMeets[0]
+
+  selectedMeetId =
+    meet?.state.meet.id ??
+    null
+
+  if (
+    meet === undefined
+  ) {
+    selectedDivisionId =
+      null
+
+    selectedTeamId =
+      null
+
+    selectedLifterId =
+      null
+
+    return
+  }
+
+  selectFirstDivisionForMeet(
+    meet
+  )
+}
+
+
+function selectMeet(
+  meetId: string,
+): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  selectedMeetId =
+    meetId
+
   registrationDefaults = {
-    divisionId:
-      selectedDivisionId,
-
-    teamId:
-      null,
-
     equipmentType:
       'equipped',
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    selectedDivisionId =
+      null
+
+    selectedTeamId =
+      null
+
+    selectedLifterId =
+      null
+  } else {
+    selectFirstDivisionForMeet(
+      meet
+    )
   }
 
   renderApp()
@@ -315,8 +509,133 @@ function selectDivision(
   divisionId: number,
 ): void {
 
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined ||
+    !meet.state.divisions.some(
+      division =>
+        division.id ===
+        divisionId
+    )
+  ) {
+    return
+  }
+
   selectedDivisionId =
     divisionId
+
+  selectFirstTeamForDivision(
+    meet,
+    divisionId
+  )
+
+  renderApp()
+}
+
+
+function selectTeam(
+  teamId: number,
+): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  const meet =
+    getSelectedMeet()
+
+  const team =
+    getTeamsForSelectedDivision()
+      .find(
+        item =>
+          item.id ===
+          teamId
+      )
+
+  if (
+    meet === undefined ||
+    team === undefined
+  ) {
+    return
+  }
+
+  selectedTeamId =
+    teamId
+
+  selectFirstLifterForSelection(
+    meet
+  )
+
+  renderApp()
+}
+
+
+function selectLifter(
+  lifterId: number,
+): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const lifter =
+    meet.state.lifters.find(
+      item =>
+        item.id ===
+          lifterId &&
+        item.divisionId ===
+          selectedDivisionId &&
+        item.teamId ===
+          selectedTeamId
+    )
+
+  if (
+    lifter === undefined
+  ) {
+    return
+  }
+
+  selectedLifterId =
+    lifterId
 
   renderApp()
 }
@@ -461,11 +780,1295 @@ function flashRow(
 }
 
 
+function cancelActiveEntry():
+  void {
+
+  if (
+    activeEntry === null
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  renderApp()
+}
+
+
+function clearActiveEdit():
+  void {
+
+  activeEdit =
+    null
+
+  activeEditOriginalSnapshot =
+    null
+
+  editLifterWeightClassManuallyChanged =
+    false
+}
+
+
+function isEditingEntity(
+  type: RegistrationEntry,
+  id: string | number,
+): boolean {
+
+  return (
+    activeEdit?.type === type &&
+    String(
+      activeEdit.id
+    ) ===
+      String(id)
+  )
+}
+
+
+function getEditEntitySnapshot(
+  target: EditTarget,
+): string | null {
+
+  if (
+    target.type ===
+    'meet'
+  ) {
+    const meet =
+      localMeets.find(
+        item =>
+          item.state.meet.id ===
+          String(target.id)
+      )
+
+    if (
+      meet === undefined
+    ) {
+      return null
+    }
+
+    return JSON.stringify({
+      name:
+        meet.state.meet.name,
+      date:
+        meet.state.meet.date,
+      location:
+        meet.state.meet.location,
+      resultEntryMode:
+        meet.state.meet
+          .resultEntryMode,
+    })
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return null
+  }
+
+  const numericId =
+    Number(
+      target.id
+    )
+
+  if (
+    target.type ===
+    'division'
+  ) {
+    const division =
+      meet.state.divisions.find(
+        item =>
+          item.id ===
+          numericId
+      )
+
+    if (
+      division === undefined
+    ) {
+      return null
+    }
+
+    return JSON.stringify({
+      name:
+        division.name,
+      ruleSet:
+        division.ruleSet ??
+        '',
+    })
+  }
+
+  if (
+    target.type ===
+    'team'
+  ) {
+    const team =
+      meet.state.teams.find(
+        item =>
+          item.id ===
+          numericId
+      )
+
+    if (
+      team === undefined
+    ) {
+      return null
+    }
+
+    return JSON.stringify({
+      name:
+        team.name,
+    })
+  }
+
+  const lifter =
+    meet.state.lifters.find(
+      item =>
+        item.id ===
+        numericId
+    )
+
+  if (
+    lifter === undefined
+  ) {
+    return null
+  }
+
+  return JSON.stringify({
+    lifterNumber:
+      lifter.lifterNumber,
+    firstName:
+      lifter.firstName,
+    lastName:
+      lifter.lastName,
+    bodyWeight:
+      lifter.bodyWeight,
+    weightClass:
+      lifter.weightClass ??
+      '',
+    grade:
+      lifter.grade,
+    equipmentType:
+      lifter.equipmentType,
+    isGuest:
+      lifter.isGuest,
+    isExtraLifter:
+      lifter.isExtraLifter,
+  })
+}
+
+
+function getEditFormSnapshot(
+  target: EditTarget,
+): string | null {
+
+  if (
+    target.type ===
+    'meet'
+  ) {
+    const name =
+      document.querySelector<HTMLInputElement>(
+        '#editMeetName'
+      )
+
+    const date =
+      document.querySelector<HTMLInputElement>(
+        '#editMeetDate'
+      )
+
+    const location =
+      document.querySelector<HTMLInputElement>(
+        '#editMeetLocation'
+      )
+
+    const mode =
+      document.querySelector<HTMLSelectElement>(
+        '#editMeetResultEntryMode'
+      )
+
+    if (
+      name === null ||
+      date === null ||
+      location === null ||
+      mode === null
+    ) {
+      return null
+    }
+
+    return JSON.stringify({
+      name:
+        name.value.trim(),
+      date:
+        date.value,
+      location:
+        location.value.trim(),
+      resultEntryMode:
+        mode.value,
+    })
+  }
+
+  if (
+    target.type ===
+    'division'
+  ) {
+    const name =
+      document.querySelector<HTMLInputElement>(
+        '#editDivisionName'
+      )
+
+    const ruleSet =
+      document.querySelector<HTMLSelectElement>(
+        '#editDivisionRuleSet'
+      )
+
+    if (
+      name === null ||
+      ruleSet === null
+    ) {
+      return null
+    }
+
+    return JSON.stringify({
+      name:
+        name.value.trim(),
+      ruleSet:
+        ruleSet.value,
+    })
+  }
+
+  if (
+    target.type ===
+    'team'
+  ) {
+    const name =
+      document.querySelector<HTMLInputElement>(
+        '#editTeamName'
+      )
+
+    if (
+      name === null
+    ) {
+      return null
+    }
+
+    return JSON.stringify({
+      name:
+        name.value.trim(),
+    })
+  }
+
+  const number =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterNumber'
+    )
+
+  const first =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterFirstName'
+    )
+
+  const last =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterLastName'
+    )
+
+  const bodyWeight =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterBodyWeight'
+    )
+
+  const weightClass =
+    document.querySelector<HTMLSelectElement>(
+      '#editLifterWeightClass'
+    )
+
+  const grade =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterGrade'
+    )
+
+  const equipment =
+    document.querySelector<HTMLSelectElement>(
+      '#editLifterEquipment'
+    )
+
+  const guest =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterGuest'
+    )
+
+  const extra =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterExtra'
+    )
+
+  if (
+    number === null ||
+    first === null ||
+    last === null ||
+    bodyWeight === null ||
+    weightClass === null ||
+    grade === null ||
+    equipment === null ||
+    guest === null ||
+    extra === null
+  ) {
+    return null
+  }
+
+  const bodyWeightValue =
+    bodyWeight.value.trim() ===
+    ''
+      ? null
+      : Number(
+          bodyWeight.value
+        )
+
+  const gradeValue =
+    grade.value.trim() ===
+    ''
+      ? null
+      : Number(
+          grade.value
+        )
+
+  return JSON.stringify({
+    lifterNumber:
+      Number(
+        number.value
+      ),
+    firstName:
+      first.value.trim(),
+    lastName:
+      last.value.trim(),
+    bodyWeight:
+      bodyWeightValue,
+    weightClass:
+      weightClass.value,
+    grade:
+      gradeValue,
+    equipmentType:
+      equipment.value,
+    isGuest:
+      guest.checked,
+    isExtraLifter:
+      extra.checked,
+  })
+}
+
+
+function hasActiveEditChanges():
+  boolean {
+
+  if (
+    activeEdit === null ||
+    activeEditOriginalSnapshot ===
+      null
+  ) {
+    return false
+  }
+
+  const current =
+    getEditFormSnapshot(
+      activeEdit
+    )
+
+  return (
+    current !== null &&
+    current !==
+      activeEditOriginalSnapshot
+  )
+}
+
+
+function saveMeetEdit(
+  target: EditTarget,
+): boolean {
+
+  const meet =
+    localMeets.find(
+      item =>
+        item.state.meet.id ===
+        String(target.id)
+    )
+
+  const nameInput =
+    document.querySelector<HTMLInputElement>(
+      '#editMeetName'
+    )
+
+  const dateInput =
+    document.querySelector<HTMLInputElement>(
+      '#editMeetDate'
+    )
+
+  const locationInput =
+    document.querySelector<HTMLInputElement>(
+      '#editMeetLocation'
+    )
+
+  const modeInput =
+    document.querySelector<HTMLSelectElement>(
+      '#editMeetResultEntryMode'
+    )
+
+  if (
+    meet === undefined ||
+    nameInput === null ||
+    dateInput === null ||
+    locationInput === null ||
+    modeInput === null
+  ) {
+    return false
+  }
+
+  const name =
+    nameInput.value.trim()
+
+  if (
+    name === ''
+  ) {
+    window.alert(
+      'Enter a meet name.'
+    )
+
+    nameInput.focus()
+
+    return false
+  }
+
+  meet.state.meet.name =
+    name
+
+  meet.state.meet.date =
+    dateInput.value
+
+  meet.state.meet.location =
+    locationInput.value.trim()
+
+  meet.state.meet.resultEntryMode =
+    modeInput.value ===
+      'all-attempts'
+        ? 'all-attempts'
+        : 'best-lift-only'
+
+  return true
+}
+
+
+function saveDivisionEdit(
+  target: EditTarget,
+): boolean {
+
+  const meet =
+    getSelectedMeet()
+
+  const nameInput =
+    document.querySelector<HTMLInputElement>(
+      '#editDivisionName'
+    )
+
+  const ruleSetInput =
+    document.querySelector<HTMLSelectElement>(
+      '#editDivisionRuleSet'
+    )
+
+  if (
+    meet === undefined ||
+    nameInput === null ||
+    ruleSetInput === null
+  ) {
+    return false
+  }
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        Number(target.id)
+    )
+
+  if (
+    division === undefined
+  ) {
+    return false
+  }
+
+  const name =
+    nameInput.value.trim()
+
+  if (
+    name === ''
+  ) {
+    window.alert(
+      'Enter a division name.'
+    )
+
+    nameInput.focus()
+
+    return false
+  }
+
+  const ruleSet =
+    ruleSetInput.value as
+      DivisionRuleSet
+
+  if (
+    ruleSet !== 'THSPA' &&
+    ruleSet !== 'THSWPA' &&
+    ruleSet !== 'NMAA_BOYS' &&
+    ruleSet !== 'NMAA_GIRLS'
+  ) {
+    window.alert(
+      'Select a valid rule set for the division.'
+    )
+
+    ruleSetInput.focus()
+
+    return false
+  }
+
+  division.name =
+    name
+
+  division.ruleSet =
+    ruleSet
+
+  return true
+}
+
+
+function saveTeamEdit(
+  target: EditTarget,
+): boolean {
+
+  const meet =
+    getSelectedMeet()
+
+  const nameInput =
+    document.querySelector<HTMLInputElement>(
+      '#editTeamName'
+    )
+
+  if (
+    meet === undefined ||
+    nameInput === null
+  ) {
+    return false
+  }
+
+  const teamId =
+    Number(
+      target.id
+    )
+
+  const team =
+    meet.state.teams.find(
+      item =>
+        item.id ===
+        teamId
+    )
+
+  if (
+    team === undefined
+  ) {
+    return false
+  }
+
+  const name =
+    nameInput.value.trim()
+
+  if (
+    name === ''
+  ) {
+    window.alert(
+      'Enter a team name.'
+    )
+
+    nameInput.focus()
+
+    return false
+  }
+
+  const duplicate =
+    meet.state.teams.some(
+      item =>
+        item.id !==
+          teamId &&
+        item.name
+          .trim()
+          .toLocaleLowerCase() ===
+        name.toLocaleLowerCase()
+    )
+
+  if (
+    duplicate
+  ) {
+    window.alert(
+      'A team with that name already exists in this meet.'
+    )
+
+    nameInput.focus()
+
+    return false
+  }
+
+  team.name =
+    name
+
+  return true
+}
+
+
+function saveLifterEdit(
+  target: EditTarget,
+): boolean {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return false
+  }
+
+  const lifterId =
+    Number(
+      target.id
+    )
+
+  const lifter =
+    meet.state.lifters.find(
+      item =>
+        item.id ===
+        lifterId
+    )
+
+  const division =
+    lifter === undefined
+      ? undefined
+      : meet.state.divisions.find(
+          item =>
+            item.id ===
+            lifter.divisionId
+        )
+
+  const numberInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterNumber'
+    )
+
+  const firstInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterFirstName'
+    )
+
+  const lastInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterLastName'
+    )
+
+  const bodyWeightInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterBodyWeight'
+    )
+
+  const classInput =
+    document.querySelector<HTMLSelectElement>(
+      '#editLifterWeightClass'
+    )
+
+  const gradeInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterGrade'
+    )
+
+  const equipmentInput =
+    document.querySelector<HTMLSelectElement>(
+      '#editLifterEquipment'
+    )
+
+  const guestInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterGuest'
+    )
+
+  const extraInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterExtra'
+    )
+
+  if (
+    lifter === undefined ||
+    division === undefined ||
+    numberInput === null ||
+    firstInput === null ||
+    lastInput === null ||
+    bodyWeightInput === null ||
+    classInput === null ||
+    gradeInput === null ||
+    equipmentInput === null ||
+    guestInput === null ||
+    extraInput === null
+  ) {
+    return false
+  }
+
+  const lifterNumber =
+    Number(
+      numberInput.value
+    )
+
+  if (
+    !Number.isInteger(
+      lifterNumber
+    ) ||
+    lifterNumber <= 0
+  ) {
+    window.alert(
+      'Enter a valid lifter number.'
+    )
+
+    numberInput.focus()
+
+    return false
+  }
+
+  const duplicateNumber =
+    meet.state.lifters.some(
+      item =>
+        item.id !==
+          lifter.id &&
+        item.lifterNumber ===
+          lifterNumber
+    )
+
+  if (
+    duplicateNumber
+  ) {
+    window.alert(
+      `Lifter number ${lifterNumber} is already in use.`
+    )
+
+    numberInput.focus()
+
+    return false
+  }
+
+  const firstName =
+    firstInput.value.trim()
+
+  const lastName =
+    lastInput.value.trim()
+
+  if (
+    firstName === ''
+  ) {
+    window.alert(
+      'Enter the lifter first name.'
+    )
+
+    firstInput.focus()
+
+    return false
+  }
+
+  if (
+    lastName === ''
+  ) {
+    window.alert(
+      'Enter the lifter last name.'
+    )
+
+    lastInput.focus()
+
+    return false
+  }
+
+  const bodyWeight =
+    bodyWeightInput.value.trim() ===
+    ''
+      ? null
+      : Number(
+          bodyWeightInput.value
+        )
+
+  if (
+    bodyWeight !== null &&
+    (
+      !Number.isFinite(
+        bodyWeight
+      ) ||
+      bodyWeight <= 0
+    )
+  ) {
+    window.alert(
+      'Enter a valid body weight.'
+    )
+
+    bodyWeightInput.focus()
+
+    return false
+  }
+
+  const grade =
+    gradeInput.value.trim() ===
+    ''
+      ? null
+      : Number(
+          gradeInput.value
+        )
+
+  if (
+    grade !== null &&
+    (
+      !Number.isInteger(
+        grade
+      ) ||
+      grade < 1 ||
+      grade > 12
+    )
+  ) {
+    window.alert(
+      'Grade must be between 1 and 12.'
+    )
+
+    gradeInput.focus()
+
+    return false
+  }
+
+  let rules
+
+  try {
+    rules =
+      getDivisionRules(
+        division
+      )
+  } catch (
+    error
+  ) {
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to determine division rules.'
+    )
+
+    return false
+  }
+
+  let updated:
+    Lifter = {
+      ...lifter,
+      lifterNumber,
+      firstName,
+      lastName,
+      bodyWeight,
+      grade,
+      equipmentType:
+        equipmentInput.value as
+          Lifter['equipmentType'],
+      isGuest:
+        guestInput.checked,
+      isExtraLifter:
+        extraInput.checked,
+    }
+
+  const selectedClass =
+    classInput.value
+
+  const automaticClass =
+    getAutomaticWeightClass(
+      bodyWeight,
+      rules.weightClasses
+    )
+
+  try {
+    if (
+      selectedClass === '' ||
+      (
+        selectedClass ===
+          automaticClass &&
+        !(
+          lifter.weightClassSource ===
+            'manual' &&
+          selectedClass ===
+            (
+              lifter.weightClass ??
+              ''
+            )
+        )
+      )
+    ) {
+      updated.weightClass =
+        automaticClass
+
+      updated.weightClassSource =
+        'automatic'
+    } else {
+      updated =
+        assignRegisteredLifterWeightClass(
+          updated,
+          selectedClass,
+          rules
+        )
+    }
+  } catch (
+    error
+  ) {
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to assign the weight class.'
+    )
+
+    classInput.focus()
+
+    return false
+  }
+
+  Object.assign(
+    lifter,
+    updated
+  )
+
+  registrationDefaults = {
+    equipmentType:
+      lifter.equipmentType,
+  }
+
+  return true
+}
+
+
+function commitActiveEdit(
+  renderAfter: boolean = true,
+): boolean {
+
+  if (
+    activeEdit === null
+  ) {
+    return true
+  }
+
+  const target =
+    activeEdit
+
+  let saved =
+    false
+
+  switch (
+    target.type
+  ) {
+    case 'meet':
+      saved =
+        saveMeetEdit(
+          target
+        )
+      break
+
+    case 'division':
+      saved =
+        saveDivisionEdit(
+          target
+        )
+      break
+
+    case 'team':
+      saved =
+        saveTeamEdit(
+          target
+        )
+      break
+
+    case 'lifter':
+      saved =
+        saveLifterEdit(
+          target
+        )
+      break
+  }
+
+  if (
+    !saved
+  ) {
+    return false
+  }
+
+  clearActiveEdit()
+
+  if (
+    renderAfter
+  ) {
+    renderApp()
+  }
+
+  return true
+}
+
+
+function finishActiveEdit(
+  promptIfChanged: boolean,
+  renderAfter: boolean = true,
+): boolean {
+
+  if (
+    activeEdit === null
+  ) {
+    return true
+  }
+
+  if (
+    promptIfChanged &&
+    hasActiveEditChanges()
+  ) {
+    const saveChanges =
+      window.confirm(
+        'Save changes? Select OK to save or Cancel to discard the changes.'
+      )
+
+    if (
+      saveChanges
+    ) {
+      return commitActiveEdit(
+        renderAfter
+      )
+    }
+  }
+
+  clearActiveEdit()
+
+  if (
+    renderAfter
+  ) {
+    renderApp()
+  }
+
+  return true
+}
+
+
+function startEdit(
+  type: RegistrationEntry,
+  id: string | number,
+): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  if (
+    type ===
+    'meet'
+  ) {
+    const meet =
+      localMeets.find(
+        item =>
+          item.state.meet.id ===
+          String(id)
+      )
+
+    if (
+      meet === undefined
+    ) {
+      return
+    }
+
+    selectedMeetId =
+      meet.state.meet.id
+
+    selectFirstDivisionForMeet(
+      meet
+    )
+  } else {
+    const meet =
+      getSelectedMeet()
+
+    if (
+      meet === undefined
+    ) {
+      return
+    }
+
+    const numericId =
+      Number(id)
+
+    if (
+      type ===
+      'division'
+    ) {
+      const division =
+        meet.state.divisions.find(
+          item =>
+            item.id ===
+            numericId
+        )
+
+      if (
+        division === undefined
+      ) {
+        return
+      }
+
+      selectedDivisionId =
+        division.id
+
+      selectFirstTeamForDivision(
+        meet,
+        division.id
+      )
+    } else if (
+      type ===
+      'team'
+    ) {
+      const team =
+        getTeamsForSelectedDivision()
+          .find(
+            item =>
+              item.id ===
+              numericId
+          )
+
+      if (
+        team === undefined
+      ) {
+        return
+      }
+
+      selectedTeamId =
+        team.id
+
+      selectFirstLifterForSelection(
+        meet
+      )
+    } else {
+      const lifter =
+        meet.state.lifters.find(
+          item =>
+            item.id ===
+              numericId &&
+            item.divisionId ===
+              selectedDivisionId &&
+            item.teamId ===
+              selectedTeamId
+        )
+
+      if (
+        lifter === undefined
+      ) {
+        return
+      }
+
+      selectedLifterId =
+        lifter.id
+
+      editLifterWeightClassManuallyChanged =
+        false
+    }
+  }
+
+  activeEdit = {
+    type,
+    id,
+  }
+
+  activeEditOriginalSnapshot =
+    getEditEntitySnapshot(
+      activeEdit
+    )
+
+  renderApp()
+
+  const selector =
+    type === 'meet'
+      ? '#editMeetName'
+      : type === 'division'
+        ? '#editDivisionName'
+        : type === 'team'
+          ? '#editTeamName'
+          : '#editLifterFirstName'
+
+  focusElement(
+    selector
+  )
+}
+
+
+function beginNewEntry(
+  type: RegistrationEntry,
+): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEdit =
+    null
+
+  if (
+    type === 'division' &&
+    getSelectedMeet() ===
+      undefined
+  ) {
+    return
+  }
+
+  if (
+    type === 'team' &&
+    getSelectedDivision() ===
+      undefined
+  ) {
+    return
+  }
+
+  if (
+    type === 'lifter' &&
+    getSelectedTeam() ===
+      undefined
+  ) {
+    return
+  }
+
+  activeEntry =
+    type
+
+  renderApp()
+
+  const selector =
+    type === 'meet'
+      ? '#newMeetName'
+      : type === 'division'
+        ? '#newDivisionName'
+        : type === 'team'
+          ? '#newTeamName'
+          : '#entryFirstName'
+
+  focusElement(
+    selector
+  )
+}
+
+
 function startMeetEntry():
   void {
 
-  focusElement(
-    '#newMeetName'
+  beginNewEntry(
+    'meet'
   )
 }
 
@@ -473,8 +2076,8 @@ function startMeetEntry():
 function startDivisionEntry():
   void {
 
-  focusElement(
-    '#newDivisionName'
+  beginNewEntry(
+    'division'
   )
 }
 
@@ -482,8 +2085,17 @@ function startDivisionEntry():
 function startTeamEntry():
   void {
 
-  focusElement(
-    '#newTeamName'
+  beginNewEntry(
+    'team'
+  )
+}
+
+
+function startLifterEntry():
+  void {
+
+  beginNewEntry(
+    'lifter'
   )
 }
 
@@ -491,28 +2103,51 @@ function startTeamEntry():
 function commitNewMeet():
   void {
 
-  const input =
+  const nameInput =
     document.querySelector<HTMLInputElement>(
       '#newMeetName'
     )
 
+  const dateInput =
+    document.querySelector<HTMLInputElement>(
+      '#newMeetDate'
+    )
+
+  const locationInput =
+    document.querySelector<HTMLInputElement>(
+      '#newMeetLocation'
+    )
+
+  const resultEntryInput =
+    document.querySelector<HTMLSelectElement>(
+      '#newMeetResultEntryMode'
+    )
+
   if (
-    input === null
+    nameInput === null ||
+    dateInput === null ||
+    locationInput === null ||
+    resultEntryInput === null
   ) {
     return
   }
 
   const name =
-    input.value.trim()
+    nameInput.value.trim()
 
   if (
     name === ''
   ) {
+    nameInput.focus()
     return
   }
 
   const meetId =
     createMeetId()
+
+  const resultEntryMode =
+    resultEntryInput.value as
+      ResultEntryMode
 
   const newMeet:
     LocalMeet = {
@@ -525,13 +2160,16 @@ function commitNewMeet():
           name,
 
           date:
-            '',
+            dateInput.value,
 
           location:
-            '',
+            locationInput.value.trim(),
 
           resultEntryMode:
-            'best-lift-only',
+            resultEntryMode ===
+              'all-attempts'
+                ? 'all-attempts'
+                : 'best-lift-only',
         },
 
         divisions: [],
@@ -554,12 +2192,19 @@ function commitNewMeet():
   selectedDivisionId =
     null
 
+  selectedTeamId =
+    null
+
+  selectedLifterId =
+    null
+
   registrationDefaults = {
-    divisionId: null,
-    teamId: null,
     equipmentType:
       'equipped',
   }
+
+  activeEntry =
+    'meet'
 
   renderApp()
 
@@ -568,7 +2213,7 @@ function commitNewMeet():
   )
 
   focusElement(
-    '#meetDate'
+    '#newMeetName'
   )
 }
 
@@ -645,11 +2290,14 @@ function commitNewDivision():
   selectedDivisionId =
     division.id
 
-  registrationDefaults.divisionId =
-    division.id
-
-  registrationDefaults.teamId =
+  selectedTeamId =
     null
+
+  selectedLifterId =
+    null
+
+  activeEntry =
+    'division'
 
   renderApp()
 
@@ -767,6 +2415,16 @@ function commitNewTeam():
     })
   }
 
+  selectedTeamId =
+    team.id
+
+  selectFirstLifterForSelection(
+    meet
+  )
+
+  activeEntry =
+    'team'
+
   renderApp()
 
   flashRow(
@@ -779,9 +2437,85 @@ function commitNewTeam():
 }
 
 
-function removeDivision(
+function deleteMeet(
+  meetId: string,
+): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+
+  const meetIndex =
+    localMeets.findIndex(
+      item =>
+        item.state.meet.id ===
+        meetId
+    )
+
+  if (
+    meetIndex < 0
+  ) {
+    return
+  }
+
+  const meet =
+    localMeets[meetIndex]
+
+  const confirmed =
+    window.confirm(
+      `Delete meet "${meet.state.meet.name}" and all of its divisions, teams, and lifters?`
+    )
+
+  if (
+    !confirmed
+  ) {
+    return
+  }
+
+  localMeets.splice(
+    meetIndex,
+    1
+  )
+
+  if (
+    selectedMeetId ===
+    meetId
+  ) {
+    selectFirstHierarchy()
+  }
+
+  activeEntry =
+    null
+
+  renderApp()
+}
+
+
+function deleteDivision(
   divisionId: number,
 ): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
 
   const meet =
     getSelectedMeet()
@@ -792,27 +2526,62 @@ function removeDivision(
     return
   }
 
-  const used =
-    meet.state.lifters.some(
-      lifter =>
-        lifter.divisionId ===
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
         divisionId
     )
 
   if (
-    used
+    division === undefined
   ) {
-    window.alert(
-      'This division cannot be removed because one or more lifters are assigned to it.'
-    )
-
     return
   }
 
+  const teamIds =
+    new Set(
+      meet.divisionTeams
+        .filter(
+          item =>
+            item.divisionId ===
+            divisionId
+        )
+        .map(
+          item =>
+            item.teamId
+        )
+    )
+
+  const lifterCount =
+    meet.state.lifters.filter(
+      lifter =>
+        lifter.divisionId ===
+        divisionId
+    ).length
+
+  const confirmed =
+    window.confirm(
+      `Delete division "${division.name}" and its ${lifterCount} lifter${lifterCount === 1 ? '' : 's'}? Teams used only by this division will also be deleted.`
+    )
+
+  if (
+    !confirmed
+  ) {
+    return
+  }
+
+  meet.state.lifters =
+    meet.state.lifters.filter(
+      lifter =>
+        lifter.divisionId !==
+        divisionId
+    )
+
   meet.state.divisions =
     meet.state.divisions.filter(
-      division =>
-        division.id !==
+      item =>
+        item.id !==
         divisionId
     )
 
@@ -823,23 +2592,75 @@ function removeDivision(
         divisionId
     )
 
+  const stillUsedTeamIds =
+    new Set(
+      meet.divisionTeams.map(
+        item =>
+          item.teamId
+      )
+    )
+
+  meet.state.teams =
+    meet.state.teams.filter(
+      team =>
+        !(
+          teamIds.has(team.id) &&
+          !stillUsedTeamIds.has(
+            team.id
+          )
+        )
+    )
+
   if (
     selectedDivisionId ===
     divisionId
   ) {
-    selectedDivisionId =
+    const firstDivision =
       meet.state.divisions[0]
-        ?.id ??
+
+    selectedDivisionId =
+      firstDivision?.id ??
       null
+
+    if (
+      firstDivision === undefined
+    ) {
+      selectedTeamId =
+        null
+
+      selectedLifterId =
+        null
+    } else {
+      selectFirstTeamForDivision(
+        meet,
+        firstDivision.id
+      )
+    }
   }
+
+  activeEntry =
+    null
 
   renderApp()
 }
 
 
-function removeTeamFromDivision(
+function deleteTeam(
   teamId: number,
 ): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
 
   const meet =
     getSelectedMeet()
@@ -848,41 +2669,158 @@ function removeTeamFromDivision(
     getSelectedDivision()
 
   if (
-    meet === undefined ||
-    division === undefined
+    meet === undefined
   ) {
     return
   }
 
-  const used =
-    meet.state.lifters.some(
-      lifter =>
-        lifter.divisionId ===
-          division.id &&
-        lifter.teamId ===
-          teamId
+  const team =
+    meet.state.teams.find(
+      item =>
+        item.id ===
+        teamId
     )
 
   if (
-    used
+    team === undefined
   ) {
-    window.alert(
-      'This team cannot be removed from the division because one or more lifters in this division are assigned to it.'
-    )
-
     return
   }
+
+  const lifterCount =
+    meet.state.lifters.filter(
+      lifter =>
+        lifter.teamId ===
+        teamId
+    ).length
+
+  const confirmed =
+    window.confirm(
+      `Delete team "${team.name}" from this meet and delete all ${lifterCount} lifter${lifterCount === 1 ? '' : 's'} assigned to it?`
+    )
+
+  if (
+    !confirmed
+  ) {
+    return
+  }
+
+  meet.state.lifters =
+    meet.state.lifters.filter(
+      lifter =>
+        lifter.teamId !==
+        teamId
+    )
 
   meet.divisionTeams =
     meet.divisionTeams.filter(
       item =>
-        !(
-          item.divisionId ===
-            division.id &&
-          item.teamId ===
-            teamId
-        )
+        item.teamId !==
+        teamId
     )
+
+  meet.state.teams =
+    meet.state.teams.filter(
+      item =>
+        item.id !==
+        teamId
+    )
+
+  if (
+    selectedTeamId ===
+    teamId
+  ) {
+    if (
+      division === undefined
+    ) {
+      selectedTeamId =
+        null
+
+      selectedLifterId =
+        null
+    } else {
+      selectFirstTeamForDivision(
+        meet,
+        division.id
+      )
+    }
+  }
+
+  activeEntry =
+    null
+
+  renderApp()
+}
+
+
+function deleteLifter(
+  lifterId: number,
+): void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const lifter =
+    meet.state.lifters.find(
+      item =>
+        item.id ===
+        lifterId
+    )
+
+  if (
+    lifter === undefined
+  ) {
+    return
+  }
+
+  const confirmed =
+    window.confirm(
+      `Delete lifter #${lifter.lifterNumber} ${lifter.firstName} ${lifter.lastName}?`
+    )
+
+  if (
+    !confirmed
+  ) {
+    return
+  }
+
+  meet.state.lifters =
+    meet.state.lifters.filter(
+      item =>
+        item.id !==
+        lifterId
+    )
+
+  if (
+    selectedLifterId ===
+    lifterId
+  ) {
+    selectFirstLifterForSelection(
+      meet
+    )
+  }
+
+  activeEntry =
+    null
 
   renderApp()
 }
@@ -953,27 +2891,9 @@ function renderNavigation():
     <nav class="main-nav">
 
       <button
-        id="navSetup"
-        type="button"
-        class="nav-item ${
-          currentPage ===
-          'setup'
-            ? 'active'
-            : ''
-        }"
-      >
-        Meet Setup
-      </button>
-
-      <button
         id="navRegistration"
         type="button"
-        class="nav-item ${
-          currentPage ===
-          'registration'
-            ? 'active'
-            : ''
-        }"
+        class="nav-item active"
       >
         Registration
       </button>
@@ -1015,6 +2935,17 @@ function renderNavigation():
 }
 
 
+function getResultEntryModeLabel(
+  resultEntryMode: ResultEntryMode,
+): string {
+
+  return resultEntryMode ===
+    'all-attempts'
+      ? 'All Attempts'
+      : 'Best Lift'
+}
+
+
 function renderMeetRows():
   string {
 
@@ -1030,35 +2961,149 @@ function renderMeetRows():
             meet.id ===
             selectedMeetId
 
+          if (
+            isEditingEntity(
+              'meet',
+              meet.id
+            )
+          ) {
+            return `
+              <div
+                class="selector-row selector-row-with-actions meet-selector-row editing-row selected"
+                data-meet-row="${escapeHtml(meet.id)}"
+                data-edit-row="meet"
+              >
+                <div class="meet-entry-fields edit-fields">
+                  <input
+                    id="editMeetName"
+                    type="text"
+                    value="${escapeHtml(meet.name)}"
+                    autocomplete="off"
+                    aria-label="Meet name"
+                  >
+
+                  <input
+                    id="editMeetDate"
+                    type="date"
+                    value="${escapeHtml(meet.date)}"
+                    aria-label="Meet date"
+                  >
+
+                  <input
+                    id="editMeetLocation"
+                    type="text"
+                    value="${escapeHtml(meet.location)}"
+                    autocomplete="off"
+                    aria-label="Meet location"
+                  >
+
+                  <select
+                    id="editMeetResultEntryMode"
+                    aria-label="Meet result entry mode"
+                  >
+                    <option
+                      value="best-lift-only"
+                      ${
+                        meet.resultEntryMode ===
+                        'best-lift-only'
+                          ? 'selected'
+                          : ''
+                      }
+                    >
+                      Best Lift
+                    </option>
+
+                    <option
+                      value="all-attempts"
+                      ${
+                        meet.resultEntryMode ===
+                        'all-attempts'
+                          ? 'selected'
+                          : ''
+                      }
+                    >
+                      All Attempts
+                    </option>
+                  </select>
+                </div>
+
+                <div></div>
+                <div></div>
+              </div>
+            `
+          }
+
           return `
             <div
-              class="selector-row ${
+              class="selector-row selector-row-with-actions meet-selector-row ${
                 selected
                   ? 'selected'
                   : ''
               }"
-              data-meet-row="${meet.id}"
-              data-select-meet="${meet.id}"
-              tabindex="0"
+              data-meet-row="${escapeHtml(meet.id)}"
             >
 
-              <div class="selector-main">
-                ${
-                  escapeHtml(
-                    meet.name
-                  )
-                }
-              </div>
+              <button
+                type="button"
+                class="selector-button meet-selector-button"
+                data-select-meet="${escapeHtml(meet.id)}"
+              >
+                <span class="meet-row-name">
+                  ${escapeHtml(meet.name)}
+                </span>
 
-              <div class="selector-detail">
-                ${
-                  meet.date === ''
-                    ? 'Date not set'
-                    : escapeHtml(
-                        meet.date
-                      )
-                }
-              </div>
+                <span class="meet-row-date">
+                  ${
+                    meet.date === ''
+                      ? '—'
+                      : escapeHtml(
+                          meet.date
+                        )
+                  }
+                </span>
+
+                <span class="meet-row-location">
+                  ${
+                    meet.location === ''
+                      ? '—'
+                      : escapeHtml(
+                          meet.location
+                        )
+                  }
+                </span>
+
+                <span class="meet-row-mode">
+                  ${
+                    getResultEntryModeLabel(
+                      meet.resultEntryMode
+                    )
+                  }
+                </span>
+              </button>
+
+              <button
+                type="button"
+                class="row-edit"
+                data-edit-entity="meet"
+                data-edit-id="${escapeHtml(meet.id)}"
+                data-open-edit="meet"
+                title="Edit meet"
+                aria-label="Edit meet ${escapeHtml(meet.name)}"
+                tabindex="-1"
+              >
+                ✎
+              </button>
+
+              <button
+                type="button"
+                class="row-delete"
+                data-delete-meet="${escapeHtml(meet.id)}"
+                title="Delete meet"
+                aria-label="Delete meet ${escapeHtml(meet.name)}"
+                tabindex="-1"
+              >
+                🗑
+              </button>
 
             </div>
           `
@@ -1069,15 +3114,53 @@ function renderMeetRows():
   return `
     ${rows}
 
-    <div class="quick-entry-row">
-      <input
-        id="newMeetName"
-        type="text"
-        placeholder="New meet — Enter to add"
-        autocomplete="off"
-        aria-label="New meet name"
-      >
-    </div>
+    ${
+      activeEntry ===
+      'meet'
+        ? `
+          <div
+            class="quick-entry-row meet-entry-row"
+            data-entry-row="meet"
+          >
+            <div class="meet-entry-fields">
+              <input
+                id="newMeetName"
+                type="text"
+                placeholder="Meet name"
+                autocomplete="off"
+                aria-label="New meet name"
+              >
+
+              <input
+                id="newMeetDate"
+                type="date"
+                aria-label="New meet date"
+              >
+
+              <input
+                id="newMeetLocation"
+                type="text"
+                placeholder="Location"
+                autocomplete="off"
+                aria-label="New meet location"
+              >
+
+              <select
+                id="newMeetResultEntryMode"
+                aria-label="New meet result entry mode"
+              >
+                <option value="best-lift-only">
+                  Best Lift
+                </option>
+                <option value="all-attempts">
+                  All Attempts
+                </option>
+              </select>
+            </div>
+          </div>
+        `
+        : ''
+    }
   `
 }
 
@@ -1107,6 +3190,53 @@ function getDivisionRuleSetLabel(
 }
 
 
+function renderDivisionRuleSetOptions(
+  selectedRuleSet: DivisionRuleSet | undefined,
+): string {
+
+  const options:
+    Array<{
+      value: DivisionRuleSet
+      label: string
+    }> = [
+      {
+        value: 'THSPA',
+        label: 'THSPA',
+      },
+      {
+        value: 'THSWPA',
+        label: 'THSWPA',
+      },
+      {
+        value: 'NMAA_BOYS',
+        label: 'NMAA Boys',
+      },
+      {
+        value: 'NMAA_GIRLS',
+        label: 'NMAA Girls',
+      },
+    ]
+
+  return options
+    .map(
+      option => `
+        <option
+          value="${option.value}"
+          ${
+            option.value ===
+            selectedRuleSet
+              ? 'selected'
+              : ''
+          }
+        >
+          ${option.label}
+        </option>
+      `
+    )
+    .join('')
+}
+
+
 function renderDivisionRows():
   string {
 
@@ -1132,6 +3262,45 @@ function renderDivisionRows():
             division.id ===
             selectedDivisionId
 
+          if (
+            isEditingEntity(
+              'division',
+              division.id
+            )
+          ) {
+            return `
+              <div
+                class="selector-row selector-row-with-actions editing-row selected"
+                data-division-row="${division.id}"
+                data-edit-row="division"
+              >
+                <div class="division-entry-fields edit-fields">
+                  <input
+                    id="editDivisionName"
+                    type="text"
+                    value="${escapeHtml(division.name)}"
+                    autocomplete="off"
+                    aria-label="Division name"
+                  >
+
+                  <select
+                    id="editDivisionRuleSet"
+                    aria-label="Division rule set"
+                  >
+                    ${
+                      renderDivisionRuleSetOptions(
+                        division.ruleSet
+                      )
+                    }
+                  </select>
+                </div>
+
+                <div></div>
+                <div></div>
+              </div>
+            `
+          }
+
           const detail =
             getDivisionRuleSetLabel(
               division.ruleSet
@@ -1139,7 +3308,7 @@ function renderDivisionRows():
 
           return `
             <div
-              class="selector-row selector-row-with-delete ${
+              class="selector-row selector-row-with-actions ${
                 selected
                   ? 'selected'
                   : ''
@@ -1173,12 +3342,26 @@ function renderDivisionRows():
 
               <button
                 type="button"
-                class="row-delete"
-                data-delete-division="${division.id}"
-                title="Remove division"
+                class="row-edit"
+                data-edit-entity="division"
+                data-edit-id="${division.id}"
+                data-open-edit="division"
+                title="Edit division"
+                aria-label="Edit division ${escapeHtml(division.name)}"
                 tabindex="-1"
               >
-                ×
+                ✎
+              </button>
+
+              <button
+                type="button"
+                class="row-delete"
+                data-delete-division="${division.id}"
+                title="Delete division"
+                aria-label="Delete division ${escapeHtml(division.name)}"
+                tabindex="-1"
+              >
+                🗑
               </button>
 
             </div>
@@ -1190,42 +3373,42 @@ function renderDivisionRows():
   return `
     ${rows}
 
-    <div class="quick-entry-row">
+    ${
+      activeEntry ===
+      'division'
+        ? `
+          <div
+            class="quick-entry-row division-entry-row"
+            data-entry-row="division"
+          >
 
-      <div class="division-entry-fields">
+            <div class="division-entry-fields">
 
-        <input
-          id="newDivisionName"
-          type="text"
-          placeholder="New division — Enter to add"
-          autocomplete="off"
-          aria-label="New division name"
-        >
+              <input
+                id="newDivisionName"
+                type="text"
+                placeholder="Division name"
+                autocomplete="off"
+                aria-label="New division name"
+              >
 
-        <select
-          id="newDivisionRuleSet"
-          aria-label="Division rule set"
-        >
-          <option value="THSPA">
-            THSPA
-          </option>
+              <select
+                id="newDivisionRuleSet"
+                aria-label="Division rule set"
+              >
+                ${
+                  renderDivisionRuleSetOptions(
+                    'THSPA'
+                  )
+                }
+              </select>
 
-          <option value="THSWPA">
-            THSWPA
-          </option>
+            </div>
 
-          <option value="NMAA_BOYS">
-            NMAA Boys
-          </option>
-
-          <option value="NMAA_GIRLS">
-            NMAA Girls
-          </option>
-        </select>
-
-      </div>
-
-    </div>
+          </div>
+        `
+        : ''
+    }
   `
 }
 
@@ -1254,8 +3437,8 @@ function renderTeamRows():
   ) {
     return `
       <div class="empty-column">
-        Add a division before
-        adding teams.
+        Select a division to
+        view its teams.
       </div>
     `
   }
@@ -1266,150 +3449,120 @@ function renderTeamRows():
   const rows =
     teams
       .map(
-        team => `
-          <div
-            class="selector-row selector-row-with-delete"
-            data-team-row="${team.id}"
-          >
+        team => {
 
-            <div class="team-name">
-              ${
-                escapeHtml(
-                  team.name
-                )
-              }
-            </div>
+          const selected =
+            team.id ===
+            selectedTeamId
 
-            <button
-              type="button"
-              class="row-delete"
-              data-remove-team="${team.id}"
-              title="Remove team from division"
-              tabindex="-1"
+          if (
+            isEditingEntity(
+              'team',
+              team.id
+            )
+          ) {
+            return `
+              <div
+                class="selector-row selector-row-with-actions editing-row selected"
+                data-team-row="${team.id}"
+                data-edit-row="team"
+              >
+                <input
+                  id="editTeamName"
+                  class="row-edit-input"
+                  type="text"
+                  value="${escapeHtml(team.name)}"
+                  autocomplete="off"
+                  aria-label="Team name"
+                >
+
+                <div></div>
+                <div></div>
+              </div>
+            `
+          }
+
+          return `
+            <div
+              class="selector-row selector-row-with-actions ${
+                selected
+                  ? 'selected'
+                  : ''
+              }"
+              data-team-row="${team.id}"
             >
-              ×
-            </button>
 
-          </div>
-        `
+              <button
+                type="button"
+                class="selector-button"
+                data-select-team="${team.id}"
+              >
+                <span class="team-name">
+                  ${
+                    escapeHtml(
+                      team.name
+                    )
+                  }
+                </span>
+              </button>
+
+              <button
+                type="button"
+                class="row-edit"
+                data-edit-entity="team"
+                data-edit-id="${team.id}"
+                data-open-edit="team"
+                title="Edit team"
+                aria-label="Edit team ${escapeHtml(team.name)}"
+                tabindex="-1"
+              >
+                ✎
+              </button>
+
+              <button
+                type="button"
+                class="row-delete"
+                data-delete-team="${team.id}"
+                title="Delete team"
+                aria-label="Delete team ${escapeHtml(team.name)}"
+                tabindex="-1"
+              >
+                🗑
+              </button>
+
+            </div>
+          `
+        }
       )
       .join('')
 
   return `
     ${rows}
 
-    <div class="quick-entry-row">
-      <input
-        id="newTeamName"
-        type="text"
-        placeholder="New or existing team — Enter to add"
-        autocomplete="off"
-        aria-label="New or existing team name"
-      >
-    </div>
+    ${
+      activeEntry ===
+      'team'
+        ? `
+          <div
+            class="quick-entry-row team-entry-row"
+            data-entry-row="team"
+          >
+            <input
+              id="newTeamName"
+              type="text"
+              placeholder="Team name"
+              autocomplete="off"
+              aria-label="New or existing team name"
+            >
+          </div>
+        `
+        : ''
+    }
   `
 }
 
 
-function renderMeetDetails():
-  string {
-
-  const meet =
-    getSelectedMeet()
-
-  if (
-    meet === undefined
-  ) {
-    return `
-      <div class="meet-details-empty">
-        Select or create a meet
-        to edit its information.
-      </div>
-    `
-  }
-
-  return `
-    <div class="meet-details">
-
-      <label class="field">
-        <span>Meet Name</span>
-
-        <input
-          id="meetName"
-          type="text"
-          value="${
-            escapeHtml(
-              meet.state.meet.name
-            )
-          }"
-        >
-      </label>
-
-      <label class="field">
-        <span>Date</span>
-
-        <input
-          id="meetDate"
-          type="date"
-          value="${
-            meet.state.meet.date
-          }"
-        >
-      </label>
-
-      <label class="field">
-        <span>Location</span>
-
-        <input
-          id="meetLocation"
-          type="text"
-          value="${
-            escapeHtml(
-              meet.state.meet.location
-            )
-          }"
-        >
-      </label>
-      <label class="field">
-        <span>Result Entry</span>
-
-        <select
-          id="resultEntryMode"
-        >
-          <option
-            value="best-lift-only"
-            ${
-              meet.state.meet
-                .resultEntryMode ===
-              'best-lift-only'
-                ? 'selected'
-                : ''
-            }
-          >
-            Best Lift Only
-          </option>
-
-          <option
-            value="all-attempts"
-            ${
-              meet.state.meet
-                .resultEntryMode ===
-              'all-attempts'
-                ? 'selected'
-                : ''
-            }
-          >
-            All Attempts
-          </option>
-        </select>
-      </label>
-
-    </div>
-  `
-}
-
-
-function renderMeetSetup():
+function renderRegistrationSidebar():
   string {
 
   const meet =
@@ -1419,254 +3572,117 @@ function renderMeetSetup():
     getSelectedDivision()
 
   return `
-    <main class="workspace setup-workspace">
+    <div class="registration-sidebar">
 
-      <div class="setup-browser">
+      <section
+        class="workspace-panel registration-sidebar-panel meet-panel"
+      >
 
-        <section class="setup-column">
+        <div class="column-heading">
+          <div>
+            <strong>Meets</strong>
 
-          <div class="column-heading">
-
-            <div>
-              <strong>Meets</strong>
-
-              <span class="item-count">
-                ${localMeets.length}
-              </span>
-            </div>
-
-            <button
-              id="addMeet"
-              type="button"
-              class="compact-button"
-              tabindex="-1"
-            >
-              + Meet
-            </button>
-
+            <span class="item-count">
+              ${localMeets.length}
+            </span>
           </div>
 
-          <div class="column-context">
-            Local meets on this device
-          </div>
-
-          <div class="selector-list">
-            ${renderMeetRows()}
-          </div>
-
-        </section>
-
-
-        <section class="setup-column">
-
-          <div class="column-heading">
-
-            <div>
-              <strong>Divisions</strong>
-
-              <span class="item-count">
-                ${
-                  meet
-                    ?.state
-                    .divisions
-                    .length ??
-                  0
-                }
-              </span>
-            </div>
-
-            <button
-              id="addDivision"
-              type="button"
-              class="compact-button"
-              ${
-                meet === undefined
-                  ? 'disabled'
-                  : ''
-              }
-              tabindex="-1"
-            >
-              + Division
-            </button>
-
-          </div>
-
-          <div class="column-context">
-            ${
-              meet === undefined
-                ? 'Select a meet'
-                : escapeHtml(
-                    meet.state.meet.name
-                  )
-            }
-          </div>
-
-          <div class="selector-list">
-            ${renderDivisionRows()}
-          </div>
-
-        </section>
-
-
-        <section class="setup-column">
-
-          <div class="column-heading">
-
-            <div>
-              <strong>Teams</strong>
-
-              <span class="item-count">
-                ${
-                  getTeamsForSelectedDivision()
-                    .length
-                }
-              </span>
-            </div>
-
-            <button
-              id="addTeam"
-              type="button"
-              class="compact-button"
-              ${
-                division === undefined
-                  ? 'disabled'
-                  : ''
-              }
-              tabindex="-1"
-            >
-              + Team
-            </button>
-
-          </div>
-
-          <div class="column-context">
-            ${
-              division === undefined
-                ? 'Select a division'
-                : escapeHtml(
-                    division.name
-                  )
-            }
-          </div>
-
-          <div class="selector-list">
-            ${renderTeamRows()}
-          </div>
-
-        </section>
-
-      </div>
-
-
-      <section class="workspace-panel">
-
-        <div class="detail-heading">
-          Meet Information
+          <button
+            id="addMeet"
+            type="button"
+            class="compact-button"
+            data-open-entry="meet"
+          >
+            + Add
+          </button>
         </div>
 
-        ${renderMeetDetails()}
+        <div class="selector-list sidebar-list">
+          ${renderMeetRows()}
+        </div>
 
       </section>
 
 
-      <div class="setup-note">
-        Teams are shared within a meet.
-        The Teams column shows which
-        teams participate in the
-        selected division.
-      </div>
+      <section
+        class="workspace-panel registration-sidebar-panel division-panel"
+      >
 
-    </main>
-  `
-}
+        <div class="column-heading">
+          <div>
+            <strong>Divisions</strong>
 
-
-function renderDivisionOptions(
-  state: MeetState,
-  selectedId: number | null,
-): string {
-
-  return state.divisions
-    .map(
-      division => `
-        <option
-          value="${division.id}"
-          ${
-            division.id ===
-            selectedId
-              ? 'selected'
-              : ''
-          }
-        >
-          ${
-            escapeHtml(
-              division.name
-            )
-          }
-        </option>
-      `
-    )
-    .join('')
-}
-
-
-function renderTeamOptions(
-  meet: LocalMeet,
-  divisionId: number | null,
-  selectedTeamId: number | null,
-): string {
-
-  if (
-    divisionId === null
-  ) {
-    return `
-      <option value="">
-        Unattached
-      </option>
-    `
-  }
-
-  const teams =
-    getTeamsForDivision(
-      meet,
-      divisionId
-    )
-
-  return `
-    <option
-      value=""
-      ${
-        selectedTeamId === null
-          ? 'selected'
-          : ''
-      }
-    >
-      Unattached
-    </option>
-
-    ${
-      teams
-        .map(
-          team => `
-            <option
-              value="${team.id}"
+            <span class="item-count">
               ${
-                team.id ===
-                selectedTeamId
-                  ? 'selected'
-                  : ''
+                meet
+                  ?.state
+                  .divisions
+                  .length ??
+                0
               }
-            >
+            </span>
+          </div>
+
+          <button
+            id="addDivision"
+            type="button"
+            class="compact-button"
+            data-open-entry="division"
+            ${
+              meet === undefined
+                ? 'disabled'
+                : ''
+            }
+          >
+            + Add
+          </button>
+        </div>
+
+        <div class="selector-list sidebar-list">
+          ${renderDivisionRows()}
+        </div>
+
+      </section>
+
+
+      <section
+        class="workspace-panel registration-sidebar-panel team-panel"
+      >
+
+        <div class="column-heading">
+          <div>
+            <strong>Teams</strong>
+
+            <span class="item-count">
               ${
-                escapeHtml(
-                  team.name
-                )
+                getTeamsForSelectedDivision()
+                  .length
               }
-            </option>
-          `
-        )
-        .join('')
-    }
+            </span>
+          </div>
+
+          <button
+            id="addTeam"
+            type="button"
+            class="compact-button"
+            data-open-entry="team"
+            ${
+              division === undefined
+                ? 'disabled'
+                : ''
+            }
+          >
+            + Add
+          </button>
+        </div>
+
+        <div class="selector-list sidebar-list">
+          ${renderTeamRows()}
+        </div>
+
+      </section>
+
+    </div>
   `
 }
 
@@ -1721,18 +3737,247 @@ function getLifterReadinessLabel(
 }
 
 
+function getLifterSelectionLabel(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  const team =
+    getSelectedTeam()
+
+  if (
+    division !== undefined &&
+    team !== undefined
+  ) {
+    return (
+      team.name +
+      ' · ' +
+      division.name
+    )
+  }
+
+  if (
+    division !== undefined
+  ) {
+    return division.name
+  }
+
+  return meet.state.meet.name
+}
+
+
+function getVisibleLifters(
+  meet: LocalMeet,
+): Lifter[] {
+
+  const division =
+    getSelectedDivision()
+
+  const team =
+    getSelectedTeam()
+
+  return meet.state.lifters.filter(
+    lifter => {
+
+      if (
+        division === undefined
+      ) {
+        return true
+      }
+
+      if (
+        lifter.divisionId !==
+        division.id
+      ) {
+        return false
+      }
+
+      if (
+        team === undefined
+      ) {
+        return true
+      }
+
+      return lifter.teamId ===
+        team.id
+    }
+  )
+}
+
+
+function renderLifterEditRow(
+  meet: LocalMeet,
+  lifter: Lifter,
+): string {
+
+  return `
+    <div
+      class="registration-row registered-row selected editing-row"
+      data-lifter-row="${lifter.id}"
+      data-edit-row="lifter"
+    >
+
+      <input
+        id="editLifterNumber"
+        class="grid-input number-input"
+        type="number"
+        min="1"
+        value="${lifter.lifterNumber}"
+        aria-label="Lifter number"
+      >
+
+      <input
+        id="editLifterFirstName"
+        class="grid-input"
+        type="text"
+        value="${escapeHtml(lifter.firstName)}"
+        autocomplete="off"
+        aria-label="First name"
+      >
+
+      <input
+        id="editLifterLastName"
+        class="grid-input"
+        type="text"
+        value="${escapeHtml(lifter.lastName)}"
+        autocomplete="off"
+        aria-label="Last name"
+      >
+
+      <input
+        id="editLifterBodyWeight"
+        class="grid-input number-input"
+        type="number"
+        min="0"
+        step="0.1"
+        value="${
+          lifter.bodyWeight ??
+          ''
+        }"
+        aria-label="Body weight"
+      >
+
+      <select
+        id="editLifterWeightClass"
+        class="grid-select"
+        aria-label="Weight class"
+      >
+        ${
+          renderEntryWeightClassOptions(
+            meet,
+            lifter.divisionId,
+            lifter.weightClass ??
+            ''
+          )
+        }
+      </select>
+
+      <input
+        id="editLifterGrade"
+        class="grid-input number-input"
+        type="number"
+        min="1"
+        max="12"
+        value="${
+          lifter.grade ??
+          ''
+        }"
+        aria-label="Grade"
+      >
+
+      <select
+        id="editLifterEquipment"
+        class="grid-select"
+        aria-label="Equipment"
+      >
+        <option
+          value="equipped"
+          ${
+            lifter.equipmentType ===
+            'equipped'
+              ? 'selected'
+              : ''
+          }
+        >
+          Eq
+        </option>
+
+        <option
+          value="unequipped"
+          ${
+            lifter.equipmentType ===
+            'unequipped'
+              ? 'selected'
+              : ''
+          }
+        >
+          UnEq
+        </option>
+      </select>
+
+      <label
+        class="grid-check"
+        title="Guest lifter"
+      >
+        <input
+          id="editLifterGuest"
+          type="checkbox"
+          aria-label="Guest lifter"
+          ${
+            lifter.isGuest
+              ? 'checked'
+              : ''
+          }
+        >
+      </label>
+
+      <label
+        class="grid-check"
+        title="Extra lifter"
+      >
+        <input
+          id="editLifterExtra"
+          type="checkbox"
+          aria-label="Extra lifter"
+          ${
+            lifter.isExtraLifter
+              ? 'checked'
+              : ''
+          }
+        >
+      </label>
+
+      <div class="readiness editing-status">
+        Editing
+      </div>
+
+      <div></div>
+      <div></div>
+
+    </div>
+  `
+}
+
+
 function renderRegisteredLifterRows(
   meet: LocalMeet,
 ): string {
 
+  const lifters =
+    getVisibleLifters(
+      meet
+    )
+
   if (
-    meet.state.lifters.length ===
+    lifters.length ===
     0
   ) {
     return ''
   }
 
-  return [...meet.state.lifters]
+  return [...lifters]
     .sort(
       (a, b) =>
         a.lifterNumber -
@@ -1741,21 +3986,17 @@ function renderRegisteredLifterRows(
     .map(
       lifter => {
 
-        const division =
-          meet.state.divisions.find(
-            item =>
-              item.id ===
-              lifter.divisionId
+        if (
+          isEditingEntity(
+            'lifter',
+            lifter.id
           )
-
-        const team =
-          lifter.teamId === null
-            ? undefined
-            : meet.state.teams.find(
-                item =>
-                  item.id ===
-                  lifter.teamId
-              )
+        ) {
+          return renderLifterEditRow(
+            meet,
+            lifter
+          )
+        }
 
         const readiness =
           getLifterReadinessLabel(
@@ -1765,8 +4006,15 @@ function renderRegisteredLifterRows(
 
         return `
           <div
-            class="registration-row registered-row"
+            class="registration-row registered-row ${
+              lifter.id ===
+              selectedLifterId
+                ? 'selected'
+                : ''
+            }"
             data-lifter-row="${lifter.id}"
+            data-select-lifter="${lifter.id}"
+            tabindex="0"
           >
 
             <div class="cell-number">
@@ -1774,37 +4022,11 @@ function renderRegisteredLifterRows(
             </div>
 
             <div class="cell-name">
-              ${
-                escapeHtml(
-                  lifter.firstName
-                )
-              }
+              ${escapeHtml(lifter.firstName)}
             </div>
 
             <div class="cell-name">
-              ${
-                escapeHtml(
-                  lifter.lastName
-                )
-              }
-            </div>
-
-            <div class="cell-text">
-              ${
-                escapeHtml(
-                  division?.name ??
-                  ''
-                )
-              }
-            </div>
-
-            <div class="cell-text">
-              ${
-                escapeHtml(
-                  team?.name ??
-                  'Unattached'
-                )
-              }
+              ${escapeHtml(lifter.lastName)}
             </div>
 
             <div class="cell-number">
@@ -1868,6 +4090,30 @@ function renderRegisteredLifterRows(
               ${readiness}
             </div>
 
+            <button
+              type="button"
+              class="row-edit lifter-edit"
+              data-edit-entity="lifter"
+              data-edit-id="${lifter.id}"
+              data-open-edit="lifter"
+              title="Edit lifter"
+              aria-label="Edit lifter ${escapeHtml(lifter.firstName)} ${escapeHtml(lifter.lastName)}"
+              tabindex="-1"
+            >
+              ✎
+            </button>
+
+            <button
+              type="button"
+              class="row-delete lifter-delete"
+              data-delete-lifter="${lifter.id}"
+              title="Delete lifter"
+              aria-label="Delete lifter ${escapeHtml(lifter.firstName)} ${escapeHtml(lifter.lastName)}"
+              tabindex="-1"
+            >
+              🗑
+            </button>
+
           </div>
         `
       }
@@ -1880,90 +4126,23 @@ function renderRegistrationEntryRow(
   meet: LocalMeet,
 ): string {
 
-  if (
-    meet.state.divisions.length ===
-    0
-  ) {
-    return `
-      <div class="registration-empty">
-        Add at least one division
-        on Meet Setup before
-        registering lifters.
-      </div>
-    `
-  }
-
-  let divisionId =
-    registrationDefaults
-      .divisionId
-
-  const divisionExists =
-    meet.state.divisions.some(
-      division =>
-        division.id ===
-        divisionId
-    )
-
-  if (
-    !divisionExists
-  ) {
-    divisionId =
-      meet.state.divisions[0]
-        ?.id ??
-      null
-
-    registrationDefaults
-      .divisionId =
-        divisionId
-
-    registrationDefaults
-      .teamId =
-        null
-  }
-
   const division =
-    divisionId === null
-      ? undefined
-      : meet.state.divisions.find(
-          item =>
-            item.id ===
-            divisionId
-        )
+    getSelectedDivision()
 
-  let automaticClass =
-    ''
+  const team =
+    getSelectedTeam()
 
   if (
-    division !== undefined
+    division === undefined ||
+    team === undefined
   ) {
-    try {
-
-      const rules =
-        getDivisionRules(
-          division
-        )
-
-      const bodyWeight =
-        readNumberInput(
-          '#entryBodyWeight'
-        )
-
-      automaticClass =
-        getAutomaticWeightClass(
-          bodyWeight,
-          rules.weightClasses
-        ) ??
-        ''
-
-    } catch {
-      automaticClass =
-        ''
-    }
+    return ''
   }
 
   return `
     <div
       class="registration-row registration-entry-row"
+      data-entry-row="lifter"
     >
 
       <input
@@ -1995,34 +4174,6 @@ function renderRegistrationEntryRow(
         aria-label="Last name"
       >
 
-      <select
-        id="entryDivision"
-        class="grid-select"
-        aria-label="Division"
-      >
-        ${
-          renderDivisionOptions(
-            meet.state,
-            divisionId
-          )
-        }
-      </select>
-
-      <select
-        id="entryTeam"
-        class="grid-select"
-        aria-label="Team"
-      >
-        ${
-          renderTeamOptions(
-            meet,
-            divisionId,
-            registrationDefaults
-              .teamId
-          )
-        }
-      </select>
-
       <input
         id="entryBodyWeight"
         class="grid-input number-input"
@@ -2040,8 +4191,8 @@ function renderRegistrationEntryRow(
         ${
           renderEntryWeightClassOptions(
             meet,
-            divisionId,
-            automaticClass
+            division.id,
+            ''
           )
         }
       </select>
@@ -2109,13 +4260,9 @@ function renderRegistrationEntryRow(
         >
       </label>
 
-      <button
-        id="addLifter"
-        type="button"
-        class="entry-add-button"
-      >
-        Add
-      </button>
+      <div></div>
+      <div></div>
+      <div></div>
 
     </div>
   `
@@ -2213,104 +4360,148 @@ function renderRegistration():
   const meet =
     getSelectedMeet()
 
-  if (
+  const selectedTeam =
+    getSelectedTeam()
+
+  const visibleLifterCount =
     meet === undefined
-  ) {
-    return `
-      <main class="workspace">
-
-        <section class="workspace-panel">
-
-          <div class="registration-placeholder">
-
-            <strong>
-              No Meet Selected
-            </strong>
-
-            <span>
-              Select or create a meet
-              on Meet Setup.
-            </span>
-
-          </div>
-
-        </section>
-
-      </main>
-    `
-  }
+      ? 0
+      : getVisibleLifters(
+          meet
+        ).length
 
   return `
     <main class="workspace registration-workspace">
 
-      <section class="workspace-panel registration-panel">
+      <div class="registration-layout">
 
-        <div class="registration-toolbar">
+        ${renderRegistrationSidebar()}
 
-          <div>
-            <span class="section-title">
-              Registration
-            </span>
+        ${
+          meet === undefined
+            ? `
+              <section
+                class="workspace-panel registration-panel"
+              >
 
-            <span class="item-count">
-              ${
-                meet.state.lifters.length
-              }
-              lifters
-            </span>
-          </div>
+                <div class="registration-placeholder">
 
-          <div class="registration-meet-name">
-            ${
-              escapeHtml(
-                meet.state.meet.name
-              )
-            }
-          </div>
+                  <strong>
+                    No Meet Selected
+                  </strong>
 
-          <div class="registration-help">
-            Enter adds lifter
-          </div>
+                  <span>
+                    Create or select a meet
+                    on the left to begin.
+                  </span>
 
-        </div>
+                </div>
+
+              </section>
+            `
+            : `
+              <section
+                class="workspace-panel registration-panel"
+              >
+
+                <div class="registration-toolbar">
+
+                  <div>
+                    <span class="section-title">
+                      Lifters
+                    </span>
+
+                    <span class="item-count">
+                      ${visibleLifterCount}
+                      lifters
+                    </span>
+                  </div>
+
+                  <div class="registration-meet-name">
+                    ${
+                      escapeHtml(
+                        getLifterSelectionLabel(
+                          meet
+                        )
+                      )
+                    }
+                  </div>
+
+                  <div class="registration-actions">
+                    <span class="registration-help">
+                      ${
+                        selectedTeam ===
+                        undefined
+                          ? 'Select a team to add lifters'
+                          : activeEntry ===
+                            'lifter'
+                            ? 'Tab moves fields · Enter adds · Esc cancels'
+                            : ''
+                      }
+                    </span>
+
+                    <button
+                      id="addLifter"
+                      type="button"
+                      class="compact-button"
+                      data-open-entry="lifter"
+                      ${
+                        selectedTeam ===
+                        undefined
+                          ? 'disabled'
+                          : ''
+                      }
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                </div>
 
 
-        <div class="registration-grid">
+                <div class="registration-grid">
 
-          <div class="registration-row registration-header">
-            <div>#</div>
-            <div>First</div>
-            <div>Last</div>
-            <div>Division</div>
-            <div>Team</div>
-            <div>BW</div>
-            <div>Class</div>
-            <div>Grade</div>
-            <div>Equip</div>
-            <div>G</div>
-            <div>X</div>
-            <div>Status</div>
-          </div>
+                  <div
+                    class="registration-row registration-header"
+                  >
+                    <div>#</div>
+                    <div>First</div>
+                    <div>Last</div>
+                    <div>BW</div>
+                    <div>Class</div>
+                    <div>Grade</div>
+                    <div>Equip</div>
+                    <div>G</div>
+                    <div>X</div>
+                    <div>Status</div>
+                    <div></div>
+                    <div></div>
+                  </div>
 
-          <div class="registration-body">
-            ${
-              renderRegisteredLifterRows(
-                meet
-              )
-            }
-          </div>
+                  <div class="registration-body">
+                    ${
+                      renderRegisteredLifterRows(
+                        meet
+                      )
+                    }
 
-          <div class="registration-entry">
-            ${
-              renderRegistrationEntryRow(
-                meet
-              )
-            }
-          </div>
+                    ${
+                      activeEntry ===
+                      'lifter'
+                        ? renderRegistrationEntryRow(
+                            meet
+                          )
+                        : ''
+                    }
+                  </div>
 
-        </div>
+                </div>
 
-      </section>
+              </section>
+            `
+        }
+
+      </div>
 
     </main>
   `
@@ -2345,64 +4536,14 @@ function readNumberInput(
 }
 
 
-function updateEntryTeams():
-  void {
-
-  const meet =
-    getSelectedMeet()
-
-  const divisionInput =
-    document.querySelector<HTMLSelectElement>(
-      '#entryDivision'
-    )
-
-  const teamInput =
-    document.querySelector<HTMLSelectElement>(
-      '#entryTeam'
-    )
-
-  if (
-    meet === undefined ||
-    divisionInput === null ||
-    teamInput === null
-  ) {
-    return
-  }
-
-  const divisionId =
-    Number(
-      divisionInput.value
-    )
-
-  registrationDefaults
-    .divisionId =
-      divisionId
-
-  registrationDefaults
-    .teamId =
-      null
-
-  teamInput.innerHTML =
-    renderTeamOptions(
-      meet,
-      divisionId,
-      null
-    )
-
-  updateEntryWeightClasses()
-}
-
-
 function updateEntryWeightClasses():
   void {
 
   const meet =
     getSelectedMeet()
 
-  const divisionInput =
-    document.querySelector<HTMLSelectElement>(
-      '#entryDivision'
-    )
+  const division =
+    getSelectedDivision()
 
   const classInput =
     document.querySelector<HTMLSelectElement>(
@@ -2411,16 +4552,11 @@ function updateEntryWeightClasses():
 
   if (
     meet === undefined ||
-    divisionInput === null ||
+    division === undefined ||
     classInput === null
   ) {
     return
   }
-
-  const divisionId =
-    Number(
-      divisionInput.value
-    )
 
   const bodyWeight =
     readNumberInput(
@@ -2430,48 +4566,134 @@ function updateEntryWeightClasses():
   let automaticClass =
     ''
 
-  const division =
-    meet.state.divisions.find(
-      item =>
-        item.id ===
-        divisionId
-    )
+  try {
 
-  if (
-    division !== undefined
-  ) {
-    try {
+    const rules =
+      getDivisionRules(
+        division
+      )
 
-      const rules =
-        getDivisionRules(
-          division
-        )
+    automaticClass =
+      getAutomaticWeightClass(
+        bodyWeight,
+        rules.weightClasses
+      ) ??
+      ''
 
-      automaticClass =
-        getAutomaticWeightClass(
-          bodyWeight,
-          rules.weightClasses
-        ) ??
-        ''
-
-    } catch {
-      automaticClass =
-        ''
-    }
+  } catch {
+    automaticClass =
+      ''
   }
 
   classInput.innerHTML =
     renderEntryWeightClassOptions(
       meet,
-      divisionId,
+      division.id,
       automaticClass
     )
 
+  classInput.value =
+    automaticClass
+}
+
+
+function updateEditLifterWeightClasses():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
   if (
-    automaticClass !== ''
+    meet === undefined ||
+    activeEdit?.type !==
+      'lifter'
   ) {
+    return
+  }
+
+  const lifter =
+    meet.state.lifters.find(
+      item =>
+        item.id ===
+        Number(
+          activeEdit?.id
+        )
+    )
+
+  const classInput =
+    document.querySelector<HTMLSelectElement>(
+      '#editLifterWeightClass'
+    )
+
+  const bodyWeightInput =
+    document.querySelector<HTMLInputElement>(
+      '#editLifterBodyWeight'
+    )
+
+  if (
+    lifter === undefined ||
+    classInput === null ||
+    bodyWeightInput === null
+  ) {
+    return
+  }
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        lifter.divisionId
+    )
+
+  if (
+    division === undefined
+  ) {
+    return
+  }
+
+  const bodyWeight =
+    bodyWeightInput.value.trim() ===
+    ''
+      ? null
+      : Number(
+          bodyWeightInput.value
+        )
+
+  let selectedClass =
+    classInput.value
+
+  try {
+    const rules =
+      getDivisionRules(
+        division
+      )
+
+    if (
+      lifter.weightClassSource ===
+        'automatic' &&
+      !editLifterWeightClassManuallyChanged
+    ) {
+      selectedClass =
+        getAutomaticWeightClass(
+          bodyWeight,
+          rules.weightClasses
+        ) ??
+        ''
+    }
+
+    classInput.innerHTML =
+      renderEntryWeightClassOptions(
+        meet,
+        division.id,
+        selectedClass
+      )
+
     classInput.value =
-      automaticClass
+      selectedClass
+
+  } catch {
+    // Keep the current selection when division
+    // rules cannot be resolved.
   }
 }
 
@@ -2482,9 +4704,21 @@ function commitNewLifter():
   const meet =
     getSelectedMeet()
 
+  const division =
+    getSelectedDivision()
+
+  const team =
+    getSelectedTeam()
+
   if (
-    meet === undefined
+    meet === undefined ||
+    division === undefined ||
+    team === undefined
   ) {
+    window.alert(
+      'Select a team before adding lifters.'
+    )
+
     return
   }
 
@@ -2501,16 +4735,6 @@ function commitNewLifter():
   const lastInput =
     document.querySelector<HTMLInputElement>(
       '#entryLastName'
-    )
-
-  const divisionInput =
-    document.querySelector<HTMLSelectElement>(
-      '#entryDivision'
-    )
-
-  const teamInput =
-    document.querySelector<HTMLSelectElement>(
-      '#entryTeam'
     )
 
   const classInput =
@@ -2542,8 +4766,6 @@ function commitNewLifter():
     numberInput === null ||
     firstInput === null ||
     lastInput === null ||
-    divisionInput === null ||
-    teamInput === null ||
     classInput === null ||
     gradeInput === null ||
     equipmentInput === null ||
@@ -2603,36 +4825,14 @@ function commitNewLifter():
     return
   }
 
-  const divisionId =
-    Number(
-      divisionInput.value
-    )
-
-  const division =
-    meet.state.divisions.find(
-      item =>
-        item.id ===
-        divisionId
-    )
-
-  if (
-    division === undefined
-  ) {
-    window.alert(
-      'Select a valid division.'
-    )
-
-    return
-  }
-
   let rules
 
   try {
 
     rules =
       getDivisionRules(
-          division
-        )
+        division
+      )
 
   } catch (
     error
@@ -2646,13 +4846,6 @@ function commitNewLifter():
 
     return
   }
-
-  const teamId =
-    teamInput.value === ''
-      ? null
-      : Number(
-          teamInput.value
-        )
 
   const bodyWeight =
     readNumberInput(
@@ -2684,9 +4877,11 @@ function commitNewLifter():
 
           lastName,
 
-          divisionId,
+          divisionId:
+            division.id,
 
-          teamId,
+          teamId:
+            team.id,
 
           bodyWeight,
 
@@ -2728,14 +4923,16 @@ function commitNewLifter():
       lifter
     )
 
+    selectedLifterId =
+      lifter.id
+
     registrationDefaults = {
-      divisionId,
-
-      teamId,
-
       equipmentType:
         lifter.equipmentType,
     }
+
+    activeEntry =
+      'lifter'
 
     renderApp()
 
@@ -2764,41 +4961,161 @@ function wireNavigation(): void {
 
   document
     .querySelector<HTMLButtonElement>(
-      '#navSetup'
-    )
-    ?.addEventListener(
-      'click',
-      () => {
-
-        currentPage =
-          'setup'
-
-        renderApp()
-      }
-    )
-
-  document
-    .querySelector<HTMLButtonElement>(
       '#navRegistration'
     )
     ?.addEventListener(
       'click',
       () => {
-
-        currentPage =
-          'registration'
-
-        renderApp()
-
-        focusElement(
-          '#entryFirstName'
-        )
+        // Registration is already the active workspace.
       }
     )
 }
 
 
-function wireMeetSetup(): void {
+function wireEntryKeyboard(
+  selector: string,
+  commit: () => void,
+): void {
+
+  document
+    .querySelector<HTMLElement>(
+      selector
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key ===
+          'Escape'
+        ) {
+          event.preventDefault()
+          cancelActiveEntry()
+          return
+        }
+
+        if (
+          event.key ===
+          'Enter'
+        ) {
+          event.preventDefault()
+          commit()
+        }
+      }
+    )
+}
+
+
+function wireEditKeyboard():
+  void {
+
+  document
+    .querySelector<HTMLElement>(
+      '[data-edit-row]'
+    )
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key ===
+          'Escape'
+        ) {
+          event.preventDefault()
+
+          finishActiveEdit(
+            true,
+            true
+          )
+
+          return
+        }
+
+        if (
+          event.key ===
+          'Enter'
+        ) {
+          event.preventDefault()
+
+          commitActiveEdit(
+            true
+          )
+        }
+      }
+    )
+}
+
+
+function wireOutsideEntryDismissal():
+  void {
+
+  if (
+    outsideEntryClickHandler !==
+    null
+  ) {
+    document.removeEventListener(
+      'click',
+      outsideEntryClickHandler
+    )
+  }
+
+  outsideEntryClickHandler =
+    event => {
+
+      const target =
+        event.target
+
+      if (
+        !(target instanceof Element)
+      ) {
+        return
+      }
+
+      if (
+        target.closest(
+          '[data-entry-row]'
+        ) !== null ||
+        target.closest(
+          '[data-edit-row]'
+        ) !== null ||
+        target.closest(
+          '[data-open-entry]'
+        ) !== null ||
+        target.closest(
+          '[data-open-edit]'
+        ) !== null
+      ) {
+        return
+      }
+
+      if (
+        activeEdit !==
+        null
+      ) {
+        finishActiveEdit(
+          true,
+          true
+        )
+
+        return
+      }
+
+      if (
+        activeEntry !==
+        null
+      ) {
+        cancelActiveEntry()
+      }
+    }
+
+  document.addEventListener(
+    'click',
+    outsideEntryClickHandler
+  )
+}
+
+
+function wireRegistrationSetup(): void {
 
   document
     .querySelector<HTMLButtonElement>(
@@ -2827,76 +5144,109 @@ function wireMeetSetup(): void {
       startTeamEntry
     )
 
-
   document
-    .querySelector<HTMLInputElement>(
-      '#newMeetName'
+    .querySelector<HTMLButtonElement>(
+      '#addLifter'
     )
     ?.addEventListener(
-      'keydown',
-      event => {
+      'click',
+      startLifterEntry
+    )
 
-        if (
-          event.key ===
-          'Enter'
-        ) {
-          event.preventDefault()
-          commitNewMeet()
-        }
+  wireEntryKeyboard(
+    '.meet-entry-row',
+    commitNewMeet
+  )
+
+  wireEntryKeyboard(
+    '.division-entry-row',
+    commitNewDivision
+  )
+
+  wireEntryKeyboard(
+    '.team-entry-row',
+    commitNewTeam
+  )
+
+  wireEditKeyboard()
+
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-edit-entity][data-edit-id]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          event => {
+            event.stopPropagation()
+
+            const type =
+              button.dataset
+                .editEntity as
+                  RegistrationEntry | undefined
+
+            const rawId =
+              button.dataset
+                .editId
+
+            if (
+              type === undefined ||
+              rawId === undefined
+            ) {
+              return
+            }
+
+            if (
+              type ===
+              'meet'
+            ) {
+              startEdit(
+                type,
+                rawId
+              )
+
+              return
+            }
+
+            const id =
+              Number(
+                rawId
+              )
+
+            if (
+              Number.isNaN(
+                id
+              )
+            ) {
+              return
+            }
+
+            startEdit(
+              type,
+              id
+            )
+          }
+        )
       }
     )
 
 
   document
-    .querySelector<HTMLInputElement>(
-      '#newDivisionName'
-    )
-    ?.addEventListener(
-      'keydown',
-      event => {
-
-        if (
-          event.key ===
-          'Enter'
-        ) {
-          event.preventDefault()
-          commitNewDivision()
-        }
-      }
-    )
-
-
-  document
-    .querySelector<HTMLInputElement>(
-      '#newTeamName'
-    )
-    ?.addEventListener(
-      'keydown',
-      event => {
-
-        if (
-          event.key ===
-          'Enter'
-        ) {
-          event.preventDefault()
-          commitNewTeam()
-        }
-      }
-    )
-
-
-  document
-    .querySelectorAll<HTMLElement>(
+    .querySelectorAll<HTMLButtonElement>(
       '[data-select-meet]'
     )
     .forEach(
-      row => {
+      button => {
 
-        const activate =
+        button.addEventListener(
+          'click',
           () => {
 
             const meetId =
-              row.dataset
+              button.dataset
                 .selectMeet
 
             if (
@@ -2905,26 +5255,6 @@ function wireMeetSetup(): void {
               selectMeet(
                 meetId
               )
-            }
-          }
-
-        row.addEventListener(
-          'click',
-          activate
-        )
-
-        row.addEventListener(
-          'keydown',
-          event => {
-
-            if (
-              event.key ===
-                'Enter' ||
-              event.key ===
-                ' '
-            ) {
-              event.preventDefault()
-              activate()
             }
           }
         )
@@ -2964,7 +5294,7 @@ function wireMeetSetup(): void {
 
   document
     .querySelectorAll<HTMLButtonElement>(
-      '[data-delete-division]'
+      '[data-select-team]'
     )
     .forEach(
       button => {
@@ -2976,13 +5306,122 @@ function wireMeetSetup(): void {
             const id =
               Number(
                 button.dataset
+                  .selectTeam
+              )
+
+            if (
+              !Number.isNaN(id)
+            ) {
+              selectTeam(
+                id
+              )
+            }
+          }
+        )
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLElement>(
+      '[data-select-lifter]'
+    )
+    .forEach(
+      row => {
+
+        const activate =
+          () => {
+
+            const id =
+              Number(
+                row.dataset
+                  .selectLifter
+              )
+
+            if (
+              !Number.isNaN(id)
+            ) {
+              selectLifter(
+                id
+              )
+            }
+          }
+
+        row.addEventListener(
+          'click',
+          activate
+        )
+
+        row.addEventListener(
+          'keydown',
+          event => {
+
+            if (
+              event.key ===
+                'Enter' ||
+              event.key ===
+                ' '
+            ) {
+              event.preventDefault()
+              activate()
+            }
+          }
+        )
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-delete-meet]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          event => {
+            event.stopPropagation()
+
+            const meetId =
+              button.dataset
+                .deleteMeet
+
+            if (
+              meetId !== undefined
+            ) {
+              deleteMeet(
+                meetId
+              )
+            }
+          }
+        )
+      }
+    )
+
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-delete-division]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          event => {
+            event.stopPropagation()
+
+            const id =
+              Number(
+                button.dataset
                   .deleteDivision
               )
 
             if (
               !Number.isNaN(id)
             ) {
-              removeDivision(
+              deleteDivision(
                 id
               )
             }
@@ -2994,25 +5433,26 @@ function wireMeetSetup(): void {
 
   document
     .querySelectorAll<HTMLButtonElement>(
-      '[data-remove-team]'
+      '[data-delete-team]'
     )
     .forEach(
       button => {
 
         button.addEventListener(
           'click',
-          () => {
+          event => {
+            event.stopPropagation()
 
             const id =
               Number(
                 button.dataset
-                  .removeTeam
+                  .deleteTeam
               )
 
             if (
               !Number.isNaN(id)
             ) {
-              removeTeamFromDivision(
+              deleteTeam(
                 id
               )
             }
@@ -3022,96 +5462,33 @@ function wireMeetSetup(): void {
     )
 
 
-  const meet =
-    getSelectedMeet()
-
-  if (
-    meet === undefined
-  ) {
-    return
-  }
-
-
   document
-    .querySelector<HTMLInputElement>(
-      '#meetName'
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-delete-lifter]'
     )
-    ?.addEventListener(
-      'input',
-      event => {
+    .forEach(
+      button => {
 
-        const target =
-          event.currentTarget as
-            HTMLInputElement
+        button.addEventListener(
+          'click',
+          event => {
+            event.stopPropagation()
 
-        meet.state.meet.name =
-          target.value
+            const id =
+              Number(
+                button.dataset
+                  .deleteLifter
+              )
 
-        const currentMeet =
-          document.querySelector(
-            '.current-meet'
-          )
-
-        if (
-          currentMeet !== null
-        ) {
-          currentMeet.textContent =
-            target.value
-        }
-      }
-    )
-
-
-  document
-    .querySelector<HTMLInputElement>(
-      '#meetDate'
-    )
-    ?.addEventListener(
-      'change',
-      event => {
-
-        const target =
-          event.currentTarget as
-            HTMLInputElement
-
-        meet.state.meet.date =
-          target.value
-      }
-    )
-
-
-  document
-    .querySelector<HTMLInputElement>(
-      '#meetLocation'
-    )
-    ?.addEventListener(
-      'input',
-      event => {
-
-        const target =
-          event.currentTarget as
-            HTMLInputElement
-
-        meet.state.meet.location =
-          target.value
-      }
-    )
-
-  document
-    .querySelector<HTMLSelectElement>(
-      '#resultEntryMode'
-    )
-    ?.addEventListener(
-      'change',
-      event => {
-
-        const target =
-          event.currentTarget as
-            HTMLSelectElement
-
-        meet.state.meet.resultEntryMode =
-          target.value as
-            ResultEntryMode
+            if (
+              !Number.isNaN(id)
+            ) {
+              deleteLifter(
+                id
+              )
+            }
+          }
+        )
       }
     )
 }
@@ -3119,38 +5496,6 @@ function wireMeetSetup(): void {
 
 function wireRegistration():
   void {
-
-  document
-    .querySelector<HTMLSelectElement>(
-      '#entryDivision'
-    )
-    ?.addEventListener(
-      'change',
-      updateEntryTeams
-    )
-
-
-  document
-    .querySelector<HTMLSelectElement>(
-      '#entryTeam'
-    )
-    ?.addEventListener(
-      'change',
-      event => {
-
-        const target =
-          event.currentTarget as
-            HTMLSelectElement
-
-        registrationDefaults.teamId =
-          target.value === ''
-            ? null
-            : Number(
-                target.value
-              )
-      }
-    )
-
 
   document
     .querySelector<HTMLInputElement>(
@@ -3183,46 +5528,34 @@ function wireRegistration():
 
 
   document
-    .querySelector<HTMLButtonElement>(
-      '#addLifter'
+    .querySelector<HTMLInputElement>(
+      '#editLifterBodyWeight'
     )
     ?.addEventListener(
-      'click',
-      commitNewLifter
+      'change',
+      updateEditLifterWeightClasses
     )
 
 
-document
-  .querySelector<HTMLElement>(
-    '.registration-entry-row'
-  )
-  ?.addEventListener(
-    'keydown',
-    event => {
-
-      if (
-        event.key !==
-        'Enter'
-      ) {
-        return
+  document
+    .querySelector<HTMLSelectElement>(
+      '#editLifterWeightClass'
+    )
+    ?.addEventListener(
+      'change',
+      () => {
+        editLifterWeightClassManuallyChanged =
+          true
       }
+    )
 
-      const target =
-        event.target as
-          HTMLElement
 
-      if (
-        target.tagName ===
-        'SELECT'
-      ) {
-        return
-      }
-
-      event.preventDefault()
-
-      commitNewLifter()
-    }
+  wireEntryKeyboard(
+    '.registration-entry-row',
+    commitNewLifter
   )
+
+  wireOutsideEntryDismissal()
 }
 
 
@@ -3273,32 +5606,16 @@ function renderApp(): void {
 
       ${renderNavigation()}
 
-      ${
-        currentPage ===
-        'setup'
-          ? renderMeetSetup()
-          : renderRegistration()
-      }
+      ${renderRegistration()}
 
     </div>
   `
 
   wireNavigation()
-
-  if (
-    currentPage ===
-    'setup'
-  ) {
-    wireMeetSetup()
-  }
-
-  if (
-    currentPage ===
-    'registration'
-  ) {
-    wireRegistration()
-  }
+  wireRegistrationSetup()
+  wireRegistration()
 }
 
 
+selectFirstHierarchy()
 renderApp()
