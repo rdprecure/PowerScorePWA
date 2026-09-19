@@ -470,7 +470,7 @@ select {
   background: #e2e8f0;
 
   box-shadow:
-    inset 4px 0 0 #334155;
+    inset 0 0 0 1px #000000;
 }
 
 .selector-row:focus {
@@ -863,7 +863,7 @@ select {
   display: grid;
 
   grid-template-columns:
-    minmax(470px, 38%)
+    minmax(350px, 28.5%)
     minmax(0, 1fr);
 
   gap: 8px;
@@ -958,87 +958,94 @@ select {
 
   width: 100%;
 
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .registration-row {
-  min-width: 955px;
+  min-width: 0;
+  width: 100%;
 
   display: grid;
 
   grid-template-columns:
-    62px
-    minmax(95px, 1fr)
-    minmax(110px, 1.1fr)
-    72px
-    72px
-    92px
-    115px
-    115px
-    105px
-    30px
-    30px;
+    minmax(0, 0.55fr)
+    minmax(0, 1.8fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.86fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.78fr)
+    minmax(0, 0.95fr)
+    minmax(0, 1fr)
+    minmax(0, 0.9fr)
+    26px
+    26px;
 
   align-items: center;
 
-  gap: 3px;
+  gap: 2px;
 
-  padding: 2px 5px;
+  padding: 2px 4px;
 }
 
 .registration-row.with-grade-column {
-  min-width: 1015px;
-
   grid-template-columns:
-    62px
-    minmax(95px, 1fr)
-    minmax(110px, 1.1fr)
-    72px
-    72px
-    55px
-    92px
-    115px
-    115px
-    105px
-    30px
-    30px;
+    minmax(0, 0.55fr)
+    minmax(0, 1.8fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.86fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.58fr)
+    minmax(0, 0.78fr)
+    minmax(0, 0.95fr)
+    minmax(0, 1fr)
+    minmax(0, 0.9fr)
+    26px
+    26px;
 }
 
 .registration-row.with-team-column {
-  min-width: 1085px;
-
   grid-template-columns:
-    62px
-    minmax(95px, 1fr)
-    minmax(110px, 1.1fr)
-    minmax(120px, 1.15fr)
-    72px
-    72px
-    92px
-    115px
-    115px
-    105px
-    30px
-    30px;
+    minmax(0, 0.55fr)
+    minmax(0, 1.75fr)
+    minmax(0, 1.2fr)
+    minmax(0, 0.7fr)
+    minmax(0, 0.84fr)
+    minmax(0, 0.7fr)
+    minmax(0, 0.76fr)
+    minmax(0, 0.92fr)
+    minmax(0, 0.98fr)
+    minmax(0, 0.88fr)
+    26px
+    26px;
 }
 
 .registration-row.with-team-column.with-grade-column {
-  min-width: 1145px;
-
   grid-template-columns:
-    62px
-    minmax(95px, 1fr)
-    minmax(110px, 1.1fr)
-    minmax(120px, 1.15fr)
-    72px
-    72px
-    55px
-    92px
-    115px
-    115px
-    105px
-    30px
-    30px;
+    minmax(0, 0.55fr)
+    minmax(0, 1.7fr)
+    minmax(0, 1.15fr)
+    minmax(0, 0.68fr)
+    minmax(0, 0.82fr)
+    minmax(0, 0.68fr)
+    minmax(0, 0.55fr)
+    minmax(0, 0.74fr)
+    minmax(0, 0.9fr)
+    minmax(0, 0.96fr)
+    minmax(0, 0.86fr)
+    26px
+    26px;
+}
+
+.lifter-name-edit-fields {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2px;
+}
+
+.lifter-name-edit-fields > input {
+  min-width: 0;
+  width: 100%;
 }
 
 
@@ -1054,12 +1061,12 @@ select {
   border-bottom:
     1px solid #cbd5e1;
 
-  color: #64748b;
+  color: #334155;
 
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
 
-  text-transform: uppercase;
+  text-transform: none;
 
   z-index: 2;
 }
@@ -1088,7 +1095,7 @@ select {
   justify-content: center;
 
   text-align: center;
-  text-transform: uppercase;
+  text-transform: none;
 
   white-space: normal;
   line-height: 1.1;
@@ -1156,7 +1163,7 @@ select {
   background: #e3edf8;
 
   box-shadow:
-    inset 4px 0 0 #334155;
+    inset 0 0 0 1px #000000;
 }
 
 .registered-row.selected:hover {
@@ -1165,15 +1172,35 @@ select {
 
 .registered-row:focus {
   outline:
-    2px solid #111827;
+    1px solid #000000;
 
-  outline-offset: -2px;
+  outline-offset: -1px;
 }
 
 .cell-number,
 .cell-class,
+.cell-coefficient,
 .cell-flag {
   text-align: center;
+}
+
+.cell-coefficient {
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.registration-derived-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 0;
+
+  padding: 0 2px;
+
+  text-align: center;
+  white-space: normal;
+  line-height: 1.1;
 }
 
 .cell-team-status,
@@ -1435,25 +1462,26 @@ select {
   flex: 1;
   flex-direction: column;
 
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .bulk-edit-row {
-  min-width: 1145px;
+  min-width: 0;
+  width: 100%;
 
   display: grid;
 
   grid-template-columns:
-    62px
-    minmax(95px, 1fr)
-    minmax(110px, 1.1fr)
-    minmax(120px, 1.15fr)
-    78px
-    78px
-    92px
-    115px
-    115px
-    105px;
+    minmax(0, 0.55fr)
+    minmax(0, 1.05fr)
+    minmax(0, 1.2fr)
+    minmax(0, 1.2fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.86fr)
+    minmax(0, 0.8fr)
+    minmax(0, 0.95fr)
+    minmax(0, 1fr)
+    minmax(0, 0.9fr);
 
   align-items: center;
 
@@ -1466,20 +1494,21 @@ select {
 }
 
 .bulk-edit-row.with-grade-column {
-  min-width: 1205px;
+  min-width: 0;
+  width: 100%;
 
   grid-template-columns:
-    62px
-    minmax(95px, 1fr)
-    minmax(110px, 1.1fr)
-    minmax(120px, 1.15fr)
-    78px
-    78px
-    58px
-    92px
-    115px
-    115px
-    105px;
+    minmax(0, 0.55fr)
+    minmax(0, 1.02fr)
+    minmax(0, 1.16fr)
+    minmax(0, 1.16fr)
+    minmax(0, 0.7fr)
+    minmax(0, 0.84fr)
+    minmax(0, 0.56fr)
+    minmax(0, 0.78fr)
+    minmax(0, 0.92fr)
+    minmax(0, 0.98fr)
+    minmax(0, 0.88fr);
 }
 
 
@@ -1491,12 +1520,12 @@ select {
 
   background: #e9eef4;
 
-  color: #64748b;
+  color: #334155;
 
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
 
-  text-transform: uppercase;
+  text-transform: none;
 
   z-index: 3;
 }
@@ -1523,7 +1552,7 @@ select {
   justify-content: center;
 
   text-align: center;
-  text-transform: uppercase;
+  text-transform: none;
 
   white-space: normal;
   line-height: 1.1;
@@ -1673,7 +1702,7 @@ select {
 
   .registration-layout {
     grid-template-columns:
-      minmax(470px, 44%)
+      minmax(330px, 31%)
       minmax(0, 1fr);
   }
 }
@@ -1736,7 +1765,9 @@ select {
   }
 
   .main-nav {
-    overflow-x: auto;
+    height: auto;
+    flex-wrap: wrap;
+    overflow: hidden;
   }
 
   .nav-item {
@@ -1779,4 +1810,553 @@ select {
   .shortcut-help-grid {
     grid-template-columns: 1fr;
   }
+}
+
+
+/* Competition */
+
+.competition-workspace {
+  min-width: 0;
+}
+
+.competition-panel {
+  min-width: 0;
+}
+
+.competition-division-tabs,
+.competition-weight-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+
+  overflow: hidden;
+
+  min-height: 36px;
+
+  padding: 4px 8px 0;
+
+  background: #eef4fa;
+  border-bottom: 1px solid #9fb5cf;
+}
+
+.competition-division-tab,
+.competition-weight-tab {
+  flex: 0 0 auto;
+
+  height: 31px;
+
+  padding: 0 11px;
+
+  border: 1px solid #aab9c9;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+
+  margin-right: 3px;
+
+  background: #dbe6f2;
+  color: #334155;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+.competition-division-tab {
+  min-width: 150px;
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+.competition-weight-tab {
+  min-width: 64px;
+}
+
+.competition-division-tab:hover,
+.competition-weight-tab:hover {
+  background: #cddceb;
+}
+
+.competition-division-tab.active,
+.competition-weight-tab.active {
+  position: relative;
+  z-index: 1;
+
+  background: white;
+  color: #111827;
+
+  border-color: #64748b;
+
+  box-shadow: inset 0 3px 0 #334155;
+}
+
+.competition-division-tab:focus-visible,
+.competition-weight-tab:focus-visible {
+  outline: 2px solid #334155;
+  outline-offset: -3px;
+}
+
+.competition-grid-wrap {
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  max-height: calc(100vh - 175px);
+}
+
+.competition-grid {
+  min-width: 0;
+  width: 100%;
+}
+
+.competition-row {
+  display: grid;
+  align-items: stretch;
+
+  min-height: 39px;
+
+  border-bottom: 1px solid #e2e8f0;
+
+  background: white;
+}
+
+.competition-row.selected {
+  position: relative;
+  z-index: 1;
+
+  background: #e3edf8;
+}
+
+.competition-row.selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+
+  border: 1px solid #000000;
+  pointer-events: none;
+}
+
+.competition-best-row {
+  grid-template-columns:
+    minmax(0, 0.5fr)
+    minmax(0, 1.65fr)
+    minmax(0, 1.05fr)
+    minmax(0, 0.62fr)
+    minmax(0, 0.58fr)
+    repeat(3, minmax(0, 0.78fr))
+    minmax(0, 0.72fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.95fr);
+
+  min-width: 0;
+  width: 100%;
+}
+
+.competition-best-row.with-weight-class {
+  grid-template-columns:
+    minmax(0, 0.5fr)
+    minmax(0, 1.6fr)
+    minmax(0, 1fr)
+    minmax(0, 0.6fr)
+    minmax(0, 0.72fr)
+    minmax(0, 0.56fr)
+    repeat(3, minmax(0, 0.76fr))
+    minmax(0, 0.7fr)
+    minmax(0, 0.7fr)
+    minmax(0, 0.92fr);
+
+  min-width: 0;
+  width: 100%;
+}
+
+.competition-attempt-row {
+  grid-template-columns:
+    minmax(0, 0.45fr)
+    minmax(0, 1.4fr)
+    minmax(0, 0.95fr)
+    minmax(0, 0.55fr)
+    minmax(0, 0.52fr)
+    repeat(9, minmax(0, 0.83fr))
+    repeat(3, minmax(0, 0.62fr))
+    minmax(0, 0.64fr)
+    minmax(0, 0.8fr);
+
+  min-width: 0;
+  width: 100%;
+}
+
+.competition-attempt-row.with-weight-class {
+  grid-template-columns:
+    minmax(0, 0.45fr)
+    minmax(0, 1.35fr)
+    minmax(0, 0.9fr)
+    minmax(0, 0.52fr)
+    minmax(0, 0.65fr)
+    minmax(0, 0.5fr)
+    repeat(9, minmax(0, 0.8fr))
+    repeat(3, minmax(0, 0.6fr))
+    minmax(0, 0.62fr)
+    minmax(0, 0.78fr);
+
+  min-width: 0;
+  width: 100%;
+}
+
+
+.competition-row > div {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  padding: 4px 3px;
+
+  border-right: 1px solid #eef2f7;
+}
+
+.competition-row > div:last-child {
+  border-right: 0;
+}
+
+.competition-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
+  min-height: 43px;
+
+  background: #dbe6f2;
+  border-bottom: 1px solid #9fb5cf;
+
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.competition-header > div {
+  justify-content: center;
+  text-align: center;
+
+  white-space: normal;
+  line-height: 1.12;
+}
+
+.competition-sort-header-cell {
+  padding: 0 !important;
+}
+
+.competition-sort-button {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 4px 13px 4px 5px;
+
+  border: 0;
+
+  background: transparent;
+  color: inherit;
+
+  font: inherit;
+  font-weight: 700;
+
+  text-align: center;
+  white-space: normal;
+  line-height: 1.12;
+}
+
+.competition-sort-button:hover,
+.competition-sort-button.active {
+  color: #1e3a5f;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.competition-sort-button:focus-visible {
+  outline: 2px solid #334155;
+  outline-offset: -2px;
+}
+
+.competition-sort-indicator {
+  position: absolute;
+  right: 3px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  font-size: 8px;
+}
+
+.competition-body {
+  min-width: 0;
+  width: 100%;
+}
+
+.competition-center,
+.competition-total,
+.competition-best-summary {
+  justify-content: center;
+  text-align: center;
+}
+
+.competition-total {
+  font-weight: 700;
+}
+
+.competition-lifter-name {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start !important;
+  justify-content: center;
+}
+
+.competition-lifter-name span {
+  margin-top: 2px;
+
+  color: #64748b;
+  font-size: 10px;
+}
+
+.competition-result-cell {
+  justify-content: center;
+}
+
+.competition-result-input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+
+  padding: 3px 2px;
+
+  border: 1px solid #94a3b8;
+  border-radius: 3px;
+
+  background: white;
+  color: #111827;
+
+  text-align: center;
+}
+
+.competition-result-input:focus {
+  outline: 2px solid #334155;
+  outline-offset: 0;
+}
+
+.competition-attempt-cell {
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 25px);
+
+  align-items: center;
+
+  gap: 3px;
+
+  padding: 4px 4px !important;
+
+  background: transparent;
+}
+
+.competition-attempt-input {
+  height: 28px;
+}
+
+.attempt-status-cycle {
+  width: 100%;
+  max-width: 25px;
+  height: 28px;
+
+  min-width: 0;
+
+  padding: 0;
+
+  border: 1px solid #94a3b8;
+  border-radius: 0;
+
+  background: white;
+  color: #111827;
+
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 26px;
+
+  text-align: center;
+}
+
+.attempt-status-cycle:hover {
+  border-color: #475569;
+}
+
+.attempt-status-cycle:focus {
+  outline: 2px solid #334155;
+  outline-offset: -1px;
+}
+
+.attempt-status-cycle.attempt-status-good {
+  background: #22c55e;
+  color: #071a0c;
+}
+
+.attempt-status-cycle.attempt-status-bad {
+  background: #ef4444;
+  color: #1f0909;
+}
+
+.attempt-status-cycle.attempt-status-unspecified {
+  background: white;
+  color: transparent;
+}
+
+.competition-attempt-cell.attempt-good,
+.competition-attempt-cell.attempt-bad,
+.competition-attempt-cell.attempt-unspecified {
+  background: transparent;
+}
+
+.competition-empty-row,
+.competition-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  padding: 24px;
+
+  color: #64748b;
+  text-align: center;
+}
+
+.competition-empty-row strong,
+.competition-placeholder strong {
+  color: #334155;
+}
+
+
+
+/* Keep registration and competition data within the viewport at any zoom. */
+.registration-row > *,
+.competition-row > * {
+  min-width: 0;
+}
+
+.registration-row .cell-name,
+.registration-row .cell-text,
+.competition-row > div {
+  overflow: hidden;
+}
+
+.competition-row > div {
+  overflow-wrap: anywhere;
+}
+
+.competition-lifter-name strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Registration division/team values are shown horizontally. */
+.division-selector-button,
+.team-selector-button {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.division-selector-button .selector-button-main,
+.team-selector-button .team-name {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.division-selector-button .selector-button-detail,
+.team-selector-button .selector-button-detail {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Lifter status highlighting. Active lifters retain the normal row colors. */
+.registered-row.lifter-status-bombed,
+.registered-row.lifter-status-bombed:nth-child(even),
+.registered-row.lifter-status-bombed:hover,
+.registered-row.lifter-status-bombed.selected,
+.registered-row.lifter-status-bombed.selected:hover,
+.competition-row.lifter-status-bombed,
+.competition-row.lifter-status-bombed.selected {
+  background: #fff1a8 !important;
+}
+
+.registered-row.lifter-status-scratched,
+.registered-row.lifter-status-scratched:nth-child(even),
+.registered-row.lifter-status-scratched:hover,
+.registered-row.lifter-status-scratched.selected,
+.registered-row.lifter-status-scratched.selected:hover,
+.competition-row.lifter-status-scratched,
+.competition-row.lifter-status-scratched.selected {
+  background: #ffd8a8 !important;
+}
+
+.registered-row.lifter-status-disqualified,
+.registered-row.lifter-status-disqualified:nth-child(even),
+.registered-row.lifter-status-disqualified:hover,
+.registered-row.lifter-status-disqualified.selected,
+.registered-row.lifter-status-disqualified.selected:hover,
+.competition-row.lifter-status-disqualified,
+.competition-row.lifter-status-disqualified.selected {
+  background: #ffc9c9 !important;
+}
+
+/* The entry boxes themselves remain neutral; surrounding cells inherit row status shading. */
+.lifter-status-bombed .competition-result-input,
+.lifter-status-scratched .competition-result-input,
+.lifter-status-disqualified .competition-result-input,
+.lifter-status-bombed .grid-input,
+.lifter-status-scratched .grid-input,
+.lifter-status-disqualified .grid-input,
+.lifter-status-bombed .grid-select,
+.lifter-status-scratched .grid-select,
+.lifter-status-disqualified .grid-select {
+  background: white;
+}
+
+/* Bulk Edit follows the same lifter-status row highlighting. */
+.bulk-edit-row.lifter-status-bombed {
+  background: #fff1a8 !important;
+}
+
+.bulk-edit-row.lifter-status-scratched {
+  background: #ffd8a8 !important;
+}
+
+.bulk-edit-row.lifter-status-disqualified {
+  background: #ffc9c9 !important;
+}
+
+.bulk-edit-row.lifter-status-bombed input,
+.bulk-edit-row.lifter-status-bombed select,
+.bulk-edit-row.lifter-status-scratched input,
+.bulk-edit-row.lifter-status-scratched select,
+.bulk-edit-row.lifter-status-disqualified input,
+.bulk-edit-row.lifter-status-disqualified select {
+  background: white;
+}
+
+
+/* Scratched/disqualified lifters remain selectable, but competition results are read-only. */
+.competition-result-input:disabled,
+.attempt-status-cycle:disabled {
+  cursor: not-allowed;
+}
+
+.competition-result-input:disabled {
+  opacity: 0.72;
 }

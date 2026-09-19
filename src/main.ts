@@ -57,6 +57,23 @@ interface RegistrationDefaults {
 }
 
 
+type AppPage =
+  | 'registration'
+  | 'competition'
+
+
+type CompetitionLift =
+  | 'squat'
+  | 'bench'
+  | 'deadlift'
+
+
+type CompetitionAttemptKey =
+  | 'attempt1'
+  | 'attempt2'
+  | 'attempt3'
+
+
 type TeamStatusValue =
   | 'regular'
   | 'bteam'
@@ -65,6 +82,7 @@ type TeamStatusValue =
 
 type LifterSortColumn =
   | 'lifterNumber'
+  | 'lifter'
   | 'firstName'
   | 'lastName'
   | 'team'
@@ -91,7 +109,200 @@ type BulkSortColumn =
   | 'readiness'
 
 
+type CompetitionSortColumn =
+  | 'lifterNumber'
+  | 'lifter'
+  | 'team'
+  | 'bodyWeight'
+  | 'weightClass'
+  | 'place'
+  | 'bestSquat'
+  | 'bestBench'
+  | 'bestDeadlift'
+  | 'total'
 
+
+
+const SCHWARTZ_COEFFICIENTS = [
+  1.2803, 1.2627, 1.2455, 1.2287, 1.2124, 1.1965, 1.1809, 1.1657, 1.1509, 1.1365,
+  1.1223, 1.1086, 1.0952, 1.0821, 1.0693, 1.0569, 1.0448, 1.0329, 1.0214, 1.0101,
+  0.9991, 0.9884, 0.9779, 0.9677, 0.9578, 0.9401, 0.9385, 0.9292, 0.9203, 0.9115,
+  0.9029, 0.8946, 0.8863, 0.8783, 0.8706, 0.8630, 0.8556, 0.8483, 0.8412, 0.8343,
+  0.8276, 0.8210, 0.8146, 0.8083, 0.8022, 0.7961, 0.7903, 0.7846, 0.7790, 0.7735,
+  0.7682, 0.7630, 0.7579, 0.7528, 0.7479, 0.7432, 0.7385, 0.7339, 0.7294, 0.7250,
+  0.7207, 0.7165, 0.7124, 0.7083, 0.7044, 0.7004, 0.6967, 0.6930, 0.6893, 0.6857,
+  0.6822, 0.6787, 0.6753, 0.6720, 0.6688, 0.6656, 0.6624, 0.6593, 0.6563, 0.6533,
+  0.6504, 0.6475, 0.6447, 0.6420, 0.6392, 0.6365, 0.6339, 0.6313, 0.6288, 0.6262,
+  0.6238, 0.6214, 0.6190, 0.6167, 0.6144, 0.6121, 0.6099, 0.6077, 0.6056, 0.6036,
+  0.6014, 0.5994, 0.5978, 0.5954, 0.5935, 0.5916, 0.5897, 0.5879, 0.5861, 0.5843,
+  0.5826, 0.5809, 0.5792, 0.5776, 0.5760, 0.5744, 0.5729, 0.5714, 0.5700, 0.5685,
+  0.5670, 0.5657, 0.5643, 0.5630, 0.5617, 0.5604, 0.5592, 0.5580, 0.5568, 0.5558,
+  0.5545, 0.5535, 0.5524, 0.5514, 0.5504, 0.5494, 0.5485, 0.5476, 0.5467, 0.5458,
+  0.5449, 0.5441, 0.5433, 0.5426, 0.5418, 0.5411, 0.5405, 0.5398, 0.5391, 0.5385,
+  0.5379, 0.5373, 0.5367, 0.5362, 0.5357, 0.5352, 0.5347, 0.5342, 0.5337, 0.5333,
+  0.5328, 0.5325, 0.5320, 0.5316, 0.5312, 0.5308, 0.5304, 0.5300, 0.5296, 0.5292,
+  0.5289, 0.5284, 0.5281, 0.5276, 0.5273, 0.5268, 0.5263, 0.5259, 0.5254, 0.5248,
+  0.5243, 0.5239, 0.5232, 0.5227, 0.5220, 0.5214, 0.5208, 0.5203, 0.5197, 0.5192,
+  0.5186, 0.5180, 0.5175, 0.5169, 0.5164, 0.5158, 0.5154, 0.5147, 0.5142, 0.5137,
+  0.5132, 0.5126, 0.5121, 0.5119, 0.5109, 0.5104, 0.5098, 0.5094, 0.5088, 0.5083,
+  0.5077, 0.5072, 0.5067, 0.5062, 0.5057, 0.5053, 0.5047, 0.5043, 0.5037, 0.5032,
+  0.5027, 0.5022, 0.5017, 0.5013, 0.5007, 0.5002, 0.4998, 0.4992, 0.4988, 0.4982,
+  0.4978, 0.4973, 0.4968, 0.4964, 0.4959, 0.4955, 0.4950, 0.4946, 0.4941, 0.4937,
+  0.4932, 0.4928, 0.4924, 0.4919, 0.4914, 0.4909, 0.4905, 0.4901, 0.4896, 0.4891,
+  0.4887, 0.4883, 0.4878, 0.4874, 0.4870, 0.4866, 0.4862, 0.4858, 0.4854, 0.4850,
+  0.4845, 0.4841, 0.4837, 0.4833, 0.4829, 0.4825, 0.4821, 0.4817, 0.4813, 0.4809,
+  0.4805, 0.4801, 0.4798, 0.4792, 0.4788, 0.4784,
+] as const
+
+const MALONE_COEFFICIENTS = [
+  1.1756, 1.1645, 1.1557, 1.1450, 1.1365, 1.1261, 1.1180, 1.1079, 1.0980, 1.0903,
+  1.0807, 1.0732, 1.0657, 1.0566, 1.0494, 1.0405, 1.0336, 1.0250, 1.0165, 1.0098,
+  1.0016, 0.9952, 0.9872, 0.9809, 0.9731, 0.9670, 0.9595, 0.9536, 0.9462, 0.9390,
+  0.9333, 0.9263, 0.9208, 0.9110, 0.9086, 0.9019, 0.8980, 0.8902, 0.8851, 0.8788,
+  0.8728, 0.8676, 0.8628, 0.8568, 0.8508, 0.8462, 0.8401, 0.8358, 0.8302, 0.8257,
+  0.8202, 0.8159, 0.8105, 0.8052, 0.8010, 0.7959, 0.7918, 0.7867, 0.7826, 0.7769,
+  0.7737, 0.7697, 0.7666, 0.7627, 0.7596, 0.7565, 0.7520, 0.7490, 0.7453, 0.7431,
+  0.7387, 0.7358, 0.7322, 0.7293, 0.7258, 0.7230, 0.7196, 0.7168, 0.7134, 0.7107,
+  0.7074, 0.7040, 0.7014, 0.6981, 0.6956, 0.6923, 0.6898, 0.6866, 0.6841, 0.6810,
+  0.6786, 0.6755, 0.6731, 0.6701, 0.6671, 0.6648, 0.6618, 0.6595, 0.6566, 0.6543,
+  0.6521, 0.6492, 0.6464, 0.6442, 0.6415, 0.6387, 0.6366, 0.6339, 0.6317, 0.6300,
+  0.6287, 0.6269, 0.6256, 0.6239, 0.6226, 0.6209, 0.6196, 0.6180, 0.6167, 0.6151,
+  0.6134, 0.6122, 0.6109, 0.6093, 0.6077, 0.6064, 0.6049, 0.6036, 0.6021, 0.6008,
+  0.5993, 0.5981, 0.5966, 0.5953, 0.5930, 0.5926, 0.5911, 0.5896, 0.5884, 0.5869,
+  0.5858, 0.5843, 0.5831, 0.5817, 0.5805, 0.5791, 0.5779, 0.5765, 0.5754, 0.5740,
+  0.5725, 0.5714, 0.5700, 0.5693, 0.5685, 0.5681, 0.5671, 0.5669, 0.5662, 0.5656,
+  0.5649,
+] as const
+
+function getDivisionCoefficientSystem(
+  division: Division,
+): 'schwartz' | 'malone' | null {
+
+  switch (
+    division.ruleSet
+  ) {
+    case 'THSPA':
+    case 'NMAA_BOYS':
+      return 'schwartz'
+
+    case 'THSWPA':
+    case 'NMAA_GIRLS':
+      return 'malone'
+
+    default:
+      return null
+  }
+}
+
+
+function getBodyWeightCoefficient(
+  division: Division,
+  bodyWeight: number | null,
+): number | null {
+
+  if (
+    bodyWeight === null ||
+    !Number.isFinite(
+      bodyWeight
+    ) ||
+    bodyWeight <= 0
+  ) {
+    return null
+  }
+
+  const system =
+    getDivisionCoefficientSystem(
+      division
+    )
+
+  if (
+    system === null
+  ) {
+    return null
+  }
+
+  const table =
+    system === 'schwartz'
+      ? SCHWARTZ_COEFFICIENTS
+      : MALONE_COEFFICIENTS
+
+  const wholePounds =
+    Math.floor(
+      bodyWeight
+    )
+
+  const index =
+    Math.max(
+      0,
+      Math.min(
+        table.length - 1,
+        wholePounds - 90
+      )
+    )
+
+  return table[index]
+}
+
+
+function formatBodyWeightCoefficient(
+  value: number | null,
+): string {
+
+  return value === null
+    ? ''
+    : value.toFixed(4)
+}
+
+
+function getLifterBodyWeightCoefficient(
+  meet: LocalMeet,
+  lifter: Lifter,
+): number | null {
+
+  const division =
+    meet.state.divisions.find(
+      item =>
+        item.id ===
+        lifter.divisionId
+    )
+
+  if (
+    division === undefined
+  ) {
+    return null
+  }
+
+  return getBodyWeightCoefficient(
+    division,
+    lifter.bodyWeight
+  )
+}
+
+
+function getRegistrationCoefficientHeader(
+  division: Division | undefined,
+): string {
+
+  const system =
+    division === undefined
+      ? null
+      : getDivisionCoefficientSystem(
+          division
+        )
+
+  switch (
+    system
+  ) {
+    case 'schwartz':
+      return 'Schwartz'
+
+    case 'malone':
+      return 'Malone'
+
+    default:
+      return 'Coefficient'
+  }
+}
 function createDevelopmentLifter(
   id: number,
   lifterNumber: number,
@@ -134,7 +345,7 @@ const localMeets: LocalMeet[] = [
         date: '2026-09-16',
         location: 'Lubbock, Texas',
         resultEntryMode:
-          'best-lift-only',
+          'all-attempts',
       },
 
       divisions: [
@@ -338,6 +549,467 @@ const localMeets: LocalMeet[] = [
   },
 ]
 
+function expandDevelopmentMeetLifters():
+  void {
+
+  const meet =
+    localMeets.find(
+      item =>
+        item.state.meet.id ===
+        'development-meet'
+    )
+
+  if (
+    meet === undefined ||
+    meet.state.lifters.length >=
+      108
+  ) {
+    return
+  }
+
+  const boysFirstNames = [
+    'Blake', 'Carson', 'Dominic', 'Grayson', 'Ian',
+    'Jordan', 'Kayden', 'Micah', 'Nolan', 'Parker',
+    'Quentin', 'Ryder', 'Sawyer', 'Tristan', 'Xavier',
+    'Zane', 'Brody', 'Cameron', 'Diego', 'Emmett',
+    'Finn', 'Gavin', 'Hayden', 'Jonah', 'Liam',
+    'Miles', 'Preston', 'Reid', 'Tanner', 'Wesley',
+  ]
+
+  const girlsFirstNames = [
+    'Abigail', 'Bella', 'Caroline', 'Delilah', 'Ellie',
+    'Faith', 'Gianna', 'Hazel', 'Ivy', 'Julia',
+    'Kinsley', 'Leah', 'Madeline', 'Naomi', 'Olivia',
+    'Paige', 'Quinn', 'Reagan', 'Savannah', 'Tessa',
+    'Valerie', 'Willow', 'Yaretzi', 'Zoe',
+  ]
+
+  const lastNames = [
+    'Acosta', 'Barrera', 'Cantu', 'Delgado', 'Escobar',
+    'Fuentes', 'Gallegos', 'Hinojosa', 'Ibarra', 'Jimenez',
+    'Keller', 'Lara', 'Montoya', 'Nunez', 'Ochoa',
+    'Padilla', 'Quintana', 'Rosales', 'Solis', 'Trevino',
+    'Uribe', 'Valdez', 'Williams', 'Ybarra', 'Zamora',
+    'Anderson', 'Baker', 'Coleman', 'Diaz', 'Estrada',
+  ]
+
+  const boysTeams = [
+    1, 2, 4, 5, 6, 7,
+  ]
+
+  const girlsTeams = [
+    1, 3, 4, 5, 6, 7,
+  ]
+
+  for (
+    let index = 0;
+    index < boysFirstNames.length;
+    index += 1
+  ) {
+    const id =
+      55 + index
+
+    meet.state.lifters.push(
+      createDevelopmentLifter(
+        id,
+        id,
+        boysFirstNames[index],
+        lastNames[index],
+        1,
+        boysTeams[
+          index % boysTeams.length
+        ],
+        index % 7 === 0
+          ? 'unequipped'
+          : 'equipped',
+      )
+    )
+  }
+
+  for (
+    let index = 0;
+    index < girlsFirstNames.length;
+    index += 1
+  ) {
+    const id =
+      85 + index
+
+    meet.state.lifters.push(
+      createDevelopmentLifter(
+        id,
+        id,
+        girlsFirstNames[index],
+        lastNames[
+          (index + 3) %
+          lastNames.length
+        ],
+        2,
+        girlsTeams[
+          index % girlsTeams.length
+        ],
+        index % 6 === 0
+          ? 'unequipped'
+          : 'equipped',
+      )
+    )
+  }
+}
+
+
+expandDevelopmentMeetLifters()
+
+
+function roundDevelopmentAttempt(
+  value: number,
+): number {
+
+  return Math.round(
+    value / 5
+  ) * 5
+}
+
+
+function seedDevelopmentLifterAttempts(
+  lifter: Lifter,
+): void {
+
+  if (
+    lifter.bodyWeight ===
+    null
+  ) {
+    return
+  }
+
+  const squat1 =
+    roundDevelopmentAttempt(
+      lifter.bodyWeight * 1.45
+    )
+
+  const bench1 =
+    roundDevelopmentAttempt(
+      lifter.bodyWeight * 0.9
+    )
+
+  const deadlift1 =
+    roundDevelopmentAttempt(
+      lifter.bodyWeight * 1.65
+    )
+
+  const variant =
+    lifter.lifterNumber % 3
+
+  const squat2 =
+    squat1 + 10
+
+  const squat3 =
+    squat2 + 10
+
+  const bench2 =
+    bench1 + 5
+
+  const bench3 =
+    bench2 + 5
+
+  const deadlift2 =
+    deadlift1 + 10
+
+  const deadlift3 =
+    deadlift2 + 10
+
+  const bench2Good =
+    variant !== 1
+
+  lifter.allAttemptResults = {
+    squat: {
+      attempt1: {
+        weight: squat1,
+        status: 'good',
+      },
+      attempt2: {
+        weight: squat2,
+        status: 'good',
+      },
+      attempt3: {
+        weight: squat3,
+        status:
+          variant === 0
+            ? 'bad'
+            : 'unspecified',
+      },
+    },
+
+    bench: {
+      attempt1: {
+        weight: bench1,
+        status: 'good',
+      },
+      attempt2: {
+        weight: bench2,
+        status:
+          bench2Good
+            ? 'good'
+            : 'bad',
+      },
+      attempt3: {
+        weight: bench3,
+        status: 'unspecified',
+      },
+    },
+
+    deadlift: {
+      attempt1: {
+        weight: deadlift1,
+        status: 'good',
+      },
+      attempt2: {
+        weight: deadlift2,
+        status: 'good',
+      },
+      attempt3: {
+        weight: deadlift3,
+        status:
+          variant === 2
+            ? 'bad'
+            : 'unspecified',
+      },
+    },
+  }
+
+  lifter.bestLiftResults = {
+    squat:
+      squat2,
+
+    bench:
+      bench2Good
+        ? bench2
+        : bench1,
+
+    deadlift:
+      deadlift2,
+  }
+}
+
+
+function seedDevelopmentMeetData():
+  void {
+
+  const meet =
+    localMeets.find(
+      item =>
+        item.state.meet.id ===
+        'development-meet'
+    )
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  /*
+   * Sample bodyweights deliberately rotate through weight classes
+   * instead of following team/lifter-number order. This keeps each
+   * class populated by several different teams for Competition testing.
+   */
+  const boysWeights = [
+    108.4, 119.6, 129.1, 143.7, 158.5, 175.2,
+    191.4, 213.6, 235.8, 267.3, 286.5,
+  ]
+
+  const girlsWeights = [
+    93.6, 101.8, 110.7, 119.4, 128.6, 143.2,
+    158.7, 174.6, 191.2, 214.4, 235.6, 251.7,
+  ]
+
+  const assignDivisionWeights = (
+    divisionId: number,
+    classWeights: number[],
+    step: number,
+  ): void => {
+
+    const lifters =
+      meet.state.lifters
+        .filter(
+          lifter =>
+            lifter.divisionId ===
+            divisionId
+        )
+        .sort(
+          (a, b) =>
+            a.lifterNumber -
+            b.lifterNumber
+        )
+
+    const division =
+      meet.state.divisions.find(
+        item =>
+          item.id ===
+          divisionId
+      )
+
+    if (
+      division === undefined
+    ) {
+      return
+    }
+
+    for (
+      let index = 0;
+      index < lifters.length;
+      index += 1
+    ) {
+      const lifter =
+        lifters[index]
+
+      const classIndex =
+        (
+          index * step +
+          Math.floor(
+            index /
+            classWeights.length
+          )
+        ) %
+        classWeights.length
+
+      const variation =
+        (
+          (index % 4) -
+          1.5
+        ) * 0.2
+
+      const bodyWeight =
+        Math.round(
+          (
+            classWeights[classIndex] +
+            variation
+          ) * 10
+        ) / 10
+
+      try {
+
+        const rules =
+          getDivisionRules(
+            division
+          )
+
+        lifter.bodyWeight =
+          bodyWeight
+
+        lifter.weightClass =
+          getAutomaticWeightClass(
+            bodyWeight,
+            rules.weightClasses
+          )
+
+        lifter.weightClassSource =
+          'automatic'
+
+      } catch {
+        lifter.bodyWeight =
+          bodyWeight
+      }
+    }
+  }
+
+  assignDivisionWeights(
+    1,
+    boysWeights,
+    5,
+  )
+
+  assignDivisionWeights(
+    2,
+    girlsWeights,
+    5,
+  )
+
+  const classGroups =
+    new Map<
+      string,
+      Lifter[]
+    >()
+
+  for (
+    const lifter of
+    meet.state.lifters
+  ) {
+    if (
+      lifter.weightClass ===
+      null
+    ) {
+      continue
+    }
+
+    const key =
+      `${lifter.divisionId}|${lifter.weightClass}`
+
+    const group =
+      classGroups.get(
+        key
+      ) ?? []
+
+    group.push(
+      lifter
+    )
+
+    classGroups.set(
+      key,
+      group
+    )
+  }
+
+  for (
+    const group of
+    classGroups.values()
+  ) {
+    const lifters =
+      [...group].sort(
+        (a, b) =>
+          a.lifterNumber -
+          b.lifterNumber
+      )
+
+    const sampleCount =
+      Math.max(
+        1,
+        Math.round(
+          lifters.length / 2
+        )
+      )
+
+    /*
+     * Seed every other lifter rather than simply the first half.
+     * This spreads populated attempts across teams within each class.
+     */
+    const seeded =
+      lifters.filter(
+        (_, index) =>
+          index % 2 === 0
+      )
+
+    for (
+      const lifter of
+      seeded.slice(
+        0,
+        sampleCount
+      )
+    ) {
+      seedDevelopmentLifterAttempts(
+        lifter
+      )
+    }
+  }
+}
+
+
+seedDevelopmentMeetData()
+
+
+
+let currentPage:
+  AppPage =
+    'registration'
+
 
 let selectedMeetId:
   string | null =
@@ -356,6 +1028,86 @@ let selectedTeamId:
 
 let selectedLifterId:
   number | null =
+    null
+
+
+let selectedCompetitionWeightClass:
+  string | null =
+    null
+
+
+let competitionSortColumn:
+  CompetitionSortColumn =
+    'lifterNumber'
+
+
+let competitionSortAscending =
+  true
+
+
+const competitionWeightClassByDivision =
+  new Map<string, string | null>()
+
+
+function getCompetitionDivisionKey(
+  meetId: string,
+  divisionId: number,
+): string {
+
+  return `${meetId}:${divisionId}`
+}
+
+
+function rememberCompetitionWeightClass(
+  meet: LocalMeet,
+): void {
+
+  if (
+    selectedDivisionId === null
+  ) {
+    return
+  }
+
+  competitionWeightClassByDivision.set(
+    getCompetitionDivisionKey(
+      meet.state.meet.id,
+      selectedDivisionId
+    ),
+    selectedCompetitionWeightClass
+  )
+}
+
+
+function restoreCompetitionWeightClass(
+  meet: LocalMeet,
+  divisionId: number,
+): void {
+
+  const key =
+    getCompetitionDivisionKey(
+      meet.state.meet.id,
+      divisionId
+    )
+
+  selectedCompetitionWeightClass =
+    competitionWeightClassByDivision.has(
+      key
+    )
+      ? competitionWeightClassByDivision.get(
+          key
+        ) ?? null
+      : getCompetitionWeightClasses(
+          meet
+        )[0] ?? null
+}
+
+
+const competitionAutoBombedLifterIds =
+  new Set<number>()
+
+
+let competitionShortcutKeydownHandler:
+  ((event: KeyboardEvent) => void) | null =
     null
 
 
@@ -720,6 +1472,9 @@ function selectMeet(
   selectedMeetId =
     meetId
 
+  selectedCompetitionWeightClass =
+    null
+
   registrationDefaults = {
     equipmentType:
       'equipped',
@@ -789,6 +1544,9 @@ function selectDivision(
 
   selectedDivisionId =
     divisionId
+
+  selectedCompetitionWeightClass =
+    null
 
   selectFirstTeamForDivision(
     meet,
@@ -3283,15 +4041,25 @@ function renderNavigation():
       <button
         id="navRegistration"
         type="button"
-        class="nav-item active"
+        class="nav-item ${
+          currentPage ===
+          'registration'
+            ? 'active'
+            : ''
+        }"
       >
         Registration
       </button>
 
       <button
+        id="navCompetition"
         type="button"
-        class="nav-item"
-        disabled
+        class="nav-item ${
+          currentPage ===
+          'competition'
+            ? 'active'
+            : ''
+        }"
       >
         Competition
       </button>
@@ -3336,6 +4104,62 @@ function renderNavigation():
 function renderShortcutHelpDialog():
   string {
 
+  if (
+    currentPage ===
+    'competition'
+  ) {
+    return `
+      <dialog
+        id="shortcutHelpDialog"
+        class="shortcut-help-dialog"
+      >
+        <div class="shortcut-help-title-row">
+          <strong>Competition Entry Help</strong>
+
+          <button
+            id="closeShortcutHelp"
+            type="button"
+            class="shortcut-help-close"
+            aria-label="Close shortcut help"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="shortcut-help-grid">
+          <div class="shortcut-help-group">
+            <strong>Result Entry</strong>
+            <span><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> move between fields</span>
+            <span><kbd>Enter</kbd> moves to the same result field on the next lifter</span>
+            <span>Result changes are applied immediately</span>
+          </div>
+
+          <div class="shortcut-help-group">
+            <strong>All Attempts</strong>
+            <span><kbd>Space</kbd> cycles Unknown → Good → Failed</span>
+            <span><kbd>G</kbd> Good, <kbd>R</kbd> Failed, <kbd>W</kbd> Unknown</span>
+            <span>Arrow keys move between weight-entry boxes</span>
+            <span>The best lift is the highest attempt marked Good</span>
+          </div>
+
+          <div class="shortcut-help-group">
+            <strong>Lifter Status</strong>
+            <span><kbd>A</kbd> Active; <kbd>B</kbd> toggles Bombed / Active</span>
+            <span><kbd>S</kbd> toggles Scratched / Active; <kbd>Q</kbd> toggles Disqualified / Active</span>
+            <span>Three failed attempts in one lift automatically sets Bombed</span>
+          </div>
+
+          <div class="shortcut-help-group">
+            <strong>Filters</strong>
+            <span>Use the Division and Weight Class tabs above the grid</span>
+            <span>All Weight Classes shows every class in the selected division</span>
+            <span>The meet Result Entry mode on Registration controls which grid is shown</span>
+          </div>
+        </div>
+      </dialog>
+    `
+  }
+
   return `
     <dialog
       id="shortcutHelpDialog"
@@ -3370,9 +4194,9 @@ function renderShortcutHelpDialog():
         <div class="shortcut-help-group">
           <strong>Focused Lifter</strong>
           <span><kbd>a</kbd> Active</span>
-          <span><kbd>b</kbd> Bombed</span>
-          <span><kbd>s</kbd> Scratched</span>
-          <span><kbd>q</kbd> Disqualified</span>
+          <span><kbd>b</kbd> Toggle Bombed / Active</span>
+          <span><kbd>s</kbd> Toggle Scratched / Active</span>
+          <span><kbd>q</kbd> Toggle Disqualified / Active</span>
           <span><kbd>e</kbd> Equipped</span>
           <span><kbd>u</kbd> Unequipped</span>
           <span><kbd>w</kbd> Enter BWT</span>
@@ -3782,7 +4606,7 @@ function renderDivisionRows():
 
               <button
                 type="button"
-                class="selector-button"
+                class="selector-button division-selector-button"
                 data-select-division="${division.id}"
                 tabindex="-1"
               >
@@ -3952,7 +4776,7 @@ function renderTeamRows():
                           : ''
                       }
                     >
-                    B Team
+                    BTeam
                   </label>
                 </div>
 
@@ -3975,18 +4799,16 @@ function renderTeamRows():
 
               <button
                 type="button"
-                class="selector-button"
+                class="selector-button team-selector-button"
                 data-select-team="${team.id}"
                 tabindex="-1"
               >
                 <span class="team-name">
                   ${escapeHtml(team.name)}
                 </span>
-                ${
-                  team.isBTeam === true
-                    ? '<span class="selector-button-detail">B Team</span>'
-                    : ''
-                }
+                <span class="selector-button-detail">
+                  ${team.isBTeam === true ? 'BTeam' : 'ATeam'}
+                </span>
               </button>
 
               <button
@@ -4082,7 +4904,7 @@ function renderTeamRows():
                   id="newTeamBTeam"
                   type="checkbox"
                 >
-                B Team
+                BTeam
               </label>
             </div>
           </div>
@@ -4570,6 +5392,28 @@ function getLifterGridClassNames(
 }
 
 
+function getLifterStatusRowClass(
+  lifter: Lifter,
+): string {
+
+  switch (
+    lifter.status
+  ) {
+    case 'bombed':
+      return 'lifter-status-bombed'
+
+    case 'scratched':
+      return 'lifter-status-scratched'
+
+    case 'disqualified':
+      return 'lifter-status-disqualified'
+
+    default:
+      return ''
+  }
+}
+
+
 function compareOptionalNumbers(
   a: number | null,
   b: number | null,
@@ -4642,6 +5486,19 @@ function compareVisibleLifters(
     case 'lifterNumber':
       return a.lifterNumber -
         b.lifterNumber
+
+    case 'lifter': {
+      const lastNameResult =
+        a.lastName.localeCompare(
+          b.lastName
+        )
+
+      return lastNameResult !== 0
+        ? lastNameResult
+        : a.firstName.localeCompare(
+            b.firstName
+          )
+    }
 
     case 'firstName':
       return a.firstName.localeCompare(
@@ -4805,7 +5662,7 @@ function renderLifterEditRow(
 
   return `
     <div
-      class="registration-row registered-row selected editing-row ${getLifterGridClassNames(meet)}"
+      class="registration-row registered-row selected editing-row ${getLifterGridClassNames(meet)} ${getLifterStatusRowClass(lifter)}"
       data-lifter-row="${lifter.id}"
       data-edit-row="lifter"
     >
@@ -4819,23 +5676,27 @@ function renderLifterEditRow(
         aria-label="Lifter number"
       >
 
-      <input
-        id="editLifterFirstName"
-        class="grid-input"
-        type="text"
-        value="${escapeHtml(lifter.firstName)}"
-        autocomplete="off"
-        aria-label="First name"
-      >
+      <div class="lifter-name-edit-fields">
+        <input
+          id="editLifterFirstName"
+          class="grid-input"
+          type="text"
+          value="${escapeHtml(lifter.firstName)}"
+          autocomplete="off"
+          aria-label="First name"
+          placeholder="First"
+        >
 
-      <input
-        id="editLifterLastName"
-        class="grid-input"
-        type="text"
-        value="${escapeHtml(lifter.lastName)}"
-        autocomplete="off"
-        aria-label="Last name"
-      >
+        <input
+          id="editLifterLastName"
+          class="grid-input"
+          type="text"
+          value="${escapeHtml(lifter.lastName)}"
+          autocomplete="off"
+          aria-label="Last name"
+          placeholder="Last"
+        >
+      </div>
 
       ${
         showTeamColumn
@@ -4872,6 +5733,18 @@ function renderLifterEditRow(
           ''
         )}
       </select>
+
+      <div
+        id="editLifterCoefficient"
+        class="cell-coefficient"
+      >
+        ${formatBodyWeightCoefficient(
+          getLifterBodyWeightCoefficient(
+            meet,
+            lifter
+          )
+        )}
+      </div>
 
       ${
         showGradeColumn
@@ -4983,7 +5856,7 @@ function renderRegisteredLifterRows(
 
         return `
           <div
-            class="registration-row registered-row ${getLifterGridClassNames(meet)} ${
+            class="registration-row registered-row ${getLifterGridClassNames(meet)} ${getLifterStatusRowClass(lifter)} ${
               lifter.id ===
               selectedLifterId
                 ? 'selected'
@@ -4999,11 +5872,7 @@ function renderRegisteredLifterRows(
             </div>
 
             <div class="cell-name">
-              ${escapeHtml(lifter.firstName)}
-            </div>
-
-            <div class="cell-name">
-              ${escapeHtml(lifter.lastName)}
+              ${escapeHtml(lifter.lastName)}, ${escapeHtml(lifter.firstName)}
             </div>
 
             ${
@@ -5025,6 +5894,15 @@ function renderRegisteredLifterRows(
 
             <div class="cell-class">
               ${escapeHtml(lifter.weightClass ?? '')}
+            </div>
+
+            <div class="cell-coefficient">
+              ${formatBodyWeightCoefficient(
+                getLifterBodyWeightCoefficient(
+                  meet,
+                  lifter
+                )
+              )}
             </div>
 
             ${
@@ -5135,21 +6013,25 @@ function renderRegistrationEntryRow(
         aria-label="Lifter number"
       >
 
-      <input
-        id="entryFirstName"
-        class="grid-input"
-        type="text"
-        autocomplete="off"
-        aria-label="First name"
-      >
+      <div class="lifter-name-edit-fields">
+        <input
+          id="entryFirstName"
+          class="grid-input"
+          type="text"
+          autocomplete="off"
+          aria-label="First name"
+          placeholder="First"
+        >
 
-      <input
-        id="entryLastName"
-        class="grid-input"
-        type="text"
-        autocomplete="off"
-        aria-label="Last name"
-      >
+        <input
+          id="entryLastName"
+          class="grid-input"
+          type="text"
+          autocomplete="off"
+          aria-label="Last name"
+          placeholder="Last"
+        >
+      </div>
 
       ${
         shouldShowLifterTeamColumn()
@@ -5181,6 +6063,11 @@ function renderRegistrationEntryRow(
           ''
         )}
       </select>
+
+      <div
+        id="entryLifterCoefficient"
+        class="cell-coefficient"
+      ></div>
 
       ${
         showGradeColumn
@@ -5737,7 +6624,7 @@ function renderBulkEditRow(
 
   return `
     <div
-      class="bulk-edit-row ${showGradeColumn ? 'with-grade-column' : ''}"
+      class="bulk-edit-row ${showGradeColumn ? 'with-grade-column' : ''} ${getLifterStatusRowClass(lifter)}"
       data-bulk-lifter-id="${lifter.id}"
       data-bulk-row-index="${rowIndex}"
       data-team-is-bteam="${team?.isBTeam === true ? 'true' : 'false'}"
@@ -6845,6 +7732,7 @@ function wireSelectAllOnEditableInputs():
       [
         '[data-edit-row] input:not([type="checkbox"])',
         '.bulk-edit-input',
+        '.competition-result-input',
       ].join(',')
     )
     .forEach(
@@ -7462,6 +8350,29 @@ function wireBulkEdit():
             if (
               row !== null
             ) {
+              row.classList.remove(
+                'lifter-status-bombed',
+                'lifter-status-scratched',
+                'lifter-status-disqualified'
+              )
+
+              const statusClass =
+                select.value === 'bombed'
+                  ? 'lifter-status-bombed'
+                  : select.value === 'scratched'
+                    ? 'lifter-status-scratched'
+                    : select.value === 'disqualified'
+                      ? 'lifter-status-disqualified'
+                      : ''
+
+              if (
+                statusClass !== ''
+              ) {
+                row.classList.add(
+                  statusClass
+                )
+              }
+
               updateBulkReadiness(
                 row
               )
@@ -7787,8 +8698,7 @@ function renderRegistration():
                           class="registration-row registration-header ${getLifterGridClassNames(meet)}"
                         >
                           ${renderLifterSortHeader('Lifter#', 'lifterNumber')}
-                          ${renderLifterSortHeader('First', 'firstName')}
-                          ${renderLifterSortHeader('Last', 'lastName')}
+                          ${renderLifterSortHeader('Lifter', 'lifter')}
                           ${
                             shouldShowLifterTeamColumn()
                               ? renderLifterSortHeader('Team', 'team')
@@ -7796,6 +8706,13 @@ function renderRegistration():
                           }
                           ${renderLifterSortHeader('BWT', 'bodyWeight')}
                           ${renderLifterSortHeader('Weight Class', 'weightClass')}
+                          <div class="registration-derived-header">
+                            ${escapeHtml(
+                              getRegistrationCoefficientHeader(
+                                division
+                              )
+                            )}
+                          </div>
                           ${
                             shouldShowLifterGradeColumn(
                               meet
@@ -7841,6 +8758,3411 @@ function renderRegistration():
     </main>
   `
 }
+
+
+type CompetitionBestLiftResults =
+  NonNullable<
+    Lifter['bestLiftResults']
+  >
+
+
+type CompetitionAllAttemptResults =
+  NonNullable<
+    Lifter['allAttemptResults']
+  >
+
+
+type CompetitionEventAttempts =
+  CompetitionAllAttemptResults[
+    CompetitionLift
+  ]
+
+
+type CompetitionAttempt =
+  CompetitionEventAttempts[
+    CompetitionAttemptKey
+  ]
+
+
+function createEmptyCompetitionAttempt():
+  CompetitionAttempt {
+
+  return {
+    weight: null,
+    status: 'unspecified',
+  }
+}
+
+
+function createEmptyCompetitionEventAttempts():
+  CompetitionEventAttempts {
+
+  return {
+    attempt1:
+      createEmptyCompetitionAttempt(),
+    attempt2:
+      createEmptyCompetitionAttempt(),
+    attempt3:
+      createEmptyCompetitionAttempt(),
+  }
+}
+
+
+function createEmptyAllAttemptResults():
+  CompetitionAllAttemptResults {
+
+  return {
+    squat:
+      createEmptyCompetitionEventAttempts(),
+    bench:
+      createEmptyCompetitionEventAttempts(),
+    deadlift:
+      createEmptyCompetitionEventAttempts(),
+  }
+}
+
+
+function getBestLiftResults(
+  lifter: Lifter,
+): CompetitionBestLiftResults {
+
+  return (
+    lifter.bestLiftResults ??
+    {
+      squat: null,
+      bench: null,
+      deadlift: null,
+    }
+  )
+}
+
+
+function ensureBestLiftResults(
+  lifter: Lifter,
+): CompetitionBestLiftResults {
+
+  if (
+    lifter.bestLiftResults ===
+    undefined
+  ) {
+    lifter.bestLiftResults = {
+      squat: null,
+      bench: null,
+      deadlift: null,
+    }
+  }
+
+  return lifter.bestLiftResults
+}
+
+
+function getAllAttemptResults(
+  lifter: Lifter,
+): CompetitionAllAttemptResults {
+
+  return (
+    lifter.allAttemptResults ??
+    createEmptyAllAttemptResults()
+  )
+}
+
+
+function ensureAllAttemptResults(
+  lifter: Lifter,
+): CompetitionAllAttemptResults {
+
+  if (
+    lifter.allAttemptResults ===
+    undefined
+  ) {
+    lifter.allAttemptResults =
+      createEmptyAllAttemptResults()
+  }
+
+  return lifter.allAttemptResults
+}
+
+
+function readCompetitionWeight(
+  value: string,
+): number | null {
+
+  const trimmed =
+    value.trim()
+
+  if (
+    trimmed === ''
+  ) {
+    return null
+  }
+
+  const parsed =
+    Number(
+      trimmed
+    )
+
+  return (
+    Number.isFinite(
+      parsed
+    ) &&
+    parsed >= 0
+  )
+    ? parsed
+    : null
+}
+
+
+function formatCompetitionWeight(
+  value: number | null,
+): string {
+
+  return value === null
+    ? ''
+    : String(
+        value
+      )
+}
+
+
+function formatCompetitionDisplayWeight(
+  value: number | null,
+): string {
+
+  return value === null
+    ? '—'
+    : String(
+        value
+      )
+}
+
+
+function calculateCompetitionTotal(
+  results: CompetitionBestLiftResults,
+): number | null {
+
+  if (
+    results.squat === null ||
+    results.bench === null ||
+    results.deadlift === null
+  ) {
+    return null
+  }
+
+  return (
+    results.squat +
+    results.bench +
+    results.deadlift
+  )
+}
+
+
+function getBestGoodAttempt(
+  attempts: CompetitionEventAttempts,
+): number | null {
+
+  const values =
+    [
+      attempts.attempt1,
+      attempts.attempt2,
+      attempts.attempt3,
+    ]
+      .filter(
+        attempt =>
+          attempt.status ===
+            'good' &&
+          attempt.weight !==
+            null
+      )
+      .map(
+        attempt =>
+          attempt.weight as
+            number
+      )
+
+  if (
+    values.length ===
+    0
+  ) {
+    return null
+  }
+
+  return Math.max(
+    ...values
+  )
+}
+
+
+function getAllAttemptBestLifts(
+  lifter: Lifter,
+): CompetitionBestLiftResults {
+
+  const results =
+    getAllAttemptResults(
+      lifter
+    )
+
+  return {
+    squat:
+      getBestGoodAttempt(
+        results.squat
+      ),
+    bench:
+      getBestGoodAttempt(
+        results.bench
+      ),
+    deadlift:
+      getBestGoodAttempt(
+        results.deadlift
+      ),
+  }
+}
+
+
+function getCompetitionTotalForLifter(
+  meet: LocalMeet,
+  lifter: Lifter,
+): number | null {
+
+  if (
+    meet.state.meet.resultEntryMode ===
+    'all-attempts'
+  ) {
+    return calculateCompetitionTotal(
+      getAllAttemptBestLifts(
+        lifter
+      )
+    )
+  }
+
+  return calculateCompetitionTotal(
+    getBestLiftResults(
+      lifter
+    )
+  )
+}
+
+
+function getCompetitionBestLiftValue(
+  meet: LocalMeet,
+  lifter: Lifter,
+  lift: CompetitionLift,
+): number | null {
+
+  if (
+    meet.state.meet.resultEntryMode ===
+      'all-attempts'
+  ) {
+    return getAllAttemptBestLifts(
+      lifter
+    )[lift]
+  }
+
+  return getBestLiftResults(
+    lifter
+  )[lift]
+}
+
+
+function compareCompetitionOptionalNumbers(
+  a: number | null,
+  b: number | null,
+  ascending: boolean,
+): number {
+
+  if (
+    a === null &&
+    b === null
+  ) {
+    return 0
+  }
+
+  if (
+    a === null
+  ) {
+    return 1
+  }
+
+  if (
+    b === null
+  ) {
+    return -1
+  }
+
+  return ascending
+    ? a - b
+    : b - a
+}
+
+
+function compareCompetitionLifters(
+  meet: LocalMeet,
+  a: Lifter,
+  b: Lifter,
+): number {
+
+  let result =
+    0
+
+  switch (
+    competitionSortColumn
+  ) {
+    case 'lifterNumber':
+      result =
+        competitionSortAscending
+          ? a.lifterNumber -
+            b.lifterNumber
+          : b.lifterNumber -
+            a.lifterNumber
+
+      break
+
+    case 'lifter':
+      result =
+        a.lastName.localeCompare(
+          b.lastName
+        )
+
+      if (
+        result ===
+        0
+      ) {
+        result =
+          a.firstName.localeCompare(
+            b.firstName
+          )
+      }
+
+      if (
+        !competitionSortAscending
+      ) {
+        result =
+          -result
+      }
+
+      break
+
+    case 'team':
+      result =
+        getLifterTeamName(
+          meet,
+          a
+        ).localeCompare(
+          getLifterTeamName(
+            meet,
+            b
+          )
+        )
+
+      if (
+        !competitionSortAscending
+      ) {
+        result =
+          -result
+      }
+
+      break
+
+    case 'bodyWeight':
+      result =
+        compareCompetitionOptionalNumbers(
+          a.bodyWeight,
+          b.bodyWeight,
+          competitionSortAscending
+        )
+
+      break
+
+    case 'weightClass': {
+      const aMissing =
+        a.weightClass ===
+          null ||
+        a.weightClass ===
+          ''
+
+      const bMissing =
+        b.weightClass ===
+          null ||
+        b.weightClass ===
+          ''
+
+      if (
+        aMissing ||
+        bMissing
+      ) {
+        result =
+          aMissing ===
+          bMissing
+            ? 0
+            : aMissing
+              ? 1
+              : -1
+      } else {
+        const aValue =
+          getWeightClassSortValue(
+            a.weightClass
+          )
+
+        const bValue =
+          getWeightClassSortValue(
+            b.weightClass
+          )
+
+        result =
+          competitionSortAscending
+            ? aValue - bValue
+            : bValue - aValue
+      }
+
+      break
+    }
+
+    case 'place':
+      result =
+        compareCompetitionOptionalNumbers(
+          getCompetitionPlace(
+            meet,
+            a
+          ),
+          getCompetitionPlace(
+            meet,
+            b
+          ),
+          competitionSortAscending
+        )
+
+      break
+
+    case 'bestSquat':
+      result =
+        compareCompetitionOptionalNumbers(
+          getCompetitionBestLiftValue(
+            meet,
+            a,
+            'squat'
+          ),
+          getCompetitionBestLiftValue(
+            meet,
+            b,
+            'squat'
+          ),
+          competitionSortAscending
+        )
+
+      break
+
+    case 'bestBench':
+      result =
+        compareCompetitionOptionalNumbers(
+          getCompetitionBestLiftValue(
+            meet,
+            a,
+            'bench'
+          ),
+          getCompetitionBestLiftValue(
+            meet,
+            b,
+            'bench'
+          ),
+          competitionSortAscending
+        )
+
+      break
+
+    case 'bestDeadlift':
+      result =
+        compareCompetitionOptionalNumbers(
+          getCompetitionBestLiftValue(
+            meet,
+            a,
+            'deadlift'
+          ),
+          getCompetitionBestLiftValue(
+            meet,
+            b,
+            'deadlift'
+          ),
+          competitionSortAscending
+        )
+
+      break
+
+    case 'total':
+      result =
+        compareCompetitionOptionalNumbers(
+          getCompetitionTotalForLifter(
+            meet,
+            a
+          ),
+          getCompetitionTotalForLifter(
+            meet,
+            b
+          ),
+          competitionSortAscending
+        )
+
+      break
+  }
+
+  if (
+    result !==
+    0
+  ) {
+    return result
+  }
+
+  return (
+    a.lifterNumber -
+    b.lifterNumber
+  )
+}
+
+
+function renderCompetitionSortHeader(
+  label: string,
+  column: CompetitionSortColumn,
+): string {
+
+  const active =
+    competitionSortColumn ===
+    column
+
+  const wrappedLabel =
+    escapeHtml(
+      label
+    ).replaceAll(
+      ' ',
+      '<br>'
+    )
+
+  return `
+    <div class="competition-sort-header-cell">
+      <button
+        type="button"
+        class="competition-sort-button ${
+          active
+            ? 'active'
+            : ''
+        }"
+        data-competition-sort="${column}"
+      >
+        <span>${wrappedLabel}</span>
+        <span class="competition-sort-indicator">${
+          active
+            ? (
+                competitionSortAscending
+                  ? '▲'
+                  : '▼'
+              )
+            : ''
+        }</span>
+      </button>
+    </div>
+  `
+}
+
+
+function getCompetitionPlace(
+  meet: LocalMeet,
+  lifter: Lifter,
+): number | null {
+
+  if (
+    lifter.status !==
+      'active' ||
+    lifter.isGuest ||
+    lifter.weightClass ===
+      null
+  ) {
+    return null
+  }
+
+  const total =
+    getCompetitionTotalForLifter(
+      meet,
+      lifter
+    )
+
+  if (
+    total === null
+  ) {
+    return null
+  }
+
+  const candidates =
+    meet.state.lifters
+      .filter(
+        candidate =>
+          candidate.divisionId ===
+            lifter.divisionId &&
+          candidate.weightClass ===
+            lifter.weightClass &&
+          candidate.status ===
+            'active' &&
+          !candidate.isGuest &&
+          getCompetitionTotalForLifter(
+            meet,
+            candidate
+          ) !==
+            null
+      )
+      .sort(
+        (a, b) => {
+
+          const totalA =
+            getCompetitionTotalForLifter(
+              meet,
+              a
+            ) ?? 0
+
+          const totalB =
+            getCompetitionTotalForLifter(
+              meet,
+              b
+            ) ?? 0
+
+          if (
+            totalA !==
+            totalB
+          ) {
+            return (
+              totalB -
+              totalA
+            )
+          }
+
+          const bodyWeightA =
+            a.bodyWeight ??
+            Number.POSITIVE_INFINITY
+
+          const bodyWeightB =
+            b.bodyWeight ??
+            Number.POSITIVE_INFINITY
+
+          if (
+            bodyWeightA !==
+            bodyWeightB
+          ) {
+            return (
+              bodyWeightA -
+              bodyWeightB
+            )
+          }
+
+          return (
+            a.lifterNumber -
+            b.lifterNumber
+          )
+        }
+      )
+
+  const index =
+    candidates.findIndex(
+      candidate =>
+        candidate.id ===
+        lifter.id
+    )
+
+  if (
+    index < 0
+  ) {
+    return null
+  }
+
+  for (
+    let previousIndex = 0;
+    previousIndex < index;
+    previousIndex += 1
+  ) {
+    const previous =
+      candidates[
+        previousIndex
+      ]
+
+    if (
+      getCompetitionTotalForLifter(
+        meet,
+        previous
+      ) ===
+        total &&
+      previous.bodyWeight ===
+        lifter.bodyWeight
+    ) {
+      return (
+        previousIndex +
+        1
+      )
+    }
+  }
+
+  return index + 1
+}
+
+
+function formatCompetitionPlace(
+  lifter: Lifter,
+  place: number | null,
+): string {
+
+  switch (
+    lifter.status
+  ) {
+    case 'bombed':
+      return 'BO'
+
+    case 'scratched':
+      return 'SC'
+
+    case 'disqualified':
+      return 'DQ'
+
+    default:
+      return place ===
+        null
+          ? '—'
+          : String(
+              place
+            )
+  }
+}
+
+
+function getCompetitionLifters(
+  meet: LocalMeet,
+): Lifter[] {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return []
+  }
+
+  return [
+    ...meet.state.lifters,
+  ]
+    .filter(
+      lifter =>
+        lifter.divisionId ===
+          division.id &&
+        (
+          selectedCompetitionWeightClass ===
+            null ||
+          lifter.weightClass ===
+            selectedCompetitionWeightClass
+        )
+    )
+    .sort(
+      (a, b) =>
+        compareCompetitionLifters(
+          meet,
+          a,
+          b
+        )
+    )
+}
+
+
+function selectFirstCompetitionLifter(
+  meet: LocalMeet,
+): void {
+
+  selectedLifterId =
+    getCompetitionLifters(
+      meet
+    )[0]?.id ??
+    null
+}
+
+
+function getCompetitionWeightClasses(
+  meet: LocalMeet,
+): string[] {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return []
+  }
+
+  const present =
+    new Set(
+      meet.state.lifters
+        .filter(
+          lifter =>
+            lifter.divisionId ===
+              division.id &&
+            lifter.weightClass !==
+              null
+        )
+        .map(
+          lifter =>
+            lifter.weightClass as
+              string
+        )
+    )
+
+  try {
+
+    const rules =
+      getDivisionRules(
+        division
+      )
+
+    const ordered =
+      rules.weightClasses
+        .map(
+          weightClass =>
+            weightClass.name
+        )
+        .filter(
+          name =>
+            present.has(
+              name
+            )
+        )
+
+    const orderedSet =
+      new Set(
+        ordered
+      )
+
+    const extras =
+      [...present]
+        .filter(
+          name =>
+            !orderedSet.has(
+              name
+            )
+        )
+        .sort(
+          (a, b) =>
+            a.localeCompare(
+              b
+            )
+        )
+
+    return [
+      ...ordered,
+      ...extras,
+    ]
+
+  } catch {
+
+    return [
+      ...present,
+    ].sort(
+      (a, b) =>
+        a.localeCompare(
+          b
+        )
+    )
+  }
+}
+
+
+function renderCompetitionWeightClassTabs(
+  meet: LocalMeet,
+): string {
+
+  const weightClasses =
+    getCompetitionWeightClasses(
+      meet
+    )
+
+  return `
+    <div
+      class="competition-weight-tabs"
+      role="tablist"
+      aria-label="Weight Class"
+    >
+      ${
+        weightClasses
+          .map(
+            weightClass => `
+              <button
+                type="button"
+                class="competition-weight-tab ${
+                  weightClass ===
+                  selectedCompetitionWeightClass
+                    ? 'active'
+                    : ''
+                }"
+                data-competition-weight-class="${escapeHtml(weightClass)}"
+                role="tab"
+                aria-selected="${
+                  weightClass ===
+                  selectedCompetitionWeightClass
+                    ? 'true'
+                    : 'false'
+                }"
+              >
+                ${escapeHtml(weightClass)}
+              </button>
+            `
+          )
+          .join('')
+      }
+
+      <button
+        type="button"
+        class="competition-weight-tab ${
+          selectedCompetitionWeightClass ===
+          null
+            ? 'active'
+            : ''
+        }"
+        data-competition-weight-class=""
+        role="tab"
+        aria-selected="${
+          selectedCompetitionWeightClass ===
+          null
+            ? 'true'
+            : 'false'
+        }"
+      >
+        All Weight Classes
+      </button>
+    </div>
+  `
+}
+
+
+function renderCompetitionDivisionTabs(
+  meet: LocalMeet,
+): string {
+
+  if (
+    meet.state.divisions.length <=
+    1
+  ) {
+    return ''
+  }
+
+  return `
+    <div
+      class="competition-division-tabs"
+      role="tablist"
+      aria-label="Division"
+    >
+      ${
+        meet.state.divisions
+          .map(
+            division => `
+              <button
+                type="button"
+                class="competition-division-tab ${
+                  division.id ===
+                  selectedDivisionId
+                    ? 'active'
+                    : ''
+                }"
+                data-competition-division="${division.id}"
+                role="tab"
+                aria-selected="${
+                  division.id ===
+                  selectedDivisionId
+                    ? 'true'
+                    : 'false'
+                }"
+              >
+                ${escapeHtml(division.name)}
+              </button>
+            `
+          )
+          .join('')
+      }
+    </div>
+  `
+}
+
+
+function getCompetitionStatusSummary(
+  meet: LocalMeet,
+  lifter: Lifter,
+): string {
+
+  const codes =
+    [
+      getLifterTeamStatusCode(
+        meet,
+        lifter
+      ),
+      getLifterStatusCode(
+        lifter
+      ),
+    ].filter(
+      value =>
+        value !== ''
+    )
+
+  return codes.length ===
+    0
+      ? '—'
+      : codes.join(' / ')
+}
+
+
+function renderBestLiftCompetitionRows(
+  meet: LocalMeet,
+): string {
+
+  const lifters =
+    getCompetitionLifters(
+      meet
+    )
+
+  const showWeightClass =
+    selectedCompetitionWeightClass ===
+      null
+
+  if (
+    lifters.length ===
+    0
+  ) {
+    return `
+      <div class="competition-empty-row">
+        No lifters are available for this selection.
+      </div>
+    `
+  }
+
+  return lifters.map(
+    lifter => {
+
+      const results =
+        getBestLiftResults(
+          lifter
+        )
+
+      const total =
+        calculateCompetitionTotal(
+          results
+        )
+
+      const selected =
+        lifter.id ===
+        selectedLifterId
+
+      return `
+        <div
+          class="competition-row competition-best-row ${getLifterStatusRowClass(lifter)} ${
+            showWeightClass
+              ? 'with-weight-class'
+              : ''
+          } ${
+            selected
+              ? 'selected'
+              : ''
+          }"
+          data-competition-lifter-row="${lifter.id}"
+        >
+          <div class="competition-center">
+            ${lifter.lifterNumber}
+          </div>
+
+          <div class="competition-lifter-name">
+            <strong>${escapeHtml(lifter.lastName)}, ${escapeHtml(lifter.firstName)}</strong>
+          </div>
+
+          <div>
+            ${escapeHtml(getLifterTeamName(meet, lifter))}
+          </div>
+
+          <div class="competition-center">
+            ${formatCompetitionDisplayWeight(lifter.bodyWeight)}
+          </div>
+
+          ${
+            showWeightClass
+              ? `
+                <div class="competition-center">
+                  ${escapeHtml(lifter.weightClass ?? '—')}
+                </div>
+              `
+              : ''
+          }
+
+          <div
+            class="competition-center"
+            data-competition-place="${lifter.id}"
+          >
+            ${formatCompetitionPlace(
+              lifter,
+              getCompetitionPlace(
+                meet,
+                lifter
+              )
+            )}
+          </div>
+
+          ${
+            renderBestLiftInput(
+              lifter,
+              'squat',
+              results.squat
+            )
+          }
+
+          ${
+            renderBestLiftInput(
+              lifter,
+              'bench',
+              results.bench
+            )
+          }
+
+          ${
+            renderBestLiftInput(
+              lifter,
+              'deadlift',
+              results.deadlift
+            )
+          }
+
+          <div
+            class="competition-total"
+            data-best-total="${lifter.id}"
+          >
+            ${formatCompetitionDisplayWeight(total)}
+          </div>
+
+          <div
+            class="competition-center"
+            data-competition-status="${lifter.id}"
+          >
+            ${escapeHtml(getCompetitionStatusSummary(meet, lifter))}
+          </div>
+
+          <div
+            data-competition-readiness="${lifter.id}"
+            class="readiness ${
+              getLifterReadinessLabel(
+                lifter,
+                meet
+              ) === 'Ready'
+                ? 'ready'
+                : getLifterReadinessLabel(
+                    lifter,
+                    meet
+                  ) === 'Not Competing'
+                  ? 'not-competing'
+                  : 'attention'
+            }"
+          >
+            ${getLifterReadinessLabel(lifter, meet)}
+          </div>
+        </div>
+      `
+    }
+  ).join('')
+}
+
+
+function renderBestLiftInput(
+  lifter: Lifter,
+  lift: CompetitionLift,
+  value: number | null,
+): string {
+
+  return `
+    <div class="competition-result-cell">
+      <input
+        class="competition-result-input"
+        type="text"
+        inputmode="decimal"
+        autocomplete="off"
+        value="${formatCompetitionWeight(value)}"
+        data-best-lift="${lift}"
+        data-competition-lifter-id="${lifter.id}"
+        data-competition-column="best-${lift}"
+        aria-label="${lift} best lift for ${escapeHtml(lifter.firstName)} ${escapeHtml(lifter.lastName)}"
+        ${
+          isCompetitionResultEditingLocked(
+            lifter
+          )
+            ? 'disabled'
+            : ''
+        }
+      >
+    </div>
+  `
+}
+
+
+function getAttemptStatusSymbol(
+  status: CompetitionAttempt['status'],
+): string {
+
+  switch (
+    status
+  ) {
+    case 'good':
+      return '✓'
+
+    case 'bad':
+      return '×'
+
+    default:
+      return ''
+  }
+}
+
+
+function getAttemptStatusTitle(
+  status: CompetitionAttempt['status'],
+): string {
+
+  switch (
+    status
+  ) {
+    case 'good':
+      return 'Good'
+
+    case 'bad':
+      return 'Failed'
+
+    default:
+      return 'Unknown'
+  }
+}
+
+
+function getNextAttemptStatus(
+  status: CompetitionAttempt['status'],
+): CompetitionAttempt['status'] {
+
+  switch (
+    status
+  ) {
+    case 'unspecified':
+      return 'good'
+
+    case 'good':
+      return 'bad'
+
+    default:
+      return 'unspecified'
+  }
+}
+
+
+function renderAttemptStatusCycle(
+  lifterId: number,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+  attempt: CompetitionAttempt,
+  disabled: boolean,
+): string {
+
+  const title =
+    getAttemptStatusTitle(
+      attempt.status
+    )
+
+  return `
+    <button
+      type="button"
+      class="attempt-status-cycle attempt-status-${attempt.status}"
+      data-attempt-status-cycle
+      data-competition-lifter-id="${lifterId}"
+      data-attempt-lift="${lift}"
+      data-attempt-key="${attemptKey}"
+      data-attempt-status-title="${title}"
+      ${
+        disabled
+          ? ''
+          : `title="${title} — click to cycle result"`
+      }
+      aria-label="${lift} ${attemptKey}: ${title}.${
+        disabled
+          ? ''
+          : ' Click to cycle result.'
+      }"
+      tabindex="-1"
+      ${disabled ? 'disabled' : ''}
+    >${getAttemptStatusSymbol(attempt.status)}</button>
+  `
+}
+
+
+function renderAttemptCell(
+  lifter: Lifter,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+  attempt: CompetitionAttempt,
+): string {
+
+  const editingLocked =
+    isCompetitionResultEditingLocked(
+      lifter
+    )
+
+  return `
+    <div
+      class="competition-attempt-cell attempt-${attempt.status}"
+      data-attempt-cell
+    >
+      <input
+        class="competition-result-input competition-attempt-input"
+        type="text"
+        inputmode="decimal"
+        autocomplete="off"
+        value="${formatCompetitionWeight(attempt.weight)}"
+        data-attempt-weight
+        data-competition-lifter-id="${lifter.id}"
+        data-attempt-lift="${lift}"
+        data-attempt-key="${attemptKey}"
+        data-competition-column="${lift}-${attemptKey}"
+        aria-label="${lift} ${attemptKey} for ${escapeHtml(lifter.firstName)} ${escapeHtml(lifter.lastName)}"
+        ${editingLocked ? 'disabled' : ''}
+      >
+
+      ${
+        renderAttemptStatusCycle(
+          lifter.id,
+          lift,
+          attemptKey,
+          attempt,
+          editingLocked
+        )
+      }
+    </div>
+  `
+}
+
+
+function renderAllAttemptCompetitionRows(
+  meet: LocalMeet,
+): string {
+
+  const lifters =
+    getCompetitionLifters(
+      meet
+    )
+
+  const showWeightClass =
+    selectedCompetitionWeightClass ===
+      null
+
+  if (
+    lifters.length ===
+    0
+  ) {
+    return `
+      <div class="competition-empty-row">
+        No lifters are available for this selection.
+      </div>
+    `
+  }
+
+  return lifters.map(
+    lifter => {
+
+      const attempts =
+        getAllAttemptResults(
+          lifter
+        )
+
+      const best =
+        getAllAttemptBestLifts(
+          lifter
+        )
+
+      const total =
+        calculateCompetitionTotal(
+          best
+        )
+
+      const selected =
+        lifter.id ===
+        selectedLifterId
+
+      return `
+        <div
+          class="competition-row competition-attempt-row ${getLifterStatusRowClass(lifter)} ${
+            showWeightClass
+              ? 'with-weight-class'
+              : ''
+          } ${
+            selected
+              ? 'selected'
+              : ''
+          }"
+          data-competition-lifter-row="${lifter.id}"
+        >
+          <div class="competition-center">
+            ${lifter.lifterNumber}
+          </div>
+
+          <div class="competition-lifter-name">
+            <strong>${escapeHtml(lifter.lastName)}, ${escapeHtml(lifter.firstName)}</strong>
+          </div>
+
+          <div>
+            ${escapeHtml(getLifterTeamName(meet, lifter))}
+          </div>
+
+          <div class="competition-center">
+            ${formatCompetitionDisplayWeight(lifter.bodyWeight)}
+          </div>
+
+          ${
+            showWeightClass
+              ? `
+                <div class="competition-center">
+                  ${escapeHtml(lifter.weightClass ?? '—')}
+                </div>
+              `
+              : ''
+          }
+
+          <div
+            class="competition-center"
+            data-competition-place="${lifter.id}"
+          >
+            ${formatCompetitionPlace(
+              lifter,
+              getCompetitionPlace(
+                meet,
+                lifter
+              )
+            )}
+          </div>
+
+          ${renderAttemptCell(lifter, 'squat', 'attempt1', attempts.squat.attempt1)}
+          ${renderAttemptCell(lifter, 'squat', 'attempt2', attempts.squat.attempt2)}
+          ${renderAttemptCell(lifter, 'squat', 'attempt3', attempts.squat.attempt3)}
+
+          ${renderAttemptCell(lifter, 'bench', 'attempt1', attempts.bench.attempt1)}
+          ${renderAttemptCell(lifter, 'bench', 'attempt2', attempts.bench.attempt2)}
+          ${renderAttemptCell(lifter, 'bench', 'attempt3', attempts.bench.attempt3)}
+
+          ${renderAttemptCell(lifter, 'deadlift', 'attempt1', attempts.deadlift.attempt1)}
+          ${renderAttemptCell(lifter, 'deadlift', 'attempt2', attempts.deadlift.attempt2)}
+          ${renderAttemptCell(lifter, 'deadlift', 'attempt3', attempts.deadlift.attempt3)}
+
+          <div
+            class="competition-best-summary"
+            data-attempt-best="${lifter.id}-squat"
+          >
+            ${formatCompetitionDisplayWeight(best.squat)}
+          </div>
+
+          <div
+            class="competition-best-summary"
+            data-attempt-best="${lifter.id}-bench"
+          >
+            ${formatCompetitionDisplayWeight(best.bench)}
+          </div>
+
+          <div
+            class="competition-best-summary"
+            data-attempt-best="${lifter.id}-deadlift"
+          >
+            ${formatCompetitionDisplayWeight(best.deadlift)}
+          </div>
+
+          <div
+            class="competition-total"
+            data-attempt-total="${lifter.id}"
+          >
+            ${formatCompetitionDisplayWeight(total)}
+          </div>
+
+          <div
+            data-competition-readiness="${lifter.id}"
+            class="readiness ${
+              getLifterReadinessLabel(
+                lifter,
+                meet
+              ) === 'Ready'
+                ? 'ready'
+                : getLifterReadinessLabel(
+                    lifter,
+                    meet
+                  ) === 'Not Competing'
+                  ? 'not-competing'
+                  : 'attention'
+            }"
+          >
+            ${getLifterReadinessLabel(lifter, meet)}
+          </div>
+        </div>
+      `
+    }
+  ).join('')
+}
+
+
+function renderCompetition():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="workspace competition-workspace">
+        <section class="workspace-panel competition-panel">
+          <div class="competition-placeholder">
+            <strong>No Meet Selected</strong>
+            <span>Select a meet on Registration before entering competition results.</span>
+          </div>
+        </section>
+      </main>
+    `
+  }
+
+  const division =
+    getSelectedDivision()
+
+  const availableWeightClasses =
+    getCompetitionWeightClasses(
+      meet
+    )
+
+  if (
+    selectedCompetitionWeightClass !==
+      null &&
+    !availableWeightClasses.includes(
+      selectedCompetitionWeightClass
+    )
+  ) {
+    selectedCompetitionWeightClass =
+      availableWeightClasses[0] ??
+      null
+
+    rememberCompetitionWeightClass(
+      meet
+    )
+  }
+
+  const allAttempts =
+    meet.state.meet
+      .resultEntryMode ===
+      'all-attempts'
+
+  const showWeightClass =
+    selectedCompetitionWeightClass ===
+      null
+
+  return `
+    <main class="workspace competition-workspace">
+      <section class="workspace-panel competition-panel">
+
+        ${renderCompetitionDivisionTabs(meet)}
+
+        ${
+          division === undefined
+            ? ''
+            : renderCompetitionWeightClassTabs(
+                meet
+              )
+        }
+
+        <div class="competition-grid-wrap">
+          ${
+            allAttempts
+              ? `
+                <div class="competition-grid competition-attempt-grid">
+                  <div class="competition-row competition-header competition-attempt-row ${
+                    showWeightClass
+                      ? 'with-weight-class'
+                      : ''
+                  }">
+                    ${renderCompetitionSortHeader('Lifter#', 'lifterNumber')}
+                    ${renderCompetitionSortHeader('Lifter', 'lifter')}
+                    ${renderCompetitionSortHeader('Team', 'team')}
+                    ${renderCompetitionSortHeader('BWT', 'bodyWeight')}
+                    ${
+                      showWeightClass
+                        ? renderCompetitionSortHeader(
+                            'Weight Class',
+                            'weightClass'
+                          )
+                        : ''
+                    }
+                    ${renderCompetitionSortHeader('Place', 'place')}
+                    <div>1st<br>Squat</div>
+                    <div>2nd<br>Squat</div>
+                    <div>3rd<br>Squat</div>
+                    <div>1st<br>Bench</div>
+                    <div>2nd<br>Bench</div>
+                    <div>3rd<br>Bench</div>
+                    <div>1st<br>Deadlift</div>
+                    <div>2nd<br>Deadlift</div>
+                    <div>3rd<br>Deadlift</div>
+                    ${renderCompetitionSortHeader('Best Squat', 'bestSquat')}
+                    ${renderCompetitionSortHeader('Best Bench', 'bestBench')}
+                    ${renderCompetitionSortHeader('Best Deadlift', 'bestDeadlift')}
+                    ${renderCompetitionSortHeader('Total', 'total')}
+                    <div>Readiness</div>
+                  </div>
+
+                  <div class="competition-body">
+                    ${renderAllAttemptCompetitionRows(meet)}
+                  </div>
+                </div>
+              `
+              : `
+                <div class="competition-grid competition-best-grid">
+                  <div class="competition-row competition-header competition-best-row ${
+                    showWeightClass
+                      ? 'with-weight-class'
+                      : ''
+                  }">
+                    ${renderCompetitionSortHeader('Lifter#', 'lifterNumber')}
+                    ${renderCompetitionSortHeader('Lifter', 'lifter')}
+                    ${renderCompetitionSortHeader('Team', 'team')}
+                    ${renderCompetitionSortHeader('BWT', 'bodyWeight')}
+                    ${
+                      showWeightClass
+                        ? renderCompetitionSortHeader(
+                            'Weight Class',
+                            'weightClass'
+                          )
+                        : ''
+                    }
+                    ${renderCompetitionSortHeader('Place', 'place')}
+                    ${renderCompetitionSortHeader('Best Squat', 'bestSquat')}
+                    ${renderCompetitionSortHeader('Best Bench', 'bestBench')}
+                    ${renderCompetitionSortHeader('Best Deadlift', 'bestDeadlift')}
+                    ${renderCompetitionSortHeader('Total', 'total')}
+                    <div>Status</div>
+                    <div>Readiness</div>
+                  </div>
+
+                  <div class="competition-body">
+                    ${renderBestLiftCompetitionRows(meet)}
+                  </div>
+                </div>
+              `
+          }
+        </div>
+
+      </section>
+    </main>
+  `
+}
+
+
+function getCompetitionLifterById(
+  lifterId: number,
+): Lifter | undefined {
+
+  return getSelectedMeet()
+    ?.state.lifters.find(
+      lifter =>
+        lifter.id ===
+        lifterId
+    )
+}
+
+
+function updateCompetitionPlaceDisplays(
+  meet: LocalMeet,
+): void {
+
+  for (
+    const lifter of
+    getCompetitionLifters(
+      meet
+    )
+  ) {
+    const cell =
+      document.querySelector<HTMLElement>(
+        `[data-competition-place="${lifter.id}"]`
+      )
+
+    if (
+      cell !== null
+    ) {
+      cell.textContent =
+        formatCompetitionPlace(
+          lifter,
+          getCompetitionPlace(
+            meet,
+            lifter
+          )
+        )
+    }
+  }
+}
+
+
+function updateBestLiftTotalDisplay(
+  lifter: Lifter,
+): void {
+
+  const total =
+    calculateCompetitionTotal(
+      getBestLiftResults(
+        lifter
+      )
+    )
+
+  const cell =
+    document.querySelector<HTMLElement>(
+      `[data-best-total="${lifter.id}"]`
+    )
+
+  if (
+    cell !== null
+  ) {
+    cell.textContent =
+      formatCompetitionDisplayWeight(
+        total
+      )
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet !== undefined
+  ) {
+    updateCompetitionPlaceDisplays(
+      meet
+    )
+  }
+}
+
+
+function updateAttemptSummaryDisplay(
+  lifter: Lifter,
+): void {
+
+  const best =
+    getAllAttemptBestLifts(
+      lifter
+    )
+
+  const total =
+    calculateCompetitionTotal(
+      best
+    )
+
+  const values:
+    Array<[
+      CompetitionLift,
+      number | null,
+    ]> = [
+      ['squat', best.squat],
+      ['bench', best.bench],
+      ['deadlift', best.deadlift],
+    ]
+
+  for (
+    const [
+      lift,
+      value,
+    ] of values
+  ) {
+    const cell =
+      document.querySelector<HTMLElement>(
+        `[data-attempt-best="${lifter.id}-${lift}"]`
+      )
+
+    if (
+      cell !== null
+    ) {
+      cell.textContent =
+        formatCompetitionDisplayWeight(
+          value
+        )
+    }
+  }
+
+  const totalCell =
+    document.querySelector<HTMLElement>(
+      `[data-attempt-total="${lifter.id}"]`
+    )
+
+  if (
+    totalCell !== null
+  ) {
+    totalCell.textContent =
+      formatCompetitionDisplayWeight(
+        total
+      )
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet !== undefined
+  ) {
+    updateCompetitionPlaceDisplays(
+      meet
+    )
+  }
+}
+
+
+function updateCompetitionLifterStatusDisplays(
+  meet: LocalMeet,
+  lifter: Lifter,
+): void {
+
+  const row =
+    document.querySelector<HTMLElement>(
+      `[data-competition-lifter-row="${lifter.id}"]`
+    )
+
+  if (
+    row !== null
+  ) {
+    row.classList.remove(
+      'lifter-status-bombed',
+      'lifter-status-scratched',
+      'lifter-status-disqualified'
+    )
+
+    const statusClass =
+      getLifterStatusRowClass(
+        lifter
+      )
+
+    if (
+      statusClass !== ''
+    ) {
+      row.classList.add(
+        statusClass
+      )
+    }
+  }
+
+  document
+    .querySelectorAll<HTMLElement>(
+      `[data-competition-status="${lifter.id}"]`
+    )
+    .forEach(
+      element => {
+        element.textContent =
+          getCompetitionStatusSummary(
+            meet,
+            lifter
+          )
+      }
+    )
+
+  updateCompetitionResultEditingState(
+    lifter
+  )
+
+  const readinessLabel =
+    getLifterReadinessLabel(
+      lifter,
+      meet
+    )
+
+  document
+    .querySelectorAll<HTMLElement>(
+      `[data-competition-readiness="${lifter.id}"]`
+    )
+    .forEach(
+      element => {
+        element.textContent =
+          readinessLabel
+
+        element.classList.remove(
+          'ready',
+          'not-competing',
+          'attention'
+        )
+
+        element.classList.add(
+          readinessLabel ===
+            'Ready'
+              ? 'ready'
+              : readinessLabel ===
+                'Not Competing'
+                ? 'not-competing'
+                : 'attention'
+        )
+      }
+    )
+}
+
+
+function hasThreeFailedAttemptsOnLift(
+  lifter: Lifter,
+): boolean {
+
+  const results =
+    getAllAttemptResults(
+      lifter
+    )
+
+  return [
+    results.squat,
+    results.bench,
+    results.deadlift,
+  ].some(
+    attempts =>
+      attempts.attempt1.status ===
+        'bad' &&
+      attempts.attempt2.status ===
+        'bad' &&
+      attempts.attempt3.status ===
+        'bad'
+  )
+}
+
+
+function isCompetitionResultEditingLocked(
+  lifter: Lifter,
+): boolean {
+
+  return lifter.status ===
+      'scratched' ||
+    lifter.status ===
+      'disqualified'
+}
+
+
+function updateCompetitionResultEditingState(
+  lifter: Lifter,
+): void {
+
+  const locked =
+    isCompetitionResultEditingLocked(
+      lifter
+    )
+
+  document
+    .querySelectorAll<
+      HTMLInputElement | HTMLButtonElement
+    >(
+      `[data-competition-lifter-id="${lifter.id}"][data-best-lift], ` +
+      `[data-competition-lifter-id="${lifter.id}"][data-attempt-weight], ` +
+      `[data-competition-lifter-id="${lifter.id}"][data-attempt-status-cycle]`
+    )
+    .forEach(
+      control => {
+        control.disabled =
+          locked
+
+        if (
+          control instanceof HTMLButtonElement &&
+          control.hasAttribute(
+            'data-attempt-status-cycle'
+          )
+        ) {
+          const title =
+            control.dataset
+              .attemptStatusTitle ??
+              'Result'
+
+          const lift =
+            control.dataset
+              .attemptLift ??
+              'lift'
+
+          const attemptKey =
+            control.dataset
+              .attemptKey ??
+              'attempt'
+
+          if (
+            locked
+          ) {
+            control.removeAttribute(
+              'title'
+            )
+
+            control.setAttribute(
+              'aria-label',
+              `${lift} ${attemptKey}: ${title}.`
+            )
+          } else {
+            control.title =
+              `${title} — click to cycle result`
+
+            control.setAttribute(
+              'aria-label',
+              `${lift} ${attemptKey}: ${title}. Click to cycle result.`
+            )
+          }
+        }
+      }
+    )
+}
+
+
+function updateBombedStatusFromAttempts(
+  lifter: Lifter,
+  changedAttemptStatus: CompetitionAttempt['status'],
+): void {
+
+  const hasBombedEvent =
+    hasThreeFailedAttemptsOnLift(
+      lifter
+    )
+
+  let statusChanged =
+    false
+
+  if (
+    hasBombedEvent
+  ) {
+    competitionAutoBombedLifterIds.add(
+      lifter.id
+    )
+
+    if (
+      lifter.status !==
+        'bombed'
+    ) {
+      lifter.status =
+        'bombed'
+
+      statusChanged =
+        true
+    }
+  } else {
+    competitionAutoBombedLifterIds.delete(
+      lifter.id
+    )
+
+    if (
+      lifter.status ===
+        'bombed' &&
+      (
+        changedAttemptStatus ===
+          'good' ||
+        changedAttemptStatus ===
+          'unspecified'
+      )
+    ) {
+      lifter.status =
+        'active'
+
+      statusChanged =
+        true
+    }
+  }
+
+  if (
+    !statusChanged
+  ) {
+    return
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet !== undefined
+  ) {
+    updateCompetitionLifterStatusDisplays(
+      meet,
+      lifter
+    )
+
+    updateCompetitionPlaceDisplays(
+      meet
+    )
+  }
+}
+
+
+function setAttemptStatus(
+  lifter: Lifter,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+  status: CompetitionAttempt['status'],
+  sourceElement?: HTMLElement,
+): void {
+
+  if (
+    isCompetitionResultEditingLocked(
+      lifter
+    )
+  ) {
+    return
+  }
+
+  const results =
+    ensureAllAttemptResults(
+      lifter
+    )
+
+  const attempt =
+    results[lift][attemptKey]
+
+  attempt.status =
+    status
+
+  attempt.source =
+    'manual'
+
+  const cell =
+    sourceElement
+      ?.closest<HTMLElement>(
+        '[data-attempt-cell]'
+      )
+
+  if (
+    cell !== null &&
+    cell !== undefined
+  ) {
+    cell.classList.remove(
+      'attempt-good',
+      'attempt-bad',
+      'attempt-unspecified'
+    )
+
+    cell.classList.add(
+      `attempt-${status}`
+    )
+
+    const cycleButton =
+      cell.querySelector<HTMLButtonElement>(
+        '[data-attempt-status-cycle]'
+      )
+
+    if (
+      cycleButton !== null
+    ) {
+      cycleButton.classList.remove(
+        'attempt-status-good',
+        'attempt-status-bad',
+        'attempt-status-unspecified'
+      )
+
+      cycleButton.classList.add(
+        `attempt-status-${status}`
+      )
+
+      cycleButton.textContent =
+        getAttemptStatusSymbol(
+          status
+        )
+
+      const title =
+        getAttemptStatusTitle(
+          status
+        )
+
+      cycleButton.dataset
+        .attemptStatusTitle =
+          title
+
+      if (
+        cycleButton.disabled
+      ) {
+        cycleButton.removeAttribute(
+          'title'
+        )
+
+        cycleButton.setAttribute(
+          'aria-label',
+          `${lift} ${attemptKey}: ${title}.`
+        )
+      } else {
+        cycleButton.title =
+          `${title} — click to cycle result`
+
+        cycleButton.setAttribute(
+          'aria-label',
+          `${lift} ${attemptKey}: ${title}. Click to cycle result.`
+        )
+      }
+    }
+  }
+
+  updateBombedStatusFromAttempts(
+    lifter,
+    status
+  )
+
+  updateAttemptSummaryDisplay(
+    lifter
+  )
+}
+
+
+function focusCompetitionFieldOnNextLifter(
+  current: HTMLElement,
+): void {
+
+  const lifterId =
+    Number(
+      current.dataset
+        .competitionLifterId
+    )
+
+  const column =
+    current.dataset
+      .competitionColumn
+
+  if (
+    Number.isNaN(
+      lifterId
+    ) ||
+    column ===
+    undefined
+  ) {
+    return
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const lifters =
+    getCompetitionLifters(
+      meet
+    )
+
+  const index =
+    lifters.findIndex(
+      lifter =>
+        lifter.id ===
+        lifterId
+    )
+
+  if (
+    index < 0 ||
+    index >=
+      lifters.length - 1
+  ) {
+    return
+  }
+
+  const nextId =
+    lifters[index + 1]
+      .id
+
+  document
+    .querySelector<HTMLElement>(
+      `[data-competition-lifter-id="${nextId}"][data-competition-column="${column}"]`
+    )
+    ?.focus()
+}
+
+
+function focusCompetitionWeightByArrow(
+  current: HTMLInputElement,
+  key: string,
+): void {
+
+  const row =
+    current.closest<HTMLElement>(
+      '[data-competition-lifter-row]'
+    )
+
+  if (
+    row === null
+  ) {
+    return
+  }
+
+  if (
+    key === 'ArrowLeft' ||
+    key === 'ArrowRight'
+  ) {
+    const inputs =
+      [
+        ...row.querySelectorAll<HTMLInputElement>(
+          '.competition-result-input'
+        ),
+      ]
+
+    const index =
+      inputs.indexOf(
+        current
+      )
+
+    const nextIndex =
+      key === 'ArrowLeft'
+        ? index - 1
+        : index + 1
+
+    const nextInput =
+      inputs[nextIndex]
+
+    if (
+      nextInput !== undefined
+    ) {
+      const lifterId =
+        Number(
+          nextInput.dataset
+            .competitionLifterId
+        )
+
+      if (
+        !Number.isNaN(
+          lifterId
+        )
+      ) {
+        selectCompetitionRow(
+          lifterId
+        )
+      }
+
+      nextInput.focus()
+    }
+
+    return
+  }
+
+  if (
+    key !== 'ArrowUp' &&
+    key !== 'ArrowDown'
+  ) {
+    return
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  const column =
+    current.dataset
+      .competitionColumn
+
+  const lifterId =
+    Number(
+      current.dataset
+        .competitionLifterId
+    )
+
+  if (
+    meet === undefined ||
+    column === undefined ||
+    Number.isNaN(
+      lifterId
+    )
+  ) {
+    return
+  }
+
+  const lifters =
+    getCompetitionLifters(
+      meet
+    )
+
+  const index =
+    lifters.findIndex(
+      lifter =>
+        lifter.id ===
+        lifterId
+    )
+
+  const nextIndex =
+    key === 'ArrowUp'
+      ? index - 1
+      : index + 1
+
+  const nextLifter =
+    lifters[nextIndex]
+
+  if (
+    nextLifter === undefined
+  ) {
+    return
+  }
+
+  const nextInput =
+    document
+      .querySelector<HTMLInputElement>(
+        `[data-competition-lifter-id="${nextLifter.id}"][data-competition-column="${column}"]`
+      )
+
+  if (
+    nextInput !== null
+  ) {
+    selectCompetitionRow(
+      nextLifter.id
+    )
+
+    nextInput.focus()
+  }
+}
+
+
+function resolveLifterStatusShortcut(
+  lifter: Lifter,
+  requestedStatus: Lifter['status'],
+): Lifter['status'] {
+
+  let resolvedStatus =
+    requestedStatus
+
+  if (
+    requestedStatus !== 'active' &&
+    lifter.status === requestedStatus
+  ) {
+    resolvedStatus =
+      'active'
+  }
+
+  if (
+    resolvedStatus === 'active' &&
+    hasThreeFailedAttemptsOnLift(
+      lifter
+    )
+  ) {
+    resolvedStatus =
+      'bombed'
+  }
+
+  return resolvedStatus
+}
+
+
+function setLifterStatusFromShortcut(
+  lifter: Lifter,
+  requestedStatus: Lifter['status'],
+): void {
+
+  const resolvedStatus =
+    resolveLifterStatusShortcut(
+      lifter,
+      requestedStatus
+    )
+
+  const hasBombedEvent =
+    hasThreeFailedAttemptsOnLift(
+      lifter
+    )
+
+  if (
+    resolvedStatus === 'bombed' &&
+    hasBombedEvent
+  ) {
+    competitionAutoBombedLifterIds.add(
+      lifter.id
+    )
+  } else {
+    competitionAutoBombedLifterIds.delete(
+      lifter.id
+    )
+  }
+
+  lifter.status =
+    resolvedStatus
+}
+
+
+function setCompetitionLifterStatusShortcut(
+  lifterId: number,
+  status: Lifter['status'],
+): void {
+
+  const meet =
+    getSelectedMeet()
+
+  const lifter =
+    meet?.state.lifters.find(
+      item =>
+        item.id ===
+        lifterId
+    )
+
+  if (
+    meet === undefined ||
+    lifter === undefined
+  ) {
+    return
+  }
+
+  setLifterStatusFromShortcut(
+    lifter,
+    status
+  )
+
+  selectedLifterId =
+    lifter.id
+
+  updateCompetitionLifterStatusDisplays(
+    meet,
+    lifter
+  )
+
+  updateCompetitionPlaceDisplays(
+    meet
+  )
+}
+
+
+function handleCompetitionStatusShortcut(
+  event: KeyboardEvent,
+): boolean {
+
+  const key =
+    event.key.toLocaleLowerCase()
+
+  let status:
+    Lifter['status'] | null =
+      null
+
+  switch (
+    key
+  ) {
+    case 'a':
+      status = 'active'
+      break
+
+    case 'b':
+      status = 'bombed'
+      break
+
+    case 's':
+      status = 'scratched'
+      break
+
+    case 'q':
+      status = 'disqualified'
+      break
+
+    default:
+      return false
+  }
+
+  const active =
+    document.activeElement as
+      HTMLElement | null
+
+  const activeLifterId =
+    active?.dataset
+      .competitionLifterId
+
+  const lifterId =
+    activeLifterId === undefined
+      ? selectedLifterId
+      : Number(
+          activeLifterId
+        )
+
+  if (
+    lifterId === null ||
+    Number.isNaN(
+      lifterId
+    )
+  ) {
+    return false
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  setCompetitionLifterStatusShortcut(
+    lifterId,
+    status
+  )
+
+  return true
+}
+
+
+function handleCompetitionArrowNavigation(
+  event: KeyboardEvent,
+): boolean {
+
+  if (
+    event.key !== 'ArrowLeft' &&
+    event.key !== 'ArrowRight' &&
+    event.key !== 'ArrowUp' &&
+    event.key !== 'ArrowDown'
+  ) {
+    return false
+  }
+
+  const active =
+    document.activeElement as
+      HTMLElement | null
+
+  // Weight inputs handle their own arrow navigation.
+  if (
+    active?.classList.contains(
+      'competition-result-input'
+    )
+  ) {
+    return false
+  }
+
+  const activeLifterId =
+    active?.dataset
+      .competitionLifterId
+
+  const lifterId =
+    activeLifterId === undefined
+      ? selectedLifterId
+      : Number(
+          activeLifterId
+        )
+
+  if (
+    lifterId === null ||
+    Number.isNaN(
+      lifterId
+    )
+  ) {
+    return false
+  }
+
+  const row =
+    document.querySelector<HTMLElement>(
+      `[data-competition-lifter-row="${lifterId}"]`
+    )
+
+  if (
+    row === null
+  ) {
+    return false
+  }
+
+  let currentInput:
+    HTMLInputElement | null =
+      null
+
+  if (
+    active?.matches(
+      '[data-attempt-status-cycle]'
+    )
+  ) {
+    const lift =
+      active.dataset
+        .attemptLift
+
+    const attemptKey =
+      active.dataset
+        .attemptKey
+
+    if (
+      lift !== undefined &&
+      attemptKey !== undefined
+    ) {
+      currentInput =
+        row.querySelector<HTMLInputElement>(
+          `[data-attempt-weight][data-attempt-lift="${lift}"][data-attempt-key="${attemptKey}"]`
+        )
+    }
+  }
+
+  if (
+    currentInput === null
+  ) {
+    const column =
+      active?.dataset
+        .competitionColumn
+
+    if (
+      column !== undefined
+    ) {
+      currentInput =
+        row.querySelector<HTMLInputElement>(
+          `[data-competition-column="${column}"]`
+        )
+    }
+  }
+
+  if (
+    currentInput === null
+  ) {
+    const inputs =
+      [
+        ...row.querySelectorAll<HTMLInputElement>(
+          '.competition-result-input'
+        ),
+      ]
+
+    if (
+      inputs.length === 0
+    ) {
+      return false
+    }
+
+    if (
+      event.key === 'ArrowLeft'
+    ) {
+      currentInput =
+        inputs[inputs.length - 1] ??
+        null
+    } else if (
+      event.key === 'ArrowRight'
+    ) {
+      currentInput =
+        inputs[0] ??
+        null
+    } else {
+      currentInput =
+        inputs[0] ??
+        null
+
+      if (
+        currentInput !== null
+      ) {
+        focusCompetitionWeightByArrow(
+          currentInput,
+          event.key
+        )
+
+        event.preventDefault()
+        event.stopPropagation()
+
+        return true
+      }
+    }
+
+    if (
+      currentInput !== null
+    ) {
+      selectCompetitionRow(
+        lifterId
+      )
+
+      currentInput.focus()
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      return true
+    }
+  }
+
+  if (
+    currentInput === null
+  ) {
+    return false
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  focusCompetitionWeightByArrow(
+    currentInput,
+    event.key
+  )
+
+  return true
+}
+
+
+function wireCompetitionStatusShortcuts():
+  void {
+
+  if (
+    competitionShortcutKeydownHandler !==
+    null
+  ) {
+    document.removeEventListener(
+      'keydown',
+      competitionShortcutKeydownHandler
+    )
+  }
+
+  competitionShortcutKeydownHandler =
+    event => {
+      if (
+        event.defaultPrevented
+      ) {
+        return
+      }
+
+      if (
+        handleCompetitionArrowNavigation(
+          event
+        )
+      ) {
+        return
+      }
+
+      handleCompetitionStatusShortcut(
+        event
+      )
+    }
+
+  document.addEventListener(
+    'keydown',
+    competitionShortcutKeydownHandler
+  )
+}
+
+
+function disableCompetitionStatusShortcuts():
+  void {
+
+  if (
+    competitionShortcutKeydownHandler ===
+    null
+  ) {
+    return
+  }
+
+  document.removeEventListener(
+    'keydown',
+    competitionShortcutKeydownHandler
+  )
+
+  competitionShortcutKeydownHandler =
+    null
+}
+
+
+function selectCompetitionRow(
+  lifterId: number,
+): void {
+
+  selectedLifterId =
+    lifterId
+
+  document
+    .querySelectorAll<HTMLElement>(
+      '[data-competition-lifter-row]'
+    )
+    .forEach(
+      row => {
+        row.classList.toggle(
+          'selected',
+          Number(
+            row.dataset
+              .competitionLifterRow
+          ) ===
+          lifterId
+        )
+      }
+    )
+}
+
+
+function wireCompetition():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-competition-sort]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const column =
+              button.dataset
+                .competitionSort as
+                  CompetitionSortColumn | undefined
+
+            if (
+              column ===
+              undefined
+            ) {
+              return
+            }
+
+            if (
+              competitionSortColumn ===
+              column
+            ) {
+              competitionSortAscending =
+                !competitionSortAscending
+            } else {
+              competitionSortColumn =
+                column
+
+              competitionSortAscending =
+                true
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-competition-division]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const id =
+              Number(
+                button.dataset
+                  .competitionDivision
+              )
+
+            if (
+              Number.isNaN(
+                id
+              )
+            ) {
+              return
+            }
+
+            rememberCompetitionWeightClass(
+              meet
+            )
+
+            selectedDivisionId =
+              id
+
+            selectedTeamId =
+              null
+
+            restoreCompetitionWeightClass(
+              meet,
+              id
+            )
+
+            selectFirstCompetitionLifter(
+              meet
+            )
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-competition-weight-class]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const value =
+              button.dataset
+                .competitionWeightClass ??
+              ''
+
+            selectedCompetitionWeightClass =
+              value === ''
+                ? null
+                : value
+
+            rememberCompetitionWeightClass(
+              meet
+            )
+
+            selectFirstCompetitionLifter(
+              meet
+            )
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLElement>(
+      '[data-competition-lifter-row]'
+    )
+    .forEach(
+      row => {
+
+        row.addEventListener(
+          'mousedown',
+          () => {
+            const id =
+              Number(
+                row.dataset
+                  .competitionLifterRow
+              )
+
+            if (
+              !Number.isNaN(
+                id
+              )
+            ) {
+              selectCompetitionRow(
+                id
+              )
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-best-lift]'
+    )
+    .forEach(
+      input => {
+
+        input.addEventListener(
+          'focus',
+          () => {
+            const lifterId =
+              Number(
+                input.dataset
+                  .competitionLifterId
+              )
+
+            if (
+              !Number.isNaN(
+                lifterId
+              )
+            ) {
+              selectCompetitionRow(
+                lifterId
+              )
+            }
+          }
+        )
+
+        input.addEventListener(
+          'input',
+          () => {
+            const lifterId =
+              Number(
+                input.dataset
+                  .competitionLifterId
+              )
+
+            const lift =
+              input.dataset
+                .bestLift as
+                  CompetitionLift | undefined
+
+            const lifter =
+              getCompetitionLifterById(
+                lifterId
+              )
+
+            if (
+              lifter === undefined ||
+              lift === undefined ||
+              isCompetitionResultEditingLocked(
+                lifter
+              )
+            ) {
+              return
+            }
+
+            const results =
+              ensureBestLiftResults(
+                lifter
+              )
+
+            results[lift] =
+              readCompetitionWeight(
+                input.value
+              )
+
+            updateBestLiftTotalDisplay(
+              lifter
+            )
+          }
+        )
+
+        input.addEventListener(
+          'keydown',
+          event => {
+            if (
+              event.key === 'ArrowLeft' ||
+              event.key === 'ArrowRight' ||
+              event.key === 'ArrowUp' ||
+              event.key === 'ArrowDown'
+            ) {
+              event.preventDefault()
+              focusCompetitionWeightByArrow(
+                input,
+                event.key
+              )
+
+              return
+            }
+
+            if (
+              event.key ===
+              'Enter'
+            ) {
+              event.preventDefault()
+              focusCompetitionFieldOnNextLifter(
+                input
+              )
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-attempt-weight]'
+    )
+    .forEach(
+      input => {
+
+        input.addEventListener(
+          'focus',
+          () => {
+            const lifterId =
+              Number(
+                input.dataset
+                  .competitionLifterId
+              )
+
+            if (
+              !Number.isNaN(
+                lifterId
+              )
+            ) {
+              selectCompetitionRow(
+                lifterId
+              )
+            }
+          }
+        )
+
+        input.addEventListener(
+          'input',
+          () => {
+            const lifterId =
+              Number(
+                input.dataset
+                  .competitionLifterId
+              )
+
+            const lift =
+              input.dataset
+                .attemptLift as
+                  CompetitionLift | undefined
+
+            const attemptKey =
+              input.dataset
+                .attemptKey as
+                  CompetitionAttemptKey | undefined
+
+            const lifter =
+              getCompetitionLifterById(
+                lifterId
+              )
+
+            if (
+              lifter === undefined ||
+              lift === undefined ||
+              attemptKey === undefined ||
+              isCompetitionResultEditingLocked(
+                lifter
+              )
+            ) {
+              return
+            }
+
+            const attempt =
+              ensureAllAttemptResults(
+                lifter
+              )[lift][attemptKey]
+
+            attempt.weight =
+              readCompetitionWeight(
+                input.value
+              )
+
+            attempt.source =
+              'manual'
+
+            updateAttemptSummaryDisplay(
+              lifter
+            )
+          }
+        )
+
+        input.addEventListener(
+          'keydown',
+          event => {
+
+            const lifterId =
+              Number(
+                input.dataset
+                  .competitionLifterId
+              )
+
+            const lift =
+              input.dataset
+                .attemptLift as
+                  CompetitionLift | undefined
+
+            const attemptKey =
+              input.dataset
+                .attemptKey as
+                  CompetitionAttemptKey | undefined
+
+            const lifter =
+              getCompetitionLifterById(
+                lifterId
+              )
+
+            if (
+              lifter === undefined ||
+              lift === undefined ||
+              attemptKey === undefined
+            ) {
+              return
+            }
+
+            if (
+              event.key === 'ArrowLeft' ||
+              event.key === 'ArrowRight' ||
+              event.key === 'ArrowUp' ||
+              event.key === 'ArrowDown'
+            ) {
+              event.preventDefault()
+              focusCompetitionWeightByArrow(
+                input,
+                event.key
+              )
+
+              return
+            }
+
+            const key =
+              event.key
+                .toLocaleLowerCase()
+
+            if (
+              event.key ===
+              ' '
+            ) {
+              event.preventDefault()
+
+              const attempt =
+                ensureAllAttemptResults(
+                  lifter
+                )[lift][attemptKey]
+
+              setAttemptStatus(
+                lifter,
+                lift,
+                attemptKey,
+                getNextAttemptStatus(
+                  attempt.status
+                ),
+                input
+              )
+
+              return
+            }
+
+            if (
+              key === 'g' ||
+              key === 'r' ||
+              key === 'w'
+            ) {
+              event.preventDefault()
+
+              setAttemptStatus(
+                lifter,
+                lift,
+                attemptKey,
+                key === 'g'
+                  ? 'good'
+                  : key === 'r'
+                    ? 'bad'
+                    : 'unspecified',
+                input
+              )
+
+              return
+            }
+
+            if (
+              event.key ===
+              'Enter'
+            ) {
+              event.preventDefault()
+              focusCompetitionFieldOnNextLifter(
+                input
+              )
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-attempt-status-cycle]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+            const lifterId =
+              Number(
+                button.dataset
+                  .competitionLifterId
+              )
+
+            const lift =
+              button.dataset
+                .attemptLift as
+                  CompetitionLift | undefined
+
+            const attemptKey =
+              button.dataset
+                .attemptKey as
+                  CompetitionAttemptKey | undefined
+
+            const lifter =
+              getCompetitionLifterById(
+                lifterId
+              )
+
+            if (
+              lifter === undefined ||
+              lift === undefined ||
+              attemptKey === undefined
+            ) {
+              return
+            }
+
+            const attempt =
+              ensureAllAttemptResults(
+                lifter
+              )[lift][attemptKey]
+
+            setAttemptStatus(
+              lifter,
+              lift,
+              attemptKey,
+              getNextAttemptStatus(
+                attempt.status
+              ),
+              button
+            )
+          }
+        )
+      }
+    )
+}
+
 
 function readNumberInput(
   selector: string,
@@ -7896,6 +12218,23 @@ function updateEntryWeightClasses():
     readNumberInput(
       '#entryBodyWeight'
     )
+
+  const coefficientCell =
+    document.querySelector<HTMLElement>(
+      '#entryLifterCoefficient'
+    )
+
+  if (
+    coefficientCell !== null
+  ) {
+    coefficientCell.textContent =
+      formatBodyWeightCoefficient(
+        getBodyWeightCoefficient(
+          division,
+          bodyWeight
+        )
+      )
+  }
 
   let automaticClass =
     ''
@@ -7992,6 +12331,27 @@ function updateEditLifterWeightClasses():
       : Number(
           bodyWeightInput.value
         )
+
+  const coefficientCell =
+    document.querySelector<HTMLElement>(
+      '#editLifterCoefficient'
+    )
+
+  if (
+    coefficientCell !== null
+  ) {
+    coefficientCell.textContent =
+      formatBodyWeightCoefficient(
+        getBodyWeightCoefficient(
+          division,
+          Number.isFinite(
+            bodyWeight
+          )
+            ? bodyWeight
+            : null
+        )
+      )
+  }
 
   let selectedClass =
     classInput.value
@@ -8325,7 +12685,73 @@ function wireNavigation(): void {
     ?.addEventListener(
       'click',
       () => {
-        // Registration is already the active workspace.
+        currentPage =
+          'registration'
+
+        selectedTeamId =
+          null
+
+        selectedCompetitionWeightClass =
+          null
+
+        renderApp()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#navCompetition'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        activeEntry =
+          null
+
+        currentPage =
+          'competition'
+
+        const meet =
+          getSelectedMeet()
+
+        if (
+          meet !== undefined &&
+          getSelectedDivision() ===
+          undefined
+        ) {
+          selectFirstDivisionForMeet(
+            meet
+          )
+        }
+
+        if (
+          meet !== undefined &&
+          selectedDivisionId !==
+            null
+        ) {
+          restoreCompetitionWeightClass(
+            meet,
+            selectedDivisionId
+          )
+
+          selectFirstCompetitionLifter(
+            meet
+          )
+        }
+
+        renderApp()
       }
     )
 
@@ -8627,8 +13053,10 @@ function setFocusedLifterStatusShortcut(
       _meet,
       lifter,
     ) => {
-      lifter.status =
+      setLifterStatusFromShortcut(
+        lifter,
         status
+      )
 
       return true
     }
@@ -9735,6 +14163,33 @@ function wireRegistrationShortcuts():
 }
 
 
+function disableRegistrationShortcuts():
+  void {
+
+  if (
+    registrationShortcutKeydownHandler !==
+    null
+  ) {
+    document.removeEventListener(
+      'keydown',
+      registrationShortcutKeydownHandler
+    )
+
+    registrationShortcutKeydownHandler =
+      null
+  }
+
+  lastRegistrationShortcutKey =
+    null
+
+  focusedLifterWeightDigits =
+    ''
+
+  focusedLifterWeightLifterId =
+    null
+}
+
+
 function wireRegistrationSetup(): void {
 
   document
@@ -10158,12 +14613,31 @@ function renderApp(): void {
 
       ${renderShortcutHelpDialog()}
 
-      ${renderRegistration()}
+      ${
+        currentPage ===
+        'competition'
+          ? renderCompetition()
+          : renderRegistration()
+      }
 
     </div>
   `
 
   wireNavigation()
+
+  if (
+    currentPage ===
+    'competition'
+  ) {
+    disableRegistrationShortcuts()
+    wireCompetition()
+    wireCompetitionStatusShortcuts()
+    wireSelectAllOnEditableInputs()
+
+    return
+  }
+
+  disableCompetitionStatusShortcuts()
   wireRegistrationSetup()
   wireRegistration()
   wireSelectAllOnEditableInputs()
