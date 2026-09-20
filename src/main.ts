@@ -133,6 +133,8 @@ type AppPage =
   | 'standings'
   | 'best-lifters'
   | 'best-lifts'
+  | 'summary'
+  | 'detail'
   | 'platform-issues'
   | 'help'
 
@@ -194,8 +196,9 @@ type StandingsOutputScope =
   | 'both'
 
 type StandingsCopyFormat =
-  | 'spreadsheet'
   | 'formatted'
+  | 'spreadsheet'
+  | 'word'
 
 
 type IndividualStandingsSortColumn =
@@ -216,6 +219,24 @@ type TeamStandingsSortColumn =
   | 'fourths'
   | 'fifths'
   | 'totalPoints'
+
+
+type DetailSortColumn =
+  | 'weightClass'
+  | 'place'
+  | 'lifter'
+  | 'lifterNumber'
+  | 'team'
+  | 'bodyWeight'
+  | 'squat'
+  | 'bench'
+  | 'deadlift'
+  | 'total'
+  | 'coefficient'
+  | 'coefficientSquat'
+  | 'coefficientBench'
+  | 'coefficientDeadlift'
+  | 'coefficientTotal'
 
 
 type BestLiftSortColumn =
@@ -4359,6 +4380,14 @@ let bestLiftSortAscending =
   true
 
 
+let detailSortColumn:
+  DetailSortColumn =
+    'weightClass'
+
+let detailSortAscending =
+  true
+
+
 const competitionWeightClassByDivision =
   new Map<string, string | null>()
 
@@ -7684,6 +7713,32 @@ function renderNavigation():
       </button>
 
       <button
+        id="navSummary"
+        type="button"
+        class="nav-item ${
+          currentPage ===
+          'summary'
+            ? 'active'
+            : ''
+        }"
+      >
+        Summary
+      </button>
+
+      <button
+        id="navDetail"
+        type="button"
+        class="nav-item ${
+          currentPage ===
+          'detail'
+            ? 'active'
+            : ''
+        }"
+      >
+        Detail
+      </button>
+
+      <button
         type="button"
         class="nav-item"
         disabled
@@ -8167,6 +8222,13 @@ function renderStandings(): string {
             >
               <button
                 type="button"
+                data-copy-format="formatted"
+              >
+                Copy Formatted ▸
+              </button>
+
+              <button
+                type="button"
                 data-copy-format="spreadsheet"
               >
                 Copy for Spreadsheet ▸
@@ -8174,9 +8236,9 @@ function renderStandings(): string {
 
               <button
                 type="button"
-                data-copy-format="formatted"
+                data-copy-format="word"
               >
-                Copy Formatted ▸
+                Copy for Word ▸
               </button>
 
               <div
@@ -8262,8 +8324,7 @@ function renderStandings(): string {
                             <td class="numeric">${row.place}</td>
                             <td class="numeric">${row.lifterNumber}</td>
                             <td class="lifter-name">
-                              ${escapeHtml(`${row.lastName}, ${row.firstName}`)}
-                              ${row.isExtraLifter ? '<span class="standings-extra-marker">(B)</span>' : ''}
+                              ${escapeHtml(getIndividualStandingDisplayName(meet, row))}
                             </td>
                             <td>${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
                             <td class="numeric">${row.bodyWeight.toFixed(1)}</td>
@@ -8386,7 +8447,10 @@ function getStandingsSpreadsheetText(
             row.weightClass,
             row.place,
             row.lifterNumber,
-            `${row.lastName}, ${row.firstName}${row.isExtraLifter ? ' (B)' : ''}`,
+            getIndividualStandingDisplayName(
+              meet,
+              row
+            ),
             getStandingsTeamName(
               meet,
               row.teamId
@@ -8489,7 +8553,12 @@ function getStandingsFormattedHtml(
             <td style="${td}">${escapeHtml(row.weightClass)}</td>
             <td style="${td}text-align:center">${row.place}</td>
             <td style="${td}text-align:center">${row.lifterNumber}</td>
-            <td style="${td}">${escapeHtml(`${row.lastName}, ${row.firstName}${row.isExtraLifter ? ' (B)' : ''}`)}</td>
+            <td style="${td}">${escapeHtml(
+              getIndividualStandingDisplayName(
+                meet,
+                row
+              )
+            )}</td>
             <td style="${td}">${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
             <td style="${td}text-align:right">${row.bodyWeight.toFixed(1)}</td>
             <td style="${td}text-align:right;font-weight:700">${row.total}</td>
@@ -8561,6 +8630,212 @@ function getStandingsFormattedHtml(
       ${teamSection}
     </div>
   `
+}
+
+
+function getStandingsWordHtml(
+  meet: LocalMeet,
+  scope:
+    StandingsOutputScope,
+): string {
+
+  const {
+    division,
+    individual,
+    teams,
+  } =
+    getStandingsData(
+      meet
+    )
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const th =
+    'border:1px solid #9ca3af;background:#eaf1f8;padding:4px 5px;font-family:Arial,sans-serif;font-size:9px;font-weight:700;'
+
+  const td =
+    'border:1px solid #cbd5e1;padding:3px 5px;font-family:Arial,sans-serif;font-size:9px;'
+
+  const sections:
+    string[] =
+    []
+
+  if (
+    scope ===
+      'individual' ||
+    scope ===
+      'both'
+  ) {
+    const rows =
+      getSortedIndividualStandings(
+        meet,
+        individual
+      )
+        .map(
+          row => `
+            <tr>
+              <td style="${td}width:58px;text-align:right;">${escapeHtml(row.weightClass)}</td>
+              <td style="${td}width:38px;text-align:right;">${row.place}</td>
+              <td style="${td}width:48px;text-align:right;">${row.lifterNumber}</td>
+              <td style="${td}width:175px;font-weight:600;">${escapeHtml(
+              getIndividualStandingDisplayName(
+                meet,
+                row
+              )
+            )}</td>
+              <td style="${td}width:120px;">${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
+              <td style="${td}width:56px;text-align:right;">${row.bodyWeight.toFixed(1)}</td>
+              <td style="${td}width:65px;text-align:right;font-weight:700;">${row.total}</td>
+            </tr>
+          `
+        )
+        .join('')
+
+    sections.push(`
+      <div style="font-family:Arial,sans-serif;font-size:13px;font-weight:700;margin:0 0 5px;">
+        Individual Standings
+      </div>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:620px;table-layout:fixed;margin-bottom:14px;">
+        <tr>
+          <th style="${th}width:58px;">Wt. Class</th>
+          <th style="${th}width:38px;">Place</th>
+          <th style="${th}width:48px;">Lifter #</th>
+          <th style="${th}width:175px;">Lifter</th>
+          <th style="${th}width:120px;">Team</th>
+          <th style="${th}width:56px;">BWT</th>
+          <th style="${th}width:65px;">Total</th>
+        </tr>
+        ${rows}
+      </table>
+    `)
+  }
+
+  if (
+    scope ===
+      'team' ||
+    scope ===
+      'both'
+  ) {
+    const rows =
+      getSortedTeamStandings(
+        meet,
+        teams
+      )
+        .map(
+          row => `
+            <tr>
+              <td style="${td}width:38px;text-align:right;">${row.place}</td>
+              <td style="${td}width:185px;font-weight:600;">${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
+              <td style="${td}width:48px;text-align:center;">${row.firsts}</td>
+              <td style="${td}width:48px;text-align:center;">${row.seconds}</td>
+              <td style="${td}width:48px;text-align:center;">${row.thirds}</td>
+              <td style="${td}width:48px;text-align:center;">${row.fourths}</td>
+              <td style="${td}width:48px;text-align:center;">${row.fifths}</td>
+              <td style="${td}width:72px;text-align:right;font-weight:700;">${row.totalPoints}</td>
+            </tr>
+          `
+        )
+        .join('')
+
+    sections.push(`
+      <div style="font-family:Arial,sans-serif;font-size:13px;font-weight:700;margin:0 0 5px;">
+        Team Standings
+      </div>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:620px;table-layout:fixed;">
+        <tr>
+          <th style="${th}width:38px;">Place</th>
+          <th style="${th}width:185px;">Team</th>
+          <th style="${th}width:48px;">1st x7</th>
+          <th style="${th}width:48px;">2nd x5</th>
+          <th style="${th}width:48px;">3rd x3</th>
+          <th style="${th}width:48px;">4th x2</th>
+          <th style="${th}width:48px;">5th x1</th>
+          <th style="${th}width:72px;">Total Pts.</th>
+        </tr>
+        ${rows}
+      </table>
+    `)
+  }
+
+  return `
+    <div style="width:620px;font-family:Arial,sans-serif;color:#111827;">
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px;">
+        ${escapeHtml(meet.state.meet.name)}
+      </div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:12px;">
+        ${escapeHtml(division.name)} Standings
+      </div>
+      ${sections.join('')}
+    </div>
+  `
+}
+
+
+async function copyStandingsWord(
+  scope:
+    StandingsOutputScope,
+): Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getStandingsSpreadsheetText(
+      meet,
+      scope
+    )
+
+  const html =
+    getStandingsWordHtml(
+      meet,
+      scope
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob(
+            [plainText],
+            {
+              type:
+                'text/plain',
+            }
+          ),
+        'text/html':
+          new Blob(
+            [html],
+            {
+              type:
+                'text/html',
+            }
+          ),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Word-formatted Standings copied. Paste into Word.'
+  )
 }
 
 
@@ -8760,7 +9035,7 @@ function wireStandings(): void {
 
   let selectedCopyFormat:
     StandingsCopyFormat =
-      'spreadsheet'
+      'formatted'
 
   const closeStandingsMenus =
     () => {
@@ -8900,11 +9175,24 @@ function wireStandings(): void {
               void copyStandingsFormatted(
                 scope
               )
-            } else {
-              void copyStandingsForSpreadsheet(
+
+              return
+            }
+
+            if (
+              selectedCopyFormat ===
+              'word'
+            ) {
+              void copyStandingsWord(
                 scope
               )
+
+              return
             }
+
+            void copyStandingsForSpreadsheet(
+              scope
+            )
           }
         )
       }
@@ -9162,7 +9450,10 @@ function getBestLifterReportRows(
             lifterNumber:
               lifter.lifterNumber,
             lifterName:
-              `${lifter.lastName}, ${lifter.firstName}`,
+              getNonRegistrationLifterDisplayName(
+                meet,
+                lifter
+              ),
             teamName:
               getStandingsTeamName(
                 meet,
@@ -9560,6 +9851,13 @@ function renderBestLifters():
             >
               <button
                 type="button"
+                data-copy-best-lifters="formatted"
+              >
+                Copy Formatted
+              </button>
+
+              <button
+                type="button"
                 data-copy-best-lifters="spreadsheet"
               >
                 Copy for Spreadsheet
@@ -9567,9 +9865,9 @@ function renderBestLifters():
 
               <button
                 type="button"
-                data-copy-best-lifters="formatted"
+                data-copy-best-lifters="word"
               >
-                Copy Formatted
+                Copy for Word
               </button>
             </div>
           </div>
@@ -9617,7 +9915,7 @@ function renderBestLifters():
                 ${renderBestLifterSortHeader('Team', 'team')}
                 ${renderBestLifterSortHeader('Squat', 'squat')}
                 ${renderBestLifterSortHeader('Bench Press', 'bench')}
-                ${renderBestLifterSortHeader('Dead Lift', 'deadlift')}
+                ${renderBestLifterSortHeader('Deadlift', 'deadlift')}
                 ${renderBestLifterSortHeader('Total', 'total')}
                 ${renderBestLifterSortHeader(coefficientLabel, 'coefficient')}
                 ${renderBestLifterSortHeader(`${coefficientLabel} Total`, 'coefficientTotal')}
@@ -9705,7 +10003,7 @@ function getBestLifterSpreadsheetText(
         'Team',
         'Squat',
         'Bench Press',
-        'Dead Lift',
+        'Deadlift',
         'Total',
         coefficientLabel,
         `${coefficientLabel} Total`,
@@ -9810,7 +10108,7 @@ function getBestLifterFormattedHtml(
             <th style="${th}">Team</th>
             <th style="${th}">Squat</th>
             <th style="${th}">Bench Press</th>
-            <th style="${th}">Dead Lift</th>
+            <th style="${th}">Deadlift</th>
             <th style="${th}">Total</th>
             <th style="${th}">${escapeHtml(coefficientLabel)}</th>
             <th style="${th}">${escapeHtml(`${coefficientLabel} Total`)}</th>
@@ -9820,6 +10118,136 @@ function getBestLifterFormattedHtml(
       </table>
     </div>
   `
+}
+
+
+function getBestLifterWordHtml(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedBestLifterRows(
+      getBestLifterReportRows(
+        meet,
+        division
+      )
+    )
+
+  const th =
+    'border:1px solid #9ca3af;background:#eaf1f8;padding:3px 3px;font-family:Arial,sans-serif;font-size:7.5px;font-weight:700;'
+
+  const td =
+    'border:1px solid #cbd5e1;padding:2px 3px;font-family:Arial,sans-serif;font-size:7.5px;'
+
+  const body =
+    rows
+      .map(
+        row => `
+          <tr>
+            <td style="${td}width:68px;">${escapeHtml(row.weightGroup)}</td>
+            <td style="${td}width:28px;text-align:right;">${row.place}</td>
+            <td style="${td}width:38px;text-align:right;">${row.lifterNumber}</td>
+            <td style="${td}width:112px;font-weight:600;">${escapeHtml(row.lifterName)}</td>
+            <td style="${td}width:82px;">${escapeHtml(row.teamName)}</td>
+            <td style="${td}width:44px;text-align:right;">${row.squat}</td>
+            <td style="${td}width:44px;text-align:right;">${row.bench}</td>
+            <td style="${td}width:44px;text-align:right;">${row.deadlift}</td>
+            <td style="${td}width:48px;text-align:right;font-weight:700;">${row.total}</td>
+            <td style="${td}width:54px;text-align:right;">${row.coefficient.toFixed(4)}</td>
+            <td style="${td}width:58px;text-align:right;font-weight:700;">${row.coefficientTotal.toFixed(2)}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+  return `
+    <div style="width:620px;font-family:Arial,sans-serif;color:#111827;">
+      <div style="font-size:17px;font-weight:700;margin-bottom:2px;">
+        ${escapeHtml(meet.state.meet.name)}
+      </div>
+      <div style="font-size:11px;font-weight:700;margin-bottom:10px;">
+        ${escapeHtml(division.name)} Best Lifters
+      </div>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:620px;table-layout:fixed;">
+        <tr>
+          <th style="${th}width:68px;">Weight Group</th>
+          <th style="${th}width:28px;">Place</th>
+          <th style="${th}width:38px;">Lifter #</th>
+          <th style="${th}width:112px;">Lifter</th>
+          <th style="${th}width:82px;">Team</th>
+          <th style="${th}width:44px;">Squat</th>
+          <th style="${th}width:44px;">Bench</th>
+          <th style="${th}width:44px;">Deadlift</th>
+          <th style="${th}width:48px;">Total</th>
+          <th style="${th}width:54px;">${escapeHtml(coefficientLabel)}</th>
+          <th style="${th}width:58px;">${escapeHtml(`${coefficientLabel} Total`)}</th>
+        </tr>
+        ${body}
+      </table>
+    </div>
+  `
+}
+
+
+async function copyBestLiftersWord():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getBestLifterSpreadsheetText(
+      meet
+    )
+
+  const html =
+    getBestLifterWordHtml(
+      meet
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob([plainText], { type: 'text/plain' }),
+        'text/html':
+          new Blob([html], { type: 'text/html' }),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Word-formatted Best Lifters copied. Paste into Word.'
+  )
 }
 
 
@@ -10067,9 +10495,21 @@ function wireBestLifters():
               'formatted'
             ) {
               void copyBestLiftersFormatted()
-            } else {
-              void copyBestLiftersSpreadsheet()
+
+              return
             }
+
+            if (
+              button.dataset
+                .copyBestLifters ===
+              'word'
+            ) {
+              void copyBestLiftersWord()
+
+              return
+            }
+
+            void copyBestLiftersSpreadsheet()
           }
         )
       }
@@ -10189,7 +10629,7 @@ function getBestLiftReportRows(
       },
       {
         lift: 'deadlift',
-        label: 'Dead',
+        label: 'Deadlift',
       },
     ]
 
@@ -10260,7 +10700,10 @@ function getBestLiftReportRows(
                     lifterNumber:
                       lifter.lifterNumber,
                     lifterName:
-                      `${lifter.lastName}, ${lifter.firstName}`,
+                      getNonRegistrationLifterDisplayName(
+                        meet,
+                        lifter
+                      ),
                     teamName:
                       getStandingsTeamName(
                         meet,
@@ -10597,6 +11040,13 @@ function renderBestLifts():
             >
               <button
                 type="button"
+                data-copy-best-lifts="formatted"
+              >
+                Copy Formatted
+              </button>
+
+              <button
+                type="button"
                 data-copy-best-lifts="spreadsheet"
               >
                 Copy for Spreadsheet
@@ -10604,9 +11054,9 @@ function renderBestLifts():
 
               <button
                 type="button"
-                data-copy-best-lifts="formatted"
+                data-copy-best-lifts="word"
               >
-                Copy Formatted
+                Copy for Word
               </button>
             </div>
           </div>
@@ -10847,6 +11297,132 @@ function getBestLiftFormattedHtml(
 }
 
 
+function getBestLiftWordHtml(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedBestLiftRows(
+      getBestLiftReportRows(
+        meet,
+        division
+      )
+    )
+
+  const th =
+    'border:1px solid #9ca3af;background:#eaf1f8;padding:3px 4px;font-family:Arial,sans-serif;font-size:8px;font-weight:700;'
+
+  const td =
+    'border:1px solid #cbd5e1;padding:2px 4px;font-family:Arial,sans-serif;font-size:8px;'
+
+  const body =
+    rows
+      .map(
+        row => `
+          <tr>
+            <td style="${td}width:55px;">${escapeHtml(row.liftLabel)}</td>
+            <td style="${td}width:90px;">${escapeHtml(row.weightGroup)}</td>
+            <td style="${td}width:32px;text-align:right;">${row.place}</td>
+            <td style="${td}width:42px;text-align:right;">${row.lifterNumber}</td>
+            <td style="${td}width:135px;font-weight:600;">${escapeHtml(row.lifterName)}</td>
+            <td style="${td}width:100px;">${escapeHtml(row.teamName)}</td>
+            <td style="${td}width:55px;text-align:right;font-weight:700;">${row.liftWeight}</td>
+            <td style="${td}width:55px;text-align:right;">${row.coefficient.toFixed(4)}</td>
+            <td style="${td}width:65px;text-align:right;font-weight:700;">${row.coefficientLift.toFixed(2)}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+  return `
+    <div style="width:620px;font-family:Arial,sans-serif;color:#111827;">
+      <div style="font-size:17px;font-weight:700;margin-bottom:2px;">
+        ${escapeHtml(meet.state.meet.name)}
+      </div>
+      <div style="font-size:11px;font-weight:700;margin-bottom:10px;">
+        ${escapeHtml(division.name)} Best Lifts
+      </div>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:620px;table-layout:fixed;">
+        <tr>
+          <th style="${th}width:55px;">Lift</th>
+          <th style="${th}width:90px;">Weight Group</th>
+          <th style="${th}width:32px;">Place</th>
+          <th style="${th}width:42px;">Lifter #</th>
+          <th style="${th}width:135px;">Lifter</th>
+          <th style="${th}width:100px;">Team</th>
+          <th style="${th}width:55px;">Lift Weight</th>
+          <th style="${th}width:55px;">${escapeHtml(coefficientLabel)}</th>
+          <th style="${th}width:65px;">${escapeHtml(`${coefficientLabel} Lift`)}</th>
+        </tr>
+        ${body}
+      </table>
+    </div>
+  `
+}
+
+
+async function copyBestLiftsWord():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getBestLiftSpreadsheetText(
+      meet
+    )
+
+  const html =
+    getBestLiftWordHtml(
+      meet
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob([plainText], { type: 'text/plain' }),
+        'text/html':
+          new Blob([html], { type: 'text/html' }),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Word-formatted Best Lifts copied. Paste into Word.'
+  )
+}
+
+
 async function copyBestLiftsSpreadsheet():
   Promise<void> {
 
@@ -11082,9 +11658,21 @@ function wireBestLifts():
               'formatted'
             ) {
               void copyBestLiftsFormatted()
-            } else {
-              void copyBestLiftsSpreadsheet()
+
+              return
             }
+
+            if (
+              button.dataset
+                .copyBestLifts ===
+              'word'
+            ) {
+              void copyBestLiftsWord()
+
+              return
+            }
+
+            void copyBestLiftsSpreadsheet()
           }
         )
       }
@@ -11093,6 +11681,2888 @@ function wireBestLifts():
   document
     .querySelector<HTMLButtonElement>(
       '#printBestLifts'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        closeAllReportMenus()
+        window.print()
+      }
+    )
+
+  installReportMenuClickAway()
+}
+
+
+interface SummaryWeightClassSection {
+  weightClass: string
+  rows: IndividualStanding[]
+}
+
+
+function getSummaryWeightClassSections(
+  meet: LocalMeet,
+  division: Division,
+): SummaryWeightClassSection[] {
+
+  const {
+    individual,
+  } =
+    getStandingsData(
+      meet
+    )
+
+  const classOrder =
+    getDivisionRules(
+      division
+    ).weightClasses
+      .map(
+        item =>
+          item.name
+      )
+
+  return classOrder
+    .map(
+      weightClass => ({
+        weightClass,
+        rows:
+          individual
+            .filter(
+              row =>
+                row.weightClass ===
+                weightClass
+            )
+            .sort(
+              (
+                a,
+                b
+              ) =>
+                a.place -
+                b.place
+            )
+            .slice(
+              0,
+              5
+            ),
+      })
+    )
+    .filter(
+      section =>
+        section.rows.length >
+        0
+    )
+}
+
+
+function getSummaryTeamPointExpression(
+  row: TeamStanding,
+): string {
+
+  const points:
+    number[] =
+    []
+
+  for (
+    let index = 0;
+    index < row.firsts;
+    index += 1
+  ) {
+    points.push(7)
+  }
+
+  for (
+    let index = 0;
+    index < row.seconds;
+    index += 1
+  ) {
+    points.push(5)
+  }
+
+  for (
+    let index = 0;
+    index < row.thirds;
+    index += 1
+  ) {
+    points.push(3)
+  }
+
+  for (
+    let index = 0;
+    index < row.fourths;
+    index += 1
+  ) {
+    points.push(2)
+  }
+
+  for (
+    let index = 0;
+    index < row.fifths;
+    index += 1
+  ) {
+    points.push(1)
+  }
+
+  if (
+    points.length === 0
+  ) {
+    return (
+      `${row.totalPoints} points`
+    )
+  }
+
+  return (
+    `${points.join('+')}=` +
+    `${row.totalPoints} ` +
+    `${row.totalPoints === 1 ? 'point' : 'points'}`
+  )
+}
+
+
+function renderSummaryIndividualSection(
+  meet: LocalMeet,
+  division: Division,
+): string {
+
+  const sections =
+    getSummaryWeightClassSections(
+      meet,
+      division
+    )
+
+  return `
+    <section class="summary-section">
+      <h2>Individual Totals</h2>
+
+      <div class="summary-two-column-grid">
+        ${
+          sections
+            .map(
+              section => `
+                <article class="summary-card">
+                  <h3>
+                    ${escapeHtml(section.weightClass)} Class
+                  </h3>
+
+                  <div class="summary-list">
+                    ${
+                      section.rows
+                        .map(
+                          row => `
+                            <div class="summary-result-row">
+                              <span class="summary-place">
+                                ${row.place}.
+                              </span>
+
+                              <span class="summary-name">
+                                ${escapeHtml(
+                                  getIndividualStandingDisplayName(
+                                    meet,
+                                    row
+                                  )
+                                )}
+                              </span>
+
+                              <span class="summary-number">
+                                ${row.lifterNumber}
+                              </span>
+
+                              <span class="summary-team">
+                                ${escapeHtml(
+                                  getStandingsTeamName(
+                                    meet,
+                                    row.teamId
+                                  )
+                                )}
+                              </span>
+
+                              <span class="summary-value">
+                                ${row.total}
+                              </span>
+                            </div>
+                          `
+                        )
+                        .join('')
+                    }
+                  </div>
+                </article>
+              `
+            )
+            .join('')
+        }
+      </div>
+    </section>
+  `
+}
+
+
+function renderSummaryBestLiftersSection(
+  meet: LocalMeet,
+  division: Division,
+): string {
+
+  const rows =
+    getBestLifterReportRows(
+      meet,
+      division
+    )
+
+  const groups =
+    getBestLifterWeightGroups(
+      division
+    )
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  return `
+    <section class="summary-section">
+      <h2>
+        Best Lifters (${escapeHtml(coefficientLabel)})
+      </h2>
+
+      <div class="summary-two-column-grid">
+        ${
+          groups
+            .map(
+              (
+                group,
+                groupIndex
+              ) => `
+                <article class="summary-card">
+                  <h3>
+                    ${escapeHtml(group.label)} Classes
+                  </h3>
+
+                  <div class="summary-list">
+                    ${
+                      rows
+                        .filter(
+                          row =>
+                            row.groupIndex ===
+                            groupIndex
+                        )
+                        .sort(
+                          (
+                            a,
+                            b
+                          ) =>
+                            a.place -
+                            b.place
+                        )
+                        .map(
+                          row => `
+                            <div class="summary-result-row summary-four-column">
+                              <span class="summary-place">
+                                ${row.place}.
+                              </span>
+
+                              <span class="summary-name">
+                                ${escapeHtml(row.lifterName)}
+                              </span>
+
+                              <span class="summary-number">
+                                ${row.lifterNumber}
+                              </span>
+
+                              <span class="summary-team">
+                                ${escapeHtml(row.teamName)}
+                              </span>
+
+                              <span class="summary-value">
+                                ${row.coefficientTotal.toFixed(2)}
+                              </span>
+                            </div>
+                          `
+                        )
+                        .join('')
+                    }
+                  </div>
+                </article>
+              `
+            )
+            .join('')
+        }
+      </div>
+    </section>
+  `
+}
+
+
+function renderSummaryBestLiftsSection(
+  meet: LocalMeet,
+  division: Division,
+): string {
+
+  const rows =
+    getBestLiftReportRows(
+      meet,
+      division
+    )
+
+  const groups =
+    getBestLifterWeightGroups(
+      division
+    )
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const liftOrder:
+    Array<{
+      index: number
+      label: string
+    }> =
+    [
+      {
+        index: 0,
+        label: 'Squat',
+      },
+      {
+        index: 1,
+        label: 'Bench Press',
+      },
+      {
+        index: 2,
+        label: 'Deadlift',
+      },
+    ]
+
+  return `
+    <section class="summary-section">
+      <h2>
+        Best Lifts (${escapeHtml(coefficientLabel)})
+      </h2>
+
+      <div class="summary-two-column-grid">
+        ${
+          liftOrder
+            .flatMap(
+              lift =>
+                groups.map(
+                  (
+                    group,
+                    groupIndex
+                  ) => `
+                    <article class="summary-card">
+                      <h3>
+                        ${escapeHtml(lift.label)} -
+                        ${escapeHtml(group.label)} Classes
+                      </h3>
+
+                      <div class="summary-list">
+                        ${
+                          rows
+                            .filter(
+                              row =>
+                                row.liftIndex ===
+                                  lift.index &&
+                                row.groupIndex ===
+                                  groupIndex
+                            )
+                            .sort(
+                              (
+                                a,
+                                b
+                              ) =>
+                                a.place -
+                                b.place
+                            )
+                            .map(
+                              row => `
+                                <div class="summary-result-row summary-four-column">
+                                  <span class="summary-place">
+                                    ${row.place}.
+                                  </span>
+
+                                  <span class="summary-name">
+                                    ${escapeHtml(row.lifterName)}
+                                  </span>
+
+                                  <span class="summary-number">
+                                    ${row.lifterNumber}
+                                  </span>
+
+                                  <span class="summary-team">
+                                    ${escapeHtml(row.teamName)}
+                                  </span>
+
+                                  <span class="summary-value">
+                                    ${row.coefficientLift.toFixed(2)}
+                                  </span>
+                                </div>
+                              `
+                            )
+                            .join('')
+                        }
+                      </div>
+                    </article>
+                  `
+                )
+            )
+            .join('')
+        }
+      </div>
+    </section>
+  `
+}
+
+
+function renderSummaryTeamFinishesSection(
+  meet: LocalMeet,
+): string {
+
+  const {
+    teams,
+  } =
+    getStandingsData(
+      meet
+    )
+
+  return `
+    <section class="summary-section">
+      <h2>Team Finishes</h2>
+
+      <div class="summary-team-finishes">
+        ${
+          teams
+            .sort(
+              (
+                a,
+                b
+              ) =>
+                a.place -
+                b.place
+            )
+            .map(
+              row => `
+                <div class="summary-team-row">
+                  <span>
+                    ${row.place}.
+                  </span>
+
+                  <strong>
+                    ${escapeHtml(
+                      getStandingsTeamName(
+                        meet,
+                        row.teamId
+                      )
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHtml(
+                      getSummaryTeamPointExpression(
+                        row
+                      )
+                    )}
+                  </span>
+                </div>
+              `
+            )
+            .join('')
+        }
+      </div>
+    </section>
+  `
+}
+
+
+function renderSummary():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="summary-page">
+        <div class="empty-state">
+          Select a meet to view the Summary.
+        </div>
+      </main>
+    `
+  }
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return `
+      <main class="summary-page">
+        ${renderBestLifterDivisionTabs(meet)}
+
+        <div class="empty-state">
+          Select a division to view the Summary.
+        </div>
+      </main>
+    `
+  }
+
+  return `
+    <main class="summary-page">
+
+      <div class="standings-screen-toolbar no-print">
+        <div>
+          <button
+            id="printSummary"
+            type="button"
+            class="compact-button"
+          >
+            Print
+          </button>
+
+          <div class="standings-copy-menu">
+            <button
+              id="copySummaryMenu"
+              type="button"
+              class="compact-button"
+            >
+              Copy ▾
+            </button>
+
+            <div
+              id="summaryCopyOptions"
+              class="standings-copy-options"
+              hidden
+            >
+              <button
+                type="button"
+                data-copy-summary="formatted"
+              >
+                Copy Formatted
+              </button>
+
+              <button
+                type="button"
+                data-copy-summary="spreadsheet"
+              >
+                Copy for Spreadsheet
+              </button>
+
+              <button
+                type="button"
+                data-copy-summary="word"
+              >
+                Copy for Word
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="standings-toolbar-note">
+          Condensed official meet summary for the selected division.
+        </div>
+      </div>
+
+      ${renderBestLifterDivisionTabs(meet)}
+
+      <section class="standings-print-heading">
+        <h1 class="print-only">
+          ${escapeHtml(meet.state.meet.name)}
+        </h1>
+
+        <h2>
+          ${escapeHtml(division.name)} Summary
+        </h2>
+      </section>
+
+      ${renderSummaryIndividualSection(meet, division)}
+
+      ${renderSummaryBestLiftersSection(meet, division)}
+
+      ${renderSummaryBestLiftsSection(meet, division)}
+
+      ${renderSummaryTeamFinishesSection(meet)}
+
+    </main>
+  `
+}
+
+
+function getSummarySpreadsheetText(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const lines:
+    string[] =
+    [
+      meet.state.meet.name,
+      `${division.name} Summary`,
+      '',
+      'Individual Totals',
+    ]
+
+  getSummaryWeightClassSections(
+    meet,
+    division
+  )
+    .forEach(
+      section => {
+        lines.push(
+          `${section.weightClass} Class`
+        )
+
+        section.rows.forEach(
+          row => {
+            lines.push(
+              [
+                row.place,
+                getIndividualStandingDisplayName(
+                  meet,
+                  row
+                ),
+                row.lifterNumber,
+                getStandingsTeamName(
+                  meet,
+                  row.teamId
+                ),
+                row.total,
+              ].join('\t')
+            )
+          }
+        )
+
+        lines.push('')
+      }
+    )
+
+  lines.push(
+    `Best Lifters (${coefficientLabel})`
+  )
+
+  getBestLifterReportRows(
+    meet,
+    division
+  )
+    .forEach(
+      row => {
+        lines.push(
+          [
+            row.weightGroup,
+            row.place,
+            row.lifterName,
+            row.lifterNumber,
+            row.teamName,
+            row.coefficientTotal.toFixed(2),
+          ].join('\t')
+        )
+      }
+    )
+
+  lines.push(
+    '',
+    `Best Lifts (${coefficientLabel})`
+  )
+
+  getBestLiftReportRows(
+    meet,
+    division
+  )
+    .forEach(
+      row => {
+        lines.push(
+          [
+            row.liftLabel,
+            row.weightGroup,
+            row.place,
+            row.lifterName,
+            row.lifterNumber,
+            row.teamName,
+            row.coefficientLift.toFixed(2),
+          ].join('\t')
+        )
+      }
+    )
+
+  lines.push(
+    '',
+    'Team Finishes'
+  )
+
+  getStandingsData(
+    meet
+  ).teams
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        a.place -
+        b.place
+    )
+    .forEach(
+      row => {
+        lines.push(
+          [
+            row.place,
+            getStandingsTeamName(
+              meet,
+              row.teamId
+            ),
+            getSummaryTeamPointExpression(
+              row
+            ),
+          ].join('\t')
+        )
+      }
+    )
+
+  return lines.join(
+    '\n'
+  )
+}
+
+
+function getSummaryFormattedHtml(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const outerTableStyle =
+    'border-collapse:collapse;width:760px;font-family:Arial,sans-serif;color:#111827;'
+
+  const sectionTitleStyle =
+    'font-size:16px;font-weight:700;text-decoration:underline;padding:10px 0 6px;'
+
+  const pairCellStyle =
+    'width:50%;vertical-align:top;padding:0 6px 10px 0;'
+
+  const boxTableStyle =
+    'border-collapse:collapse;width:100%;table-layout:fixed;border:1px solid #9fb0c2;'
+
+  const boxHeadingStyle =
+    'background:#eaf1f8;border-bottom:1px solid #b8c7d7;padding:5px 7px;font-size:13px;font-weight:700;text-align:left;'
+
+  const rowCellStyle =
+    'padding:2px 4px;border:0;font-size:11px;line-height:1.25;vertical-align:top;'
+
+  const makeResultBox =
+    (
+      heading: string,
+      rowsHtml: string,
+    ) => `
+      <table
+        role="presentation"
+        cellpadding="0"
+        cellspacing="0"
+        style="${boxTableStyle}"
+      >
+        <tr>
+          <td
+            colspan="5"
+            style="${boxHeadingStyle}"
+          >
+            ${heading}
+          </td>
+        </tr>
+
+        ${rowsHtml}
+      </table>
+    `
+
+  const makeTwoColumnRows =
+    (
+      boxes:
+        readonly string[],
+    ) => {
+      const rows:
+        string[] =
+        []
+
+      for (
+        let index = 0;
+        index <
+        boxes.length;
+        index += 2
+      ) {
+        rows.push(`
+          <tr>
+            <td style="${pairCellStyle}">
+              ${boxes[index]}
+            </td>
+
+            <td style="width:50%;vertical-align:top;padding:0 0 10px 6px;">
+              ${
+                boxes[
+                  index + 1
+                ] ??
+                ''
+              }
+            </td>
+          </tr>
+        `)
+      }
+
+      return rows.join('')
+    }
+
+  const individualBoxes =
+    getSummaryWeightClassSections(
+      meet,
+      division
+    )
+      .map(
+        section => {
+          const rows =
+            section.rows
+              .map(
+                row => `
+                  <tr>
+                    <td style="${rowCellStyle}width:22px;text-align:right;">
+                      ${row.place}.
+                    </td>
+
+                    <td style="${rowCellStyle}width:135px;font-weight:600;">
+                      ${escapeHtml(
+                        getIndividualStandingDisplayName(
+                          meet,
+                          row
+                        )
+                      )}
+                    </td>
+
+                    <td style="${rowCellStyle}width:34px;text-align:right;">
+                      ${row.lifterNumber}
+                    </td>
+
+                    <td style="${rowCellStyle}width:86px;">
+                      ${escapeHtml(
+                        getStandingsTeamName(
+                          meet,
+                          row.teamId
+                        )
+                      )}
+                    </td>
+
+                    <td style="${rowCellStyle}width:48px;text-align:right;font-weight:700;">
+                      ${row.total}
+                    </td>
+                  </tr>
+                `
+              )
+              .join('')
+
+          return makeResultBox(
+            `${escapeHtml(section.weightClass)} Class`,
+            rows
+          )
+        }
+      )
+
+  const bestLifterRows =
+    getBestLifterReportRows(
+      meet,
+      division
+    )
+
+  const bestLifterBoxes =
+    getBestLifterWeightGroups(
+      division
+    )
+      .map(
+        (
+          group,
+          groupIndex
+        ) => {
+          const rows =
+            bestLifterRows
+              .filter(
+                row =>
+                  row.groupIndex ===
+                  groupIndex
+              )
+              .sort(
+                (
+                  a,
+                  b
+                ) =>
+                  a.place -
+                  b.place
+              )
+              .map(
+                row => `
+                  <tr>
+                    <td style="${rowCellStyle}width:22px;text-align:right;">
+                      ${row.place}.
+                    </td>
+
+                    <td style="${rowCellStyle}width:135px;font-weight:600;">
+                      ${escapeHtml(row.lifterName)}
+                    </td>
+
+                    <td style="${rowCellStyle}width:34px;text-align:right;">
+                      ${row.lifterNumber}
+                    </td>
+
+                    <td style="${rowCellStyle}width:86px;">
+                      ${escapeHtml(row.teamName)}
+                    </td>
+
+                    <td style="${rowCellStyle}width:56px;text-align:right;font-weight:700;">
+                      ${row.coefficientTotal.toFixed(2)}
+                    </td>
+                  </tr>
+                `
+              )
+              .join('')
+
+          return makeResultBox(
+            `${escapeHtml(group.label)} Classes`,
+            rows
+          )
+        }
+      )
+
+  const bestLiftRows =
+    getBestLiftReportRows(
+      meet,
+      division
+    )
+
+  const liftGroups =
+    [
+      {
+        index: 0,
+        label: 'Squat',
+      },
+      {
+        index: 1,
+        label: 'Bench Press',
+      },
+      {
+        index: 2,
+        label: 'Deadlift',
+      },
+    ]
+
+  const bestLiftBoxes =
+    liftGroups
+      .flatMap(
+        lift =>
+          getBestLifterWeightGroups(
+            division
+          )
+            .map(
+              (
+                group,
+                groupIndex
+              ) => {
+                const rows =
+                  bestLiftRows
+                    .filter(
+                      row =>
+                        row.liftIndex ===
+                          lift.index &&
+                        row.groupIndex ===
+                          groupIndex
+                    )
+                    .sort(
+                      (
+                        a,
+                        b
+                      ) =>
+                        a.place -
+                        b.place
+                    )
+                    .map(
+                      row => `
+                        <tr>
+                          <td style="${rowCellStyle}width:22px;text-align:right;">
+                            ${row.place}.
+                          </td>
+
+                          <td style="${rowCellStyle}width:135px;font-weight:600;">
+                            ${escapeHtml(row.lifterName)}
+                          </td>
+
+                          <td style="${rowCellStyle}width:34px;text-align:right;">
+                            ${row.lifterNumber}
+                          </td>
+
+                          <td style="${rowCellStyle}width:86px;">
+                            ${escapeHtml(row.teamName)}
+                          </td>
+
+                          <td style="${rowCellStyle}width:56px;text-align:right;font-weight:700;">
+                            ${row.coefficientLift.toFixed(2)}
+                          </td>
+                        </tr>
+                      `
+                    )
+                    .join('')
+
+                return makeResultBox(
+                  `${escapeHtml(lift.label)} - ${escapeHtml(group.label)} Classes`,
+                  rows
+                )
+              }
+            )
+      )
+
+  const teamRows =
+    getStandingsData(
+      meet
+    ).teams
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          a.place -
+          b.place
+      )
+      .map(
+        row => `
+          <tr>
+            <td style="${rowCellStyle}width:22px;text-align:right;">
+              ${row.place}.
+            </td>
+
+            <td style="${rowCellStyle}width:135px;font-weight:700;">
+              ${escapeHtml(
+                getStandingsTeamName(
+                  meet,
+                  row.teamId
+                )
+              )}
+            </td>
+
+            <td
+              colspan="3"
+              style="${rowCellStyle}"
+            >
+              ${escapeHtml(
+                getSummaryTeamPointExpression(
+                  row
+                )
+              )}
+            </td>
+          </tr>
+        `
+      )
+      .join('')
+
+  const teamBox =
+    makeResultBox(
+      'Team Finishes',
+      teamRows
+    )
+
+  return `
+    <table
+      role="presentation"
+      cellpadding="0"
+      cellspacing="0"
+      style="${outerTableStyle}"
+    >
+      <tr>
+        <td style="padding:0 0 2px;font-size:19px;font-weight:700;">
+          ${escapeHtml(meet.state.meet.name)}
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:0 0 12px;font-size:13px;font-weight:700;">
+          ${escapeHtml(division.name)} Summary
+        </td>
+      </tr>
+
+      <tr>
+        <td style="${sectionTitleStyle}">
+          Individual Totals
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            style="border-collapse:collapse;width:100%;"
+          >
+            ${makeTwoColumnRows(individualBoxes)}
+          </table>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="${sectionTitleStyle}">
+          Best Lifters (${escapeHtml(coefficientLabel)})
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            style="border-collapse:collapse;width:100%;"
+          >
+            ${makeTwoColumnRows(bestLifterBoxes)}
+          </table>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="${sectionTitleStyle}">
+          Best Lifts (${escapeHtml(coefficientLabel)})
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            style="border-collapse:collapse;width:100%;"
+          >
+            ${makeTwoColumnRows(bestLiftBoxes)}
+          </table>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="${sectionTitleStyle}">
+          Team Finishes
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          ${teamBox}
+        </td>
+      </tr>
+    </table>
+  `
+}
+
+
+function getSummaryWordHtml(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const pageWidth =
+    '640px'
+
+  const sectionHeading =
+    'font-family:Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:underline;padding:12px 0 6px;'
+
+  const boxTable =
+    'border-collapse:collapse;width:640px;table-layout:fixed;border:1px solid #9fb0c2;margin-bottom:10px;'
+
+  const boxHeading =
+    'background:#eaf1f8;border-bottom:1px solid #b8c7d7;padding:5px 7px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;text-align:left;'
+
+  const cell =
+    'padding:2px 4px;font-family:Arial,sans-serif;font-size:10.5px;line-height:1.2;vertical-align:top;'
+
+  const makeBox =
+    (
+      heading: string,
+      rowsHtml: string,
+    ) => `
+      <table
+        role="presentation"
+        cellpadding="0"
+        cellspacing="0"
+        style="${boxTable}"
+      >
+        <tr>
+          <td
+            colspan="5"
+            style="${boxHeading}"
+          >
+            ${heading}
+          </td>
+        </tr>
+
+        ${rowsHtml}
+      </table>
+    `
+
+  const individualHtml =
+    getSummaryWeightClassSections(
+      meet,
+      division
+    )
+      .map(
+        section => {
+          const rows =
+            section.rows
+              .map(
+                row => `
+                  <tr>
+                    <td style="${cell}width:28px;text-align:right;">
+                      ${row.place}.
+                    </td>
+
+                    <td style="${cell}width:235px;font-weight:600;">
+                      ${escapeHtml(
+                        getIndividualStandingDisplayName(
+                          meet,
+                          row
+                        )
+                      )}
+                    </td>
+
+                    <td style="${cell}width:45px;text-align:right;">
+                      ${row.lifterNumber}
+                    </td>
+
+                    <td style="${cell}width:160px;">
+                      ${escapeHtml(
+                        getStandingsTeamName(
+                          meet,
+                          row.teamId
+                        )
+                      )}
+                    </td>
+
+                    <td style="${cell}width:70px;text-align:right;font-weight:700;">
+                      ${row.total}
+                    </td>
+                  </tr>
+                `
+              )
+              .join('')
+
+          return makeBox(
+            `${escapeHtml(section.weightClass)} Class`,
+            rows
+          )
+        }
+      )
+      .join('')
+
+  const bestLifterRows =
+    getBestLifterReportRows(
+      meet,
+      division
+    )
+
+  const bestLiftersHtml =
+    getBestLifterWeightGroups(
+      division
+    )
+      .map(
+        (
+          group,
+          groupIndex
+        ) => {
+          const rows =
+            bestLifterRows
+              .filter(
+                row =>
+                  row.groupIndex ===
+                  groupIndex
+              )
+              .sort(
+                (
+                  a,
+                  b
+                ) =>
+                  a.place -
+                  b.place
+              )
+              .map(
+                row => `
+                  <tr>
+                    <td style="${cell}width:28px;text-align:right;">
+                      ${row.place}.
+                    </td>
+
+                    <td style="${cell}width:235px;font-weight:600;">
+                      ${escapeHtml(row.lifterName)}
+                    </td>
+
+                    <td style="${cell}width:45px;text-align:right;">
+                      ${row.lifterNumber}
+                    </td>
+
+                    <td style="${cell}width:160px;">
+                      ${escapeHtml(row.teamName)}
+                    </td>
+
+                    <td style="${cell}width:70px;text-align:right;font-weight:700;">
+                      ${row.coefficientTotal.toFixed(2)}
+                    </td>
+                  </tr>
+                `
+              )
+              .join('')
+
+          return makeBox(
+            `${escapeHtml(group.label)} Classes`,
+            rows
+          )
+        }
+      )
+      .join('')
+
+  const bestLiftRows =
+    getBestLiftReportRows(
+      meet,
+      division
+    )
+
+  const liftGroups =
+    [
+      {
+        index: 0,
+        label: 'Squat',
+      },
+      {
+        index: 1,
+        label: 'Bench Press',
+      },
+      {
+        index: 2,
+        label: 'Deadlift',
+      },
+    ]
+
+  const bestLiftsHtml =
+    liftGroups
+      .flatMap(
+        lift =>
+          getBestLifterWeightGroups(
+            division
+          )
+            .map(
+              (
+                group,
+                groupIndex
+              ) => {
+                const rows =
+                  bestLiftRows
+                    .filter(
+                      row =>
+                        row.liftIndex ===
+                          lift.index &&
+                        row.groupIndex ===
+                          groupIndex
+                    )
+                    .sort(
+                      (
+                        a,
+                        b
+                      ) =>
+                        a.place -
+                        b.place
+                    )
+                    .map(
+                      row => `
+                        <tr>
+                          <td style="${cell}width:28px;text-align:right;">
+                            ${row.place}.
+                          </td>
+
+                          <td style="${cell}width:235px;font-weight:600;">
+                            ${escapeHtml(row.lifterName)}
+                          </td>
+
+                          <td style="${cell}width:45px;text-align:right;">
+                            ${row.lifterNumber}
+                          </td>
+
+                          <td style="${cell}width:160px;">
+                            ${escapeHtml(row.teamName)}
+                          </td>
+
+                          <td style="${cell}width:70px;text-align:right;font-weight:700;">
+                            ${row.coefficientLift.toFixed(2)}
+                          </td>
+                        </tr>
+                      `
+                    )
+                    .join('')
+
+                return makeBox(
+                  `${escapeHtml(lift.label)} - ${escapeHtml(group.label)} Classes`,
+                  rows
+                )
+              }
+            )
+      )
+      .join('')
+
+  const teamRows =
+    getStandingsData(
+      meet
+    ).teams
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          a.place -
+          b.place
+      )
+      .map(
+        row => `
+          <tr>
+            <td style="${cell}width:28px;text-align:right;">
+              ${row.place}.
+            </td>
+
+            <td style="${cell}width:190px;font-weight:700;">
+              ${escapeHtml(
+                getStandingsTeamName(
+                  meet,
+                  row.teamId
+                )
+              )}
+            </td>
+
+            <td
+              colspan="3"
+              style="${cell}width:360px;"
+            >
+              ${escapeHtml(
+                getSummaryTeamPointExpression(
+                  row
+                )
+              )}
+            </td>
+          </tr>
+        `
+      )
+      .join('')
+
+  const teamHtml =
+    makeBox(
+      'Team Finishes',
+      teamRows
+    )
+
+  return `
+    <div
+      style="width:${pageWidth};max-width:${pageWidth};font-family:Arial,sans-serif;color:#111827;"
+    >
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px;">
+        ${escapeHtml(meet.state.meet.name)}
+      </div>
+
+      <div style="font-size:12px;font-weight:700;margin-bottom:14px;">
+        ${escapeHtml(division.name)} Summary
+      </div>
+
+      <div style="${sectionHeading}">
+        Individual Totals
+      </div>
+
+      ${individualHtml}
+
+      <div style="${sectionHeading}">
+        Best Lifters (${escapeHtml(coefficientLabel)})
+      </div>
+
+      ${bestLiftersHtml}
+
+      <div style="${sectionHeading}">
+        Best Lifts (${escapeHtml(coefficientLabel)})
+      </div>
+
+      ${bestLiftsHtml}
+
+      <div style="${sectionHeading}">
+        Team Finishes
+      </div>
+
+      ${teamHtml}
+    </div>
+  `
+}
+
+
+async function copySummaryWord():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getSummarySpreadsheetText(
+      meet
+    )
+
+  const html =
+    getSummaryWordHtml(
+      meet
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob(
+            [plainText],
+            {
+              type:
+                'text/plain',
+            }
+          ),
+        'text/html':
+          new Blob(
+            [html],
+            {
+              type:
+                'text/html',
+            }
+          ),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Word-formatted Summary copied. Paste into Word.'
+  )
+}
+
+
+async function copySummarySpreadsheet():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  await navigator.clipboard.writeText(
+    getSummarySpreadsheetText(
+      meet
+    )
+  )
+
+  window.alert(
+    'Summary copied for spreadsheet paste.'
+  )
+}
+
+
+async function copySummaryFormatted():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getSummarySpreadsheetText(
+      meet
+    )
+
+  const html =
+    getSummaryFormattedHtml(
+      meet
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob(
+            [plainText],
+            {
+              type:
+                'text/plain',
+            }
+          ),
+        'text/html':
+          new Blob(
+            [html],
+            {
+              type:
+                'text/html',
+            }
+          ),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Formatted Summary copied. Paste into email or Word.'
+  )
+}
+
+
+function wireSummary():
+  void {
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-best-lifter-division]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const divisionId =
+              Number(
+                button.dataset
+                  .bestLifterDivision
+              )
+
+            if (
+              !Number.isFinite(
+                divisionId
+              )
+            ) {
+              return
+            }
+
+            selectedDivisionId =
+              divisionId
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  const copyMenu =
+    document
+      .querySelector<HTMLButtonElement>(
+        '#copySummaryMenu'
+      )
+
+  const copyOptions =
+    document
+      .querySelector<HTMLDivElement>(
+        '#summaryCopyOptions'
+      )
+
+  copyMenu
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+
+        if (
+          copyOptions ===
+          null
+        ) {
+          return
+        }
+
+        const opening =
+          copyOptions.hidden
+
+        closeAllReportMenus()
+
+        copyOptions.hidden =
+          !opening
+      }
+    )
+
+  copyOptions
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-copy-summary]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            closeAllReportMenus()
+
+            if (
+              button.dataset
+                .copySummary ===
+              'formatted'
+            ) {
+              void copySummaryFormatted()
+
+              return
+            }
+
+            if (
+              button.dataset
+                .copySummary ===
+              'word'
+            ) {
+              void copySummaryWord()
+
+              return
+            }
+
+            void copySummarySpreadsheet()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printSummary'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        closeAllReportMenus()
+        window.print()
+      }
+    )
+
+  installReportMenuClickAway()
+}
+
+
+interface DetailReportRow {
+  lifterId: number
+  weightClass: string
+  placeText: string
+  placeSort: number
+  lifterName: string
+  lifterNumber: number
+  teamName: string
+  bodyWeight: number | null
+  squat: number
+  bench: number
+  deadlift: number
+  total: number
+  coefficient: number | null
+  coefficientSquat: number
+  coefficientBench: number
+  coefficientDeadlift: number
+  coefficientTotal: number
+}
+
+
+function getDetailLifterName(
+  meet: LocalMeet,
+  lifter: Lifter,
+): string {
+
+  return getNonRegistrationLifterDisplayName(
+    meet,
+    lifter
+  )
+}
+
+
+function getDetailPlaceSort(
+  lifter: Lifter,
+  place: number | null,
+): number {
+
+  if (
+    lifter.status ===
+    'active'
+  ) {
+    return (
+      place ??
+      900
+    )
+  }
+
+  switch (
+    lifter.status
+  ) {
+    case 'bombed':
+      return 1001
+
+    case 'scratched':
+      return 1002
+
+    case 'disqualified':
+      return 1003
+
+    default:
+      return 1004
+  }
+}
+
+
+function getDetailReportRows(
+  meet: LocalMeet,
+  division: Division,
+): DetailReportRow[] {
+
+  return meet.state.lifters
+    .filter(
+      lifter =>
+        lifter.divisionId ===
+        division.id
+    )
+    .map(
+      lifter => {
+        const place =
+          getCompetitionPlace(
+            meet,
+            lifter
+          )
+
+        const squat =
+          getCompetitionBestLiftValue(
+            meet,
+            lifter,
+            'squat'
+          ) ??
+          0
+
+        const bench =
+          getCompetitionBestLiftValue(
+            meet,
+            lifter,
+            'bench'
+          ) ??
+          0
+
+        const deadlift =
+          getCompetitionBestLiftValue(
+            meet,
+            lifter,
+            'deadlift'
+          ) ??
+          0
+
+        const runningTotal =
+          getCompetitionRunningTotalForLifter(
+            meet,
+            lifter
+          ) ??
+          0
+
+        const total =
+          lifter.status ===
+          'active'
+            ? runningTotal
+            : 0
+
+        const coefficient =
+          getLifterBodyWeightCoefficient(
+            meet,
+            lifter
+          )
+
+        const scoringEligible =
+          lifter.status ===
+          'active' &&
+          coefficient !==
+          null
+
+        return {
+          lifterId:
+            lifter.id,
+          weightClass:
+            lifter.weightClass ??
+            '—',
+          placeText:
+            formatCompetitionPlace(
+              lifter,
+              place
+            ),
+          placeSort:
+            getDetailPlaceSort(
+              lifter,
+              place
+            ),
+          lifterName:
+            getDetailLifterName(
+              meet,
+              lifter
+            ),
+          lifterNumber:
+            lifter.lifterNumber,
+          teamName:
+            getLifterTeamName(
+              meet,
+              lifter
+            ),
+          bodyWeight:
+            lifter.bodyWeight,
+          squat,
+          bench,
+          deadlift,
+          total,
+          coefficient,
+          coefficientSquat:
+            scoringEligible
+              ? squat *
+                (coefficient as number)
+              : 0,
+          coefficientBench:
+            scoringEligible
+              ? bench *
+                (coefficient as number)
+              : 0,
+          coefficientDeadlift:
+            scoringEligible
+              ? deadlift *
+                (coefficient as number)
+              : 0,
+          coefficientTotal:
+            scoringEligible
+              ? total *
+                (coefficient as number)
+              : 0,
+        }
+      }
+    )
+}
+
+
+function compareDetailOptionalNumber(
+  a: number | null,
+  b: number | null,
+): number {
+
+  if (
+    a === null &&
+    b === null
+  ) {
+    return 0
+  }
+
+  if (
+    a === null
+  ) {
+    return 1
+  }
+
+  if (
+    b === null
+  ) {
+    return -1
+  }
+
+  return a - b
+}
+
+
+function getSortedDetailRows(
+  rows:
+    readonly DetailReportRow[],
+): DetailReportRow[] {
+
+  return [...rows]
+    .sort(
+      (
+        a,
+        b
+      ) => {
+        let result =
+          0
+
+        switch (
+          detailSortColumn
+        ) {
+          case 'weightClass':
+            result =
+              getWeightClassSortValue(
+                a.weightClass
+              ) -
+              getWeightClassSortValue(
+                b.weightClass
+              )
+
+            if (
+              result === 0
+            ) {
+              result =
+                a.placeSort -
+                b.placeSort
+            }
+
+            break
+
+          case 'place':
+            result =
+              a.placeSort -
+              b.placeSort
+            break
+
+          case 'lifter':
+            result =
+              a.lifterName.localeCompare(
+                b.lifterName,
+                undefined,
+                {
+                  sensitivity:
+                    'base',
+                  numeric:
+                    true,
+                }
+              )
+            break
+
+          case 'lifterNumber':
+            result =
+              a.lifterNumber -
+              b.lifterNumber
+            break
+
+          case 'team':
+            result =
+              a.teamName.localeCompare(
+                b.teamName,
+                undefined,
+                {
+                  sensitivity:
+                    'base',
+                  numeric:
+                    true,
+                }
+              )
+            break
+
+          case 'bodyWeight':
+            result =
+              compareDetailOptionalNumber(
+                a.bodyWeight,
+                b.bodyWeight
+              )
+            break
+
+          case 'squat':
+            result =
+              a.squat -
+              b.squat
+            break
+
+          case 'bench':
+            result =
+              a.bench -
+              b.bench
+            break
+
+          case 'deadlift':
+            result =
+              a.deadlift -
+              b.deadlift
+            break
+
+          case 'total':
+            result =
+              a.total -
+              b.total
+            break
+
+          case 'coefficient':
+            result =
+              compareDetailOptionalNumber(
+                a.coefficient,
+                b.coefficient
+              )
+            break
+
+          case 'coefficientSquat':
+            result =
+              a.coefficientSquat -
+              b.coefficientSquat
+            break
+
+          case 'coefficientBench':
+            result =
+              a.coefficientBench -
+              b.coefficientBench
+            break
+
+          case 'coefficientDeadlift':
+            result =
+              a.coefficientDeadlift -
+              b.coefficientDeadlift
+            break
+
+          case 'coefficientTotal':
+            result =
+              a.coefficientTotal -
+              b.coefficientTotal
+            break
+        }
+
+        if (
+          !detailSortAscending
+        ) {
+          result =
+            -result
+        }
+
+        if (
+          result !== 0
+        ) {
+          return result
+        }
+
+        return (
+          a.lifterNumber -
+          b.lifterNumber
+        )
+      }
+    )
+}
+
+
+function renderDetailSortHeader(
+  label: string,
+  column:
+    DetailSortColumn,
+): string {
+
+  const active =
+    detailSortColumn ===
+    column
+
+  return `
+    <th>
+      <button
+        type="button"
+        class="standings-sort-button ${
+          active
+            ? 'active'
+            : ''
+        }"
+        data-detail-sort="${column}"
+      >
+        <span>${escapeHtml(label)}</span>
+        <span>${
+          active
+            ? (
+                detailSortAscending
+                  ? '▲'
+                  : '▼'
+              )
+            : ''
+        }</span>
+      </button>
+    </th>
+  `
+}
+
+
+function renderDetail():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="detail-page">
+        <div class="empty-state">
+          Select a meet to view Detail.
+        </div>
+      </main>
+    `
+  }
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return `
+      <main class="detail-page">
+        ${renderBestLifterDivisionTabs(meet)}
+        <div class="empty-state">
+          Select a division to view Detail.
+        </div>
+      </main>
+    `
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedDetailRows(
+      getDetailReportRows(
+        meet,
+        division
+      )
+    )
+
+  return `
+    <main class="detail-page">
+
+      <div class="standings-screen-toolbar no-print">
+        <div>
+          <button
+            id="printDetail"
+            type="button"
+            class="compact-button"
+          >
+            Print
+          </button>
+
+          <div class="standings-copy-menu">
+            <button
+              id="copyDetailMenu"
+              type="button"
+              class="compact-button"
+            >
+              Copy ▾
+            </button>
+
+            <div
+              id="detailCopyOptions"
+              class="standings-copy-options"
+              hidden
+            >
+              <button
+                type="button"
+                data-copy-detail="formatted"
+              >
+                Copy Formatted
+              </button>
+
+              <button
+                type="button"
+                data-copy-detail="spreadsheet"
+              >
+                Copy for Spreadsheet
+              </button>
+
+              <button
+                type="button"
+                data-copy-detail="word"
+              >
+                Copy for Word
+              </button>
+            </div>
+          </div>
+
+          <button
+            id="resetDetailSort"
+            type="button"
+            class="compact-button"
+          >
+            Reset Sort
+          </button>
+        </div>
+
+        <div class="standings-toolbar-note">
+          All lifters are included, regardless of competition status.
+        </div>
+      </div>
+
+      ${renderBestLifterDivisionTabs(meet)}
+
+      <section class="standings-print-heading">
+        <h1 class="print-only">
+          ${escapeHtml(meet.state.meet.name)}
+        </h1>
+        <h2>
+          ${escapeHtml(division.name)} Detail
+        </h2>
+      </section>
+
+      <section class="standings-panel detail-panel">
+        <div class="standings-table-scroll detail-table-scroll">
+          <table class="standings-table detail-table">
+            <thead>
+              <tr>
+                ${renderDetailSortHeader('Wt. Class', 'weightClass')}
+                ${renderDetailSortHeader('Place', 'place')}
+                ${renderDetailSortHeader('Lifter', 'lifter')}
+                ${renderDetailSortHeader('Lifter #', 'lifterNumber')}
+                ${renderDetailSortHeader('Team', 'team')}
+                ${renderDetailSortHeader('BWT', 'bodyWeight')}
+                ${renderDetailSortHeader('Squat', 'squat')}
+                ${renderDetailSortHeader('Bench Press', 'bench')}
+                ${renderDetailSortHeader('Deadlift', 'deadlift')}
+                ${renderDetailSortHeader('Total', 'total')}
+                ${renderDetailSortHeader(coefficientLabel, 'coefficient')}
+                ${renderDetailSortHeader(`${coefficientLabel} Squat`, 'coefficientSquat')}
+                ${renderDetailSortHeader(`${coefficientLabel} Bench`, 'coefficientBench')}
+                ${renderDetailSortHeader(`${coefficientLabel} Deadlift`, 'coefficientDeadlift')}
+                ${renderDetailSortHeader(`${coefficientLabel} Total`, 'coefficientTotal')}
+              </tr>
+            </thead>
+
+            <tbody>
+              ${
+                rows.length === 0
+                  ? `
+                    <tr>
+                      <td
+                        colspan="15"
+                        class="standings-empty-row"
+                      >
+                        No lifters are registered in this division.
+                      </td>
+                    </tr>
+                  `
+                  : rows
+                      .map(
+                        row => `
+                          <tr>
+                            <td class="numeric">${escapeHtml(row.weightClass)}</td>
+                            <td class="numeric">${escapeHtml(row.placeText)}</td>
+                            <td class="lifter-name">${escapeHtml(row.lifterName)}</td>
+                            <td class="numeric">${row.lifterNumber}</td>
+                            <td>${escapeHtml(row.teamName)}</td>
+                            <td class="numeric">${row.bodyWeight === null ? '—' : row.bodyWeight.toFixed(1)}</td>
+                            <td class="numeric">${row.squat}</td>
+                            <td class="numeric">${row.bench}</td>
+                            <td class="numeric">${row.deadlift}</td>
+                            <td class="numeric standings-total">${row.total}</td>
+                            <td class="numeric">${row.coefficient === null ? '—' : row.coefficient.toFixed(4)}</td>
+                            <td class="numeric">${row.coefficientSquat.toFixed(2)}</td>
+                            <td class="numeric">${row.coefficientBench.toFixed(2)}</td>
+                            <td class="numeric">${row.coefficientDeadlift.toFixed(2)}</td>
+                            <td class="numeric standings-total">${row.coefficientTotal.toFixed(2)}</td>
+                          </tr>
+                        `
+                      )
+                      .join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  `
+}
+
+
+function getDetailSpreadsheetText(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedDetailRows(
+      getDetailReportRows(
+        meet,
+        division
+      )
+    )
+
+  const lines:
+    string[] =
+    [
+      meet.state.meet.name,
+      `${division.name} Detail`,
+      '',
+      [
+        'Wt. Class',
+        'Place',
+        'Lifter',
+        'Lifter #',
+        'Team',
+        'BWT',
+        'Squat',
+        'Bench Press',
+        'Deadlift',
+        'Total',
+        coefficientLabel,
+        `${coefficientLabel} Squat`,
+        `${coefficientLabel} Bench`,
+        `${coefficientLabel} Deadlift`,
+        `${coefficientLabel} Total`,
+      ].join('\t'),
+    ]
+
+  rows.forEach(
+    row => {
+      lines.push(
+        [
+          row.weightClass,
+          row.placeText,
+          row.lifterName,
+          row.lifterNumber,
+          row.teamName,
+          row.bodyWeight ===
+            null
+              ? ''
+              : row.bodyWeight.toFixed(1),
+          row.squat,
+          row.bench,
+          row.deadlift,
+          row.total,
+          row.coefficient ===
+            null
+              ? ''
+              : row.coefficient.toFixed(4),
+          row.coefficientSquat.toFixed(2),
+          row.coefficientBench.toFixed(2),
+          row.coefficientDeadlift.toFixed(2),
+          row.coefficientTotal.toFixed(2),
+        ].join('\t')
+      )
+    }
+  )
+
+  return lines.join(
+    '\n'
+  )
+}
+
+
+function getDetailFormattedHtml(
+  meet: LocalMeet,
+  wordSafe = false,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedDetailRows(
+      getDetailReportRows(
+        meet,
+        division
+      )
+    )
+
+  const width =
+    wordSafe
+      ? '640px'
+      : '100%'
+
+  const fontSize =
+    wordSafe
+      ? '7px'
+      : '10px'
+
+  const th =
+    `border:1px solid #9ca3af;background:#eaf1f8;padding:3px;font-family:Arial,sans-serif;font-size:${fontSize};font-weight:700;`
+
+  const td =
+    `border:1px solid #cbd5e1;padding:2px 3px;font-family:Arial,sans-serif;font-size:${fontSize};`
+
+  const body =
+    rows
+      .map(
+        row => `
+          <tr>
+            <td style="${td}">${escapeHtml(row.weightClass)}</td>
+            <td style="${td}text-align:center;">${escapeHtml(row.placeText)}</td>
+            <td style="${td}font-weight:600;">${escapeHtml(row.lifterName)}</td>
+            <td style="${td}text-align:right;">${row.lifterNumber}</td>
+            <td style="${td}">${escapeHtml(row.teamName)}</td>
+            <td style="${td}text-align:right;">${row.bodyWeight === null ? '—' : row.bodyWeight.toFixed(1)}</td>
+            <td style="${td}text-align:right;">${row.squat}</td>
+            <td style="${td}text-align:right;">${row.bench}</td>
+            <td style="${td}text-align:right;">${row.deadlift}</td>
+            <td style="${td}text-align:right;font-weight:700;">${row.total}</td>
+            <td style="${td}text-align:right;">${row.coefficient === null ? '—' : row.coefficient.toFixed(4)}</td>
+            <td style="${td}text-align:right;">${row.coefficientSquat.toFixed(2)}</td>
+            <td style="${td}text-align:right;">${row.coefficientBench.toFixed(2)}</td>
+            <td style="${td}text-align:right;">${row.coefficientDeadlift.toFixed(2)}</td>
+            <td style="${td}text-align:right;font-weight:700;">${row.coefficientTotal.toFixed(2)}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+  return `
+    <div style="width:${width};font-family:Arial,sans-serif;color:#111827;">
+      <div style="font-size:${wordSafe ? '16px' : '18px'};font-weight:700;margin-bottom:2px;">
+        ${escapeHtml(meet.state.meet.name)}
+      </div>
+      <div style="font-size:${wordSafe ? '10px' : '12px'};font-weight:700;margin-bottom:10px;">
+        ${escapeHtml(division.name)} Detail
+      </div>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:${width};table-layout:fixed;">
+        <tr>
+          <th style="${th}">Wt. Class</th>
+          <th style="${th}">Place</th>
+          <th style="${th}">Lifter</th>
+          <th style="${th}">Lifter #</th>
+          <th style="${th}">Team</th>
+          <th style="${th}">BWT</th>
+          <th style="${th}">Squat</th>
+          <th style="${th}">Bench</th>
+          <th style="${th}">Deadlift</th>
+          <th style="${th}">Total</th>
+          <th style="${th}">${escapeHtml(coefficientLabel)}</th>
+          <th style="${th}">${escapeHtml(`${coefficientLabel} Squat`)}</th>
+          <th style="${th}">${escapeHtml(`${coefficientLabel} Bench`)}</th>
+          <th style="${th}">${escapeHtml(`${coefficientLabel} Deadlift`)}</th>
+          <th style="${th}">${escapeHtml(`${coefficientLabel} Total`)}</th>
+        </tr>
+        ${body}
+      </table>
+    </div>
+  `
+}
+
+
+async function copyDetailRich(
+  wordSafe: boolean,
+): Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getDetailSpreadsheetText(
+      meet
+    )
+
+  const html =
+    getDetailFormattedHtml(
+      meet,
+      wordSafe
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob([plainText], { type: 'text/plain' }),
+        'text/html':
+          new Blob([html], { type: 'text/html' }),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    wordSafe
+      ? 'Word-formatted Detail copied. Paste into Word.'
+      : 'Formatted Detail copied. Paste into email.'
+  )
+}
+
+
+async function copyDetailSpreadsheet():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  await navigator.clipboard.writeText(
+    getDetailSpreadsheetText(
+      meet
+    )
+  )
+
+  window.alert(
+    'Detail copied for spreadsheet paste.'
+  )
+}
+
+
+function wireDetail():
+  void {
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-best-lifter-division]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const divisionId =
+              Number(
+                button.dataset
+                  .bestLifterDivision
+              )
+
+            if (
+              !Number.isFinite(
+                divisionId
+              )
+            ) {
+              return
+            }
+
+            selectedDivisionId =
+              divisionId
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-detail-sort]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const column =
+              button.dataset
+                .detailSort as
+                  DetailSortColumn
+
+            if (
+              detailSortColumn ===
+              column
+            ) {
+              detailSortAscending =
+                !detailSortAscending
+            } else {
+              detailSortColumn =
+                column
+
+              detailSortAscending =
+                ![
+                  'squat',
+                  'bench',
+                  'deadlift',
+                  'total',
+                  'coefficientSquat',
+                  'coefficientBench',
+                  'coefficientDeadlift',
+                  'coefficientTotal',
+                ].includes(
+                  column
+                )
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#resetDetailSort'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        detailSortColumn =
+          'weightClass'
+
+        detailSortAscending =
+          true
+
+        renderApp()
+      }
+    )
+
+  const copyOptions =
+    document
+      .querySelector<HTMLDivElement>(
+        '#detailCopyOptions'
+      )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#copyDetailMenu'
+    )
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+
+        if (
+          copyOptions ===
+          null
+        ) {
+          return
+        }
+
+        const opening =
+          copyOptions.hidden
+
+        closeAllReportMenus()
+
+        copyOptions.hidden =
+          !opening
+      }
+    )
+
+  copyOptions
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-copy-detail]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            closeAllReportMenus()
+
+            const format =
+              button.dataset
+                .copyDetail
+
+            if (
+              format ===
+              'formatted'
+            ) {
+              void copyDetailRich(
+                false
+              )
+
+              return
+            }
+
+            if (
+              format ===
+              'word'
+            ) {
+              void copyDetailRich(
+                true
+              )
+
+              return
+            }
+
+            void copyDetailSpreadsheet()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printDetail'
     )
     ?.addEventListener(
       'click',
@@ -12559,6 +16029,91 @@ function getLifterTeamStatusCode(
   }
 
   return ''
+}
+
+
+function getNonRegistrationLifterDisplayName(
+  meet: LocalMeet,
+  lifter: Lifter,
+): string {
+
+  const suffixes:
+    string[] =
+    []
+
+  const team =
+    getLifterTeam(
+      meet,
+      lifter
+    )
+
+  if (
+    lifter.isExtraLifter ||
+    team?.isBTeam ===
+      true
+  ) {
+    suffixes.push(
+      '(B)'
+    )
+  }
+
+  if (
+    lifter.isGuest
+  ) {
+    suffixes.push(
+      '(G)'
+    )
+  }
+
+  if (
+    lifter.equipmentType ===
+    'unequipped'
+  ) {
+    suffixes.push(
+      '(U)'
+    )
+  }
+
+  return (
+    `${lifter.lastName}, ${lifter.firstName}` +
+    (
+      suffixes.length > 0
+        ? ` ${suffixes.join(' ')}`
+        : ''
+    )
+  )
+}
+
+
+function getIndividualStandingDisplayName(
+  meet: LocalMeet,
+  row: IndividualStanding,
+): string {
+
+  const lifter =
+    meet.state.lifters.find(
+      candidate =>
+        candidate.id ===
+        row.lifterId
+    )
+
+  if (
+    lifter !== undefined
+  ) {
+    return getNonRegistrationLifterDisplayName(
+      meet,
+      lifter
+    )
+  }
+
+  return (
+    `${row.lastName}, ${row.firstName}` +
+    (
+      row.isExtraLifter
+        ? ' (B)'
+        : ''
+    )
+  )
 }
 
 
@@ -17873,7 +21428,7 @@ function renderBestLiftCompetitionRows(
           </div>
 
           <div class="competition-lifter-name">
-            <strong>${escapeHtml(lifter.lastName)}, ${escapeHtml(lifter.firstName)}</strong>
+            <strong>${escapeHtml(getNonRegistrationLifterDisplayName(meet, lifter))}</strong>
           </div>
 
           <div>
@@ -18249,7 +21804,7 @@ function renderAllAttemptCompetitionRows(
           </div>
 
           <div class="competition-lifter-name">
-            <strong>${escapeHtml(lifter.lastName)}, ${escapeHtml(lifter.firstName)}</strong>
+            <strong>${escapeHtml(getNonRegistrationLifterDisplayName(meet, lifter))}</strong>
           </div>
 
           <div>
@@ -24463,6 +28018,60 @@ function wireNavigation(): void {
 
   document
     .querySelector<HTMLButtonElement>(
+      '#navDetail'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        currentPage =
+          'detail'
+
+        renderApp()
+      }
+    )
+
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#navSummary'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        currentPage =
+          'summary'
+
+        renderApp()
+      }
+    )
+
+
+  document
+    .querySelector<HTMLButtonElement>(
       '#navBestLifts'
     )
     ?.addEventListener(
@@ -26483,6 +30092,12 @@ function renderApp(): void {
                   'best-lifts'
                 ? renderBestLifts()
                 : currentPage ===
+                    'summary'
+                  ? renderSummary()
+                  : currentPage ===
+                      'detail'
+                    ? renderDetail()
+                    : currentPage ===
               'platform-issues'
             ? renderPlatformImportIssues()
             : currentPage ===
@@ -26504,6 +30119,30 @@ function renderApp(): void {
     wireCompetition()
     wireCompetitionStatusShortcuts()
     wireSelectAllOnEditableInputs()
+
+    return
+  }
+
+  if (
+    currentPage ===
+    'detail'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+
+    wireDetail()
+
+    return
+  }
+
+  if (
+    currentPage ===
+    'summary'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+
+    wireSummary()
 
     return
   }
