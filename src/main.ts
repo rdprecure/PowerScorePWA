@@ -102,6 +102,13 @@ import {
 } from './training/platformManagerTraining'
 
 
+const TEST_BEST_LIFT_MEET_ID =
+  'powerscore-test-best-lift'
+
+const TEST_ALL_ATTEMPTS_MEET_ID =
+  'powerscore-test-all-attempts'
+
+
 interface DivisionTeam {
   divisionId: number
   teamId: number
@@ -124,6 +131,8 @@ type AppPage =
   | 'registration'
   | 'competition'
   | 'standings'
+  | 'best-lifters'
+  | 'best-lifts'
   | 'platform-issues'
   | 'help'
 
@@ -207,6 +216,32 @@ type TeamStandingsSortColumn =
   | 'fourths'
   | 'fifths'
   | 'totalPoints'
+
+
+type BestLiftSortColumn =
+  | 'lift'
+  | 'weightGroup'
+  | 'place'
+  | 'lifterNumber'
+  | 'lifter'
+  | 'team'
+  | 'liftWeight'
+  | 'coefficient'
+  | 'coefficientLift'
+
+
+type BestLifterSortColumn =
+  | 'weightGroup'
+  | 'place'
+  | 'lifterNumber'
+  | 'lifter'
+  | 'team'
+  | 'squat'
+  | 'bench'
+  | 'deadlift'
+  | 'total'
+  | 'coefficient'
+  | 'coefficientTotal'
 
 
 type CompetitionSortColumn =
@@ -3520,6 +3555,284 @@ populateTrainingMeet(
 )
 
 
+function completeTestImportedLifter(
+  meet: LocalMeet,
+  lifter: Lifter,
+): void {
+
+  const isBestLift =
+    meet.state.meet.id ===
+    TEST_BEST_LIFT_MEET_ID
+
+  const division =
+    meet.state.divisions[0]
+
+  if (
+    division === undefined
+  ) {
+    return
+  }
+
+  const teamId =
+    meet.divisionTeams.find(
+      item =>
+        item.divisionId ===
+        division.id
+    )?.teamId ??
+    meet.state.teams[0]?.id ??
+    null
+
+  lifter.divisionId =
+    division.id
+
+  lifter.teamId =
+    teamId
+
+  lifter.firstName =
+    isBestLift
+      ? 'Mateo'
+      : 'Darius'
+
+  lifter.lastName =
+    isBestLift
+      ? 'Renteria'
+      : 'Coleman'
+
+  lifter.bodyWeight =
+    isBestLift
+      ? 179.6
+      : 180.2
+
+  lifter.weightClass =
+    '181'
+
+  lifter.weightClassSource =
+    'automatic'
+
+  setPlatformRegistrationState(
+    lifter,
+    undefined
+  )
+}
+
+
+function createPreloadedTestMeet(
+  trainingMeetId: string,
+  testMeetId: string,
+  testMeetName: string,
+  trainingPlatformMeetId: string,
+  idOffset: number,
+): void {
+
+  if (
+    localMeets.some(
+      meet =>
+        meet.state.meet.id ===
+        testMeetId
+    )
+  ) {
+    return
+  }
+
+  populateTrainingMeet(
+    trainingMeetId
+  )
+
+  const trainingMeet =
+    localMeets.find(
+      meet =>
+        meet.state.meet.id ===
+        trainingMeetId
+    )
+
+  if (
+    trainingMeet === undefined
+  ) {
+    return
+  }
+
+  const testMeet =
+    JSON.parse(
+      JSON.stringify(
+        trainingMeet
+      )
+    ) as LocalMeet
+
+  testMeet.state.meet.id =
+    testMeetId
+
+  testMeet.state.meet.name =
+    testMeetName
+
+  testMeet.state.meet.location =
+    'Development Test Data'
+
+  delete testMeet.state.meet
+    .platformMeetId
+
+  const divisionIdMap =
+    new Map<number, number>()
+
+  testMeet.state.divisions.forEach(
+    division => {
+      const oldId =
+        division.id
+
+      const newId =
+        oldId +
+        idOffset
+
+      divisionIdMap.set(
+        oldId,
+        newId
+      )
+
+      division.id =
+        newId
+
+      division.meetId =
+        testMeetId
+
+      division.name =
+        division.name.replace(
+          'Training',
+          'Test'
+        )
+    }
+  )
+
+  const teamIdMap =
+    new Map<number, number>()
+
+  testMeet.state.teams.forEach(
+    team => {
+      const oldId =
+        team.id
+
+      const newId =
+        oldId +
+        idOffset
+
+      teamIdMap.set(
+        oldId,
+        newId
+      )
+
+      team.id =
+        newId
+
+      team.meetId =
+        testMeetId
+    }
+  )
+
+  testMeet.divisionTeams.forEach(
+    item => {
+      item.divisionId =
+        divisionIdMap.get(
+          item.divisionId
+        ) ??
+        item.divisionId
+
+      item.teamId =
+        teamIdMap.get(
+          item.teamId
+        ) ??
+        item.teamId
+    }
+  )
+
+  testMeet.state.lifters.forEach(
+    lifter => {
+      lifter.id +=
+        idOffset * 10
+
+      lifter.divisionId =
+        divisionIdMap.get(
+          lifter.divisionId
+        ) ??
+        lifter.divisionId
+
+      if (
+        lifter.teamId !==
+        null
+      ) {
+        lifter.teamId =
+          teamIdMap.get(
+            lifter.teamId
+          ) ??
+          lifter.teamId
+      }
+    }
+  )
+
+  localMeets.push(
+    testMeet
+  )
+
+  const submissions =
+    listTrainingPlatformManagerFiles(
+      trainingPlatformMeetId
+    )
+      .map(
+        file =>
+          parsePlatformManagerSubmission(
+            file.name,
+            getTrainingPlatformManagerCsv(
+              trainingPlatformMeetId,
+              file.name
+            ),
+            trainingPlatformMeetId
+          )
+      )
+
+  applyPlatformManagerSubmissions(
+    testMeet,
+    submissions
+  )
+
+  testMeet.state.lifters
+    .filter(
+      lifter =>
+        isPlatformRegistrationIncomplete(
+          lifter
+        )
+    )
+    .forEach(
+      lifter => {
+        completeTestImportedLifter(
+          testMeet,
+          lifter
+        )
+      }
+    )
+}
+
+
+function ensurePreloadedTestMeets():
+  void {
+
+  createPreloadedTestMeet(
+    TRAINING_BEST_LIFT_MEET_ID,
+    TEST_BEST_LIFT_MEET_ID,
+    'PowerScore Test - Best Lift',
+    TRAINING_BEST_LIFT_PLATFORM_MEET_ID,
+    10000
+  )
+
+  createPreloadedTestMeet(
+    TRAINING_ALL_ATTEMPTS_MEET_ID,
+    TEST_ALL_ATTEMPTS_MEET_ID,
+    'PowerScore Test - All Attempts',
+    TRAINING_ALL_ATTEMPTS_PLATFORM_MEET_ID,
+    20000
+  )
+}
+
+
+ensurePreloadedTestMeets()
+
+
 function expandDevelopmentMeetLifters():
   void {
 
@@ -4027,6 +4340,22 @@ let teamStandingsSortColumn:
     'place'
 
 let teamStandingsSortAscending =
+  true
+
+
+let bestLifterSortColumn:
+  BestLifterSortColumn =
+    'weightGroup'
+
+let bestLifterSortAscending =
+  true
+
+
+let bestLiftSortColumn:
+  BestLiftSortColumn =
+    'lift'
+
+let bestLiftSortAscending =
   true
 
 
@@ -7329,11 +7658,29 @@ function renderNavigation():
       </button>
 
       <button
+        id="navBestLifters"
         type="button"
-        class="nav-item"
-        disabled
+        class="nav-item ${
+          currentPage ===
+          'best-lifters'
+            ? 'active'
+            : ''
+        }"
       >
         Best Lifters
+      </button>
+
+      <button
+        id="navBestLifts"
+        type="button"
+        class="nav-item ${
+          currentPage ===
+          'best-lifts'
+            ? 'active'
+            : ''
+        }"
+      >
+        Best Lifts
       </button>
 
       <button
@@ -8619,13 +8966,2143 @@ function wireStandings(): void {
       }
     )
 
-  document.addEventListener(
-    'click',
-    closeStandingsMenus,
+  installReportMenuClickAway()
+}
+
+
+interface BestLifterReportRow {
+  groupIndex: number
+  weightGroup: string
+  place: number
+  lifterNumber: number
+  lifterName: string
+  teamName: string
+  squat: number
+  bench: number
+  deadlift: number
+  total: number
+  coefficient: number
+  coefficientTotal: number
+}
+
+
+function getBestLifterWeightGroups(
+  division: Division,
+):
+  Array<{
+    label: string
+    classes: Set<string>
+  }> {
+
+  const weightClasses =
+    getDivisionRules(
+      division
+    ).weightClasses
+      .map(
+        item =>
+          item.name
+      )
+
+  if (
+    weightClasses.length === 0
+  ) {
+    return []
+  }
+
+  const splitIndex =
+    Math.ceil(
+      weightClasses.length / 2
+    )
+
+  const lower =
+    weightClasses.slice(
+      0,
+      splitIndex
+    )
+
+  const upper =
+    weightClasses.slice(
+      splitIndex
+    )
+
+  const makeLabel =
+    (
+      classes:
+        readonly string[],
+    ) => {
+      if (
+        classes.length === 0
+      ) {
+        return ''
+      }
+
+      return (
+        `${classes[0]} to ` +
+        `${classes[classes.length - 1]}`
+      )
+    }
+
+  return [
     {
-      once: true,
+      label:
+        makeLabel(
+          lower
+        ),
+      classes:
+        new Set(
+          lower
+        ),
+    },
+
+    ...(upper.length > 0
+      ? [
+          {
+            label:
+              makeLabel(
+                upper
+              ),
+            classes:
+              new Set(
+                upper
+              ),
+          },
+        ]
+      : []),
+  ]
+}
+
+
+function getBestLifterReportRows(
+  meet: LocalMeet,
+  division: Division,
+): BestLifterReportRow[] {
+
+  const groups =
+    getBestLifterWeightGroups(
+      division
+    )
+
+  const candidateRows =
+    meet.state.lifters
+      .filter(
+        lifter =>
+          lifter.divisionId ===
+            division.id &&
+          lifter.status ===
+            'active' &&
+          !lifter.isGuest &&
+          lifter.weightClass !==
+            null &&
+          lifter.bodyWeight !==
+            null
+      )
+      .map(
+        lifter => {
+          const squat =
+            getCompetitionBestLiftValue(
+              meet,
+              lifter,
+              'squat'
+            )
+
+          const bench =
+            getCompetitionBestLiftValue(
+              meet,
+              lifter,
+              'bench'
+            )
+
+          const deadlift =
+            getCompetitionBestLiftValue(
+              meet,
+              lifter,
+              'deadlift'
+            )
+
+          const coefficient =
+            getLifterBodyWeightCoefficient(
+              meet,
+              lifter
+            )
+
+          if (
+            squat === null ||
+            bench === null ||
+            deadlift === null ||
+            coefficient === null
+          ) {
+            return null
+          }
+
+          const total =
+            squat +
+            bench +
+            deadlift
+
+          const groupIndex =
+            groups.findIndex(
+              group =>
+                group.classes.has(
+                  lifter.weightClass as string
+                )
+            )
+
+          if (
+            groupIndex < 0
+          ) {
+            return null
+          }
+
+          return {
+            groupIndex,
+            weightGroup:
+              groups[
+                groupIndex
+              ].label,
+            lifterNumber:
+              lifter.lifterNumber,
+            lifterName:
+              `${lifter.lastName}, ${lifter.firstName}`,
+            teamName:
+              getStandingsTeamName(
+                meet,
+                lifter.teamId
+              ),
+            squat,
+            bench,
+            deadlift,
+            total,
+            coefficient,
+            coefficientTotal:
+              total *
+              coefficient,
+          }
+        }
+      )
+      .filter(
+        (
+          row
+        ): row is Omit<
+          BestLifterReportRow,
+          'place'
+        > =>
+          row !== null
+      )
+
+  const result:
+    BestLifterReportRow[] =
+    []
+
+  groups.forEach(
+    (
+      _,
+      groupIndex
+    ) => {
+      candidateRows
+        .filter(
+          row =>
+            row.groupIndex ===
+            groupIndex
+        )
+        .sort(
+          (
+            a,
+            b
+          ) => {
+            if (
+              a.coefficientTotal !==
+              b.coefficientTotal
+            ) {
+              return (
+                b.coefficientTotal -
+                a.coefficientTotal
+              )
+            }
+
+            if (
+              a.total !==
+              b.total
+            ) {
+              return (
+                b.total -
+                a.total
+              )
+            }
+
+            return (
+              a.lifterNumber -
+              b.lifterNumber
+            )
+          }
+        )
+        .slice(
+          0,
+          3
+        )
+        .forEach(
+          (
+            row,
+            index
+          ) => {
+            result.push({
+              ...row,
+              place:
+                index + 1,
+            })
+          }
+        )
     }
   )
+
+  return result
+}
+
+
+function getSortedBestLifterRows(
+  rows:
+    readonly BestLifterReportRow[],
+): BestLifterReportRow[] {
+
+  return [...rows]
+    .sort(
+      (
+        a,
+        b
+      ) => {
+        let result =
+          0
+
+        switch (
+          bestLifterSortColumn
+        ) {
+          case 'weightGroup':
+            result =
+              a.groupIndex -
+              b.groupIndex
+
+            if (
+              result === 0
+            ) {
+              result =
+                a.place -
+                b.place
+            }
+
+            break
+
+          case 'place':
+            result =
+              a.place -
+              b.place
+            break
+
+          case 'lifterNumber':
+            result =
+              a.lifterNumber -
+              b.lifterNumber
+            break
+
+          case 'lifter':
+            result =
+              a.lifterName.localeCompare(
+                b.lifterName,
+                undefined,
+                {
+                  sensitivity:
+                    'base',
+                  numeric:
+                    true,
+                }
+              )
+            break
+
+          case 'team':
+            result =
+              a.teamName.localeCompare(
+                b.teamName,
+                undefined,
+                {
+                  sensitivity:
+                    'base',
+                  numeric:
+                    true,
+                }
+              )
+            break
+
+          case 'squat':
+            result =
+              a.squat -
+              b.squat
+            break
+
+          case 'bench':
+            result =
+              a.bench -
+              b.bench
+            break
+
+          case 'deadlift':
+            result =
+              a.deadlift -
+              b.deadlift
+            break
+
+          case 'total':
+            result =
+              a.total -
+              b.total
+            break
+
+          case 'coefficient':
+            result =
+              a.coefficient -
+              b.coefficient
+            break
+
+          case 'coefficientTotal':
+            result =
+              a.coefficientTotal -
+              b.coefficientTotal
+            break
+        }
+
+        if (
+          !bestLifterSortAscending
+        ) {
+          result =
+            -result
+        }
+
+        if (
+          result !== 0
+        ) {
+          return result
+        }
+
+        return (
+          a.lifterNumber -
+          b.lifterNumber
+        )
+      }
+    )
+}
+
+
+function renderBestLifterSortHeader(
+  label: string,
+  column:
+    BestLifterSortColumn,
+): string {
+
+  const active =
+    bestLifterSortColumn ===
+    column
+
+  return `
+    <th>
+      <button
+        type="button"
+        class="standings-sort-button ${
+          active
+            ? 'active'
+            : ''
+        }"
+        data-best-lifter-sort="${column}"
+      >
+        <span>${escapeHtml(label)}</span>
+        <span>${
+          active
+            ? (
+                bestLifterSortAscending
+                  ? '▲'
+                  : '▼'
+              )
+            : ''
+        }</span>
+      </button>
+    </th>
+  `
+}
+
+
+function renderBestLifterDivisionTabs(
+  meet: LocalMeet,
+): string {
+
+  return `
+    <div class="standings-division-tabs">
+      ${
+        meet.state.divisions
+          .map(
+            division => `
+              <button
+                type="button"
+                class="standings-division-tab ${
+                  division.id ===
+                  selectedDivisionId
+                    ? 'active'
+                    : ''
+                }"
+                data-best-lifter-division="${division.id}"
+              >
+                ${escapeHtml(division.name)}
+              </button>
+            `
+          )
+          .join('')
+      }
+    </div>
+  `
+}
+
+
+function getBestLifterCoefficientLabel(
+  division: Division,
+): string {
+
+  const system =
+    getDivisionCoefficientSystem(
+      division
+    )
+
+  if (
+    system ===
+    'schwartz'
+  ) {
+    return 'Schwartz'
+  }
+
+  if (
+    system ===
+    'malone'
+  ) {
+    return 'Malone'
+  }
+
+  return 'Coefficient'
+}
+
+
+function renderBestLifters():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="best-lifters-page">
+        <div class="empty-state">
+          Select a meet to view Best Lifters.
+        </div>
+      </main>
+    `
+  }
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return `
+      <main class="best-lifters-page">
+        ${renderBestLifterDivisionTabs(meet)}
+        <div class="empty-state">
+          Select a division to view Best Lifters.
+        </div>
+      </main>
+    `
+  }
+
+  const rows =
+    getSortedBestLifterRows(
+      getBestLifterReportRows(
+        meet,
+        division
+      )
+    )
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  return `
+    <main class="best-lifters-page">
+
+      <div class="standings-screen-toolbar no-print">
+        <div>
+          <button
+            id="printBestLifters"
+            type="button"
+            class="compact-button"
+          >
+            Print
+          </button>
+
+          <div class="standings-copy-menu">
+            <button
+              id="copyBestLiftersMenu"
+              type="button"
+              class="compact-button"
+            >
+              Copy ▾
+            </button>
+
+            <div
+              id="bestLiftersCopyOptions"
+              class="standings-copy-options"
+              hidden
+            >
+              <button
+                type="button"
+                data-copy-best-lifters="spreadsheet"
+              >
+                Copy for Spreadsheet
+              </button>
+
+              <button
+                type="button"
+                data-copy-best-lifters="formatted"
+              >
+                Copy Formatted
+              </button>
+            </div>
+          </div>
+
+          <button
+            id="resetBestLiftersSort"
+            type="button"
+            class="compact-button"
+            title="Restore default Best Lifters sorting"
+          >
+            Reset Sort
+          </button>
+        </div>
+
+        <div class="standings-toolbar-note">
+          Click a column heading to sort. Sorting does not change official Best Lifter placing.
+        </div>
+      </div>
+
+      ${renderBestLifterDivisionTabs(meet)}
+
+      <section class="standings-print-heading">
+        <h1 class="print-only">
+          ${escapeHtml(meet.state.meet.name)}
+        </h1>
+        <h2>
+          ${escapeHtml(division.name)} Best Lifters
+        </h2>
+      </section>
+
+      <section class="standings-panel best-lifters-panel">
+        <div class="standings-panel-heading">
+          <h2>Best Lifters</h2>
+          <span>Top 3 in each weight group</span>
+        </div>
+
+        <div class="standings-table-scroll">
+          <table class="standings-table best-lifters-table">
+            <thead>
+              <tr>
+                ${renderBestLifterSortHeader('Weight Group', 'weightGroup')}
+                ${renderBestLifterSortHeader('Place', 'place')}
+                ${renderBestLifterSortHeader('Lifter #', 'lifterNumber')}
+                ${renderBestLifterSortHeader('Lifter', 'lifter')}
+                ${renderBestLifterSortHeader('Team', 'team')}
+                ${renderBestLifterSortHeader('Squat', 'squat')}
+                ${renderBestLifterSortHeader('Bench Press', 'bench')}
+                ${renderBestLifterSortHeader('Dead Lift', 'deadlift')}
+                ${renderBestLifterSortHeader('Total', 'total')}
+                ${renderBestLifterSortHeader(coefficientLabel, 'coefficient')}
+                ${renderBestLifterSortHeader(`${coefficientLabel} Total`, 'coefficientTotal')}
+              </tr>
+            </thead>
+
+            <tbody>
+              ${
+                rows.length === 0
+                  ? `
+                    <tr>
+                      <td
+                        colspan="11"
+                        class="standings-empty-row"
+                      >
+                        No completed lifters are available for Best Lifter calculations.
+                      </td>
+                    </tr>
+                  `
+                  : rows
+                      .map(
+                        row => `
+                          <tr>
+                            <td>${escapeHtml(row.weightGroup)}</td>
+                            <td class="numeric">${row.place}</td>
+                            <td class="numeric">${row.lifterNumber}</td>
+                            <td class="lifter-name">${escapeHtml(row.lifterName)}</td>
+                            <td>${escapeHtml(row.teamName)}</td>
+                            <td class="numeric">${row.squat}</td>
+                            <td class="numeric">${row.bench}</td>
+                            <td class="numeric">${row.deadlift}</td>
+                            <td class="numeric standings-total">${row.total}</td>
+                            <td class="numeric">${row.coefficient.toFixed(4)}</td>
+                            <td class="numeric standings-total">${row.coefficientTotal.toFixed(2)}</td>
+                          </tr>
+                        `
+                      )
+                      .join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  `
+}
+
+
+function getBestLifterSpreadsheetText(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedBestLifterRows(
+      getBestLifterReportRows(
+        meet,
+        division
+      )
+    )
+
+  const lines =
+    [
+      meet.state.meet.name,
+      `${division.name} Best Lifters`,
+      '',
+      [
+        'Weight Group',
+        'Place',
+        'Lifter #',
+        'Lifter',
+        'Team',
+        'Squat',
+        'Bench Press',
+        'Dead Lift',
+        'Total',
+        coefficientLabel,
+        `${coefficientLabel} Total`,
+      ].join('\t'),
+    ]
+
+  rows.forEach(
+    row => {
+      lines.push(
+        [
+          row.weightGroup,
+          row.place,
+          row.lifterNumber,
+          row.lifterName,
+          row.teamName,
+          row.squat,
+          row.bench,
+          row.deadlift,
+          row.total,
+          row.coefficient.toFixed(4),
+          row.coefficientTotal.toFixed(2),
+        ].join('\t')
+      )
+    }
+  )
+
+  return lines.join(
+    '\n'
+  )
+}
+
+
+function getBestLifterFormattedHtml(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedBestLifterRows(
+      getBestLifterReportRows(
+        meet,
+        division
+      )
+    )
+
+  const th =
+    'border:1px solid #9ca3af;background:#dbe7f3;padding:6px 8px;font-weight:700;'
+
+  const td =
+    'border:1px solid #cbd5e1;padding:5px 7px;'
+
+  const body =
+    rows
+      .map(
+        row => `
+          <tr>
+            <td style="${td}">${escapeHtml(row.weightGroup)}</td>
+            <td style="${td}text-align:center">${row.place}</td>
+            <td style="${td}text-align:center">${row.lifterNumber}</td>
+            <td style="${td}">${escapeHtml(row.lifterName)}</td>
+            <td style="${td}">${escapeHtml(row.teamName)}</td>
+            <td style="${td}text-align:right">${row.squat}</td>
+            <td style="${td}text-align:right">${row.bench}</td>
+            <td style="${td}text-align:right">${row.deadlift}</td>
+            <td style="${td}text-align:right;font-weight:700">${row.total}</td>
+            <td style="${td}text-align:right">${row.coefficient.toFixed(4)}</td>
+            <td style="${td}text-align:right;font-weight:700">${row.coefficientTotal.toFixed(2)}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#111827;">
+      <h2 style="margin:0 0 2px;">
+        ${escapeHtml(meet.state.meet.name)}
+      </h2>
+      <h3 style="margin:0 0 14px;">
+        ${escapeHtml(division.name)} Best Lifters
+      </h3>
+
+      <table style="border-collapse:collapse;width:100%;font-size:12px;">
+        <thead>
+          <tr>
+            <th style="${th}">Weight Group</th>
+            <th style="${th}">Place</th>
+            <th style="${th}">Lifter #</th>
+            <th style="${th}">Lifter</th>
+            <th style="${th}">Team</th>
+            <th style="${th}">Squat</th>
+            <th style="${th}">Bench Press</th>
+            <th style="${th}">Dead Lift</th>
+            <th style="${th}">Total</th>
+            <th style="${th}">${escapeHtml(coefficientLabel)}</th>
+            <th style="${th}">${escapeHtml(`${coefficientLabel} Total`)}</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+  `
+}
+
+
+async function copyBestLiftersSpreadsheet():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  await navigator.clipboard.writeText(
+    getBestLifterSpreadsheetText(
+      meet
+    )
+  )
+
+  window.alert(
+    'Best Lifters copied for spreadsheet paste.'
+  )
+}
+
+
+async function copyBestLiftersFormatted():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getBestLifterSpreadsheetText(
+      meet
+    )
+
+  const html =
+    getBestLifterFormattedHtml(
+      meet
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob(
+            [plainText],
+            {
+              type:
+                'text/plain',
+            }
+          ),
+        'text/html':
+          new Blob(
+            [html],
+            {
+              type:
+                'text/html',
+            }
+          ),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Formatted Best Lifters copied. Paste into email or Word.'
+  )
+}
+
+
+function wireBestLifters():
+  void {
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-best-lifter-division]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const divisionId =
+              Number(
+                button.dataset
+                  .bestLifterDivision
+              )
+
+            if (
+              !Number.isFinite(
+                divisionId
+              )
+            ) {
+              return
+            }
+
+            selectedDivisionId =
+              divisionId
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-best-lifter-sort]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const column =
+              button.dataset
+                .bestLifterSort as
+                  BestLifterSortColumn
+
+            if (
+              bestLifterSortColumn ===
+              column
+            ) {
+              bestLifterSortAscending =
+                !bestLifterSortAscending
+            } else {
+              bestLifterSortColumn =
+                column
+
+              bestLifterSortAscending =
+                ![
+                  'squat',
+                  'bench',
+                  'deadlift',
+                  'total',
+                  'coefficientTotal',
+                ].includes(
+                  column
+                )
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#resetBestLiftersSort'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        bestLifterSortColumn =
+          'weightGroup'
+
+        bestLifterSortAscending =
+          true
+
+        renderApp()
+      }
+    )
+
+  const copyMenu =
+    document
+      .querySelector<HTMLButtonElement>(
+        '#copyBestLiftersMenu'
+      )
+
+  const copyOptions =
+    document
+      .querySelector<HTMLDivElement>(
+        '#bestLiftersCopyOptions'
+      )
+
+  const closeMenu =
+    () => {
+      if (
+        copyOptions !==
+        null
+      ) {
+        copyOptions.hidden =
+          true
+      }
+    }
+
+  copyMenu
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+
+        if (
+          copyOptions ===
+          null
+        ) {
+          return
+        }
+
+        copyOptions.hidden =
+          !copyOptions.hidden
+      }
+    )
+
+  copyOptions
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-copy-best-lifters]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            closeMenu()
+
+            if (
+              button.dataset
+                .copyBestLifters ===
+              'formatted'
+            ) {
+              void copyBestLiftersFormatted()
+            } else {
+              void copyBestLiftersSpreadsheet()
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printBestLifters'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        window.print()
+      }
+    )
+
+  installReportMenuClickAway()
+}
+
+
+let reportMenuClickAwayInstalled =
+  false
+
+
+function closeAllReportMenus():
+  void {
+
+  document
+    .querySelectorAll<HTMLElement>(
+      [
+        '.standings-print-options',
+        '.standings-copy-options',
+        '.standings-copy-scope-options',
+      ].join(',')
+    )
+    .forEach(
+      element => {
+        element.hidden =
+          true
+      }
+    )
+}
+
+
+function installReportMenuClickAway():
+  void {
+
+  if (
+    reportMenuClickAwayInstalled
+  ) {
+    return
+  }
+
+  reportMenuClickAwayInstalled =
+    true
+
+  document.addEventListener(
+    'click',
+    event => {
+      const target =
+        event.target as
+          HTMLElement | null
+
+      if (
+        target?.closest(
+          '.standings-print-menu, .standings-copy-menu'
+        ) !==
+        null
+      ) {
+        return
+      }
+
+      closeAllReportMenus()
+    }
+  )
+}
+
+
+interface BestLiftReportRow {
+  liftIndex: number
+  lift: CompetitionLift
+  liftLabel: string
+  groupIndex: number
+  weightGroup: string
+  place: number
+  lifterNumber: number
+  lifterName: string
+  teamName: string
+  liftWeight: number
+  coefficient: number
+  coefficientLift: number
+}
+
+
+function getBestLiftReportRows(
+  meet: LocalMeet,
+  division: Division,
+): BestLiftReportRow[] {
+
+  const groups =
+    getBestLifterWeightGroups(
+      division
+    )
+
+  const lifts:
+    Array<{
+      lift: CompetitionLift
+      label: string
+    }> = [
+      {
+        lift: 'squat',
+        label: 'Squat',
+      },
+      {
+        lift: 'bench',
+        label: 'Bench',
+      },
+      {
+        lift: 'deadlift',
+        label: 'Dead',
+      },
+    ]
+
+  const result:
+    BestLiftReportRow[] =
+    []
+
+  lifts.forEach(
+    (
+      liftInfo,
+      liftIndex
+    ) => {
+      groups.forEach(
+        (
+          group,
+          groupIndex
+        ) => {
+          const groupRows =
+            meet.state.lifters
+              .filter(
+                lifter =>
+                  lifter.divisionId ===
+                    division.id &&
+                  lifter.status ===
+                    'active' &&
+                  !lifter.isGuest &&
+                  lifter.weightClass !==
+                    null &&
+                  lifter.bodyWeight !==
+                    null &&
+                  group.classes.has(
+                    lifter.weightClass
+                  )
+              )
+              .map(
+                lifter => {
+                  const liftWeight =
+                    getCompetitionBestLiftValue(
+                      meet,
+                      lifter,
+                      liftInfo.lift
+                    )
+
+                  const coefficient =
+                    getLifterBodyWeightCoefficient(
+                      meet,
+                      lifter
+                    )
+
+                  if (
+                    liftWeight ===
+                      null ||
+                    coefficient ===
+                      null
+                  ) {
+                    return null
+                  }
+
+                  return {
+                    liftIndex,
+                    lift:
+                      liftInfo.lift,
+                    liftLabel:
+                      liftInfo.label,
+                    groupIndex,
+                    weightGroup:
+                      group.label,
+                    lifterNumber:
+                      lifter.lifterNumber,
+                    lifterName:
+                      `${lifter.lastName}, ${lifter.firstName}`,
+                    teamName:
+                      getStandingsTeamName(
+                        meet,
+                        lifter.teamId
+                      ),
+                    liftWeight,
+                    coefficient,
+                    coefficientLift:
+                      liftWeight *
+                      coefficient,
+                  }
+                }
+              )
+              .filter(
+                (
+                  row
+                ): row is Omit<
+                  BestLiftReportRow,
+                  'place'
+                > =>
+                  row !== null
+              )
+              .sort(
+                (
+                  a,
+                  b
+                ) => {
+                  if (
+                    a.coefficientLift !==
+                    b.coefficientLift
+                  ) {
+                    return (
+                      b.coefficientLift -
+                      a.coefficientLift
+                    )
+                  }
+
+                  if (
+                    a.liftWeight !==
+                    b.liftWeight
+                  ) {
+                    return (
+                      b.liftWeight -
+                      a.liftWeight
+                    )
+                  }
+
+                  return (
+                    a.lifterNumber -
+                    b.lifterNumber
+                  )
+                }
+              )
+              .slice(
+                0,
+                3
+              )
+
+          groupRows.forEach(
+            (
+              row,
+              index
+            ) => {
+              result.push({
+                ...row,
+                place:
+                  index + 1,
+              })
+            }
+          )
+        }
+      )
+    }
+  )
+
+  return result
+}
+
+
+function getSortedBestLiftRows(
+  rows:
+    readonly BestLiftReportRow[],
+): BestLiftReportRow[] {
+
+  return [...rows]
+    .sort(
+      (
+        a,
+        b
+      ) => {
+        let result =
+          0
+
+        switch (
+          bestLiftSortColumn
+        ) {
+          case 'lift':
+            result =
+              a.liftIndex -
+              b.liftIndex
+
+            if (
+              result === 0
+            ) {
+              result =
+                a.groupIndex -
+                b.groupIndex
+            }
+
+            if (
+              result === 0
+            ) {
+              result =
+                a.place -
+                b.place
+            }
+
+            break
+
+          case 'weightGroup':
+            result =
+              a.groupIndex -
+              b.groupIndex
+
+            if (
+              result === 0
+            ) {
+              result =
+                a.liftIndex -
+                b.liftIndex
+            }
+
+            if (
+              result === 0
+            ) {
+              result =
+                a.place -
+                b.place
+            }
+
+            break
+
+          case 'place':
+            result =
+              a.place -
+              b.place
+            break
+
+          case 'lifterNumber':
+            result =
+              a.lifterNumber -
+              b.lifterNumber
+            break
+
+          case 'lifter':
+            result =
+              a.lifterName.localeCompare(
+                b.lifterName,
+                undefined,
+                {
+                  sensitivity:
+                    'base',
+                  numeric:
+                    true,
+                }
+              )
+            break
+
+          case 'team':
+            result =
+              a.teamName.localeCompare(
+                b.teamName,
+                undefined,
+                {
+                  sensitivity:
+                    'base',
+                  numeric:
+                    true,
+                }
+              )
+            break
+
+          case 'liftWeight':
+            result =
+              a.liftWeight -
+              b.liftWeight
+            break
+
+          case 'coefficient':
+            result =
+              a.coefficient -
+              b.coefficient
+            break
+
+          case 'coefficientLift':
+            result =
+              a.coefficientLift -
+              b.coefficientLift
+            break
+        }
+
+        if (
+          !bestLiftSortAscending
+        ) {
+          result =
+            -result
+        }
+
+        if (
+          result !== 0
+        ) {
+          return result
+        }
+
+        return (
+          a.lifterNumber -
+          b.lifterNumber
+        )
+      }
+    )
+}
+
+
+function renderBestLiftSortHeader(
+  label: string,
+  column:
+    BestLiftSortColumn,
+): string {
+
+  const active =
+    bestLiftSortColumn ===
+    column
+
+  return `
+    <th>
+      <button
+        type="button"
+        class="standings-sort-button ${
+          active
+            ? 'active'
+            : ''
+        }"
+        data-best-lift-sort="${column}"
+      >
+        <span>${escapeHtml(label)}</span>
+        <span>${
+          active
+            ? (
+                bestLiftSortAscending
+                  ? '▲'
+                  : '▼'
+              )
+            : ''
+        }</span>
+      </button>
+    </th>
+  `
+}
+
+
+function renderBestLifts():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="best-lifts-page">
+        <div class="empty-state">
+          Select a meet to view Best Lifts.
+        </div>
+      </main>
+    `
+  }
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return `
+      <main class="best-lifts-page">
+        ${renderBestLifterDivisionTabs(meet)}
+        <div class="empty-state">
+          Select a division to view Best Lifts.
+        </div>
+      </main>
+    `
+  }
+
+  const rows =
+    getSortedBestLiftRows(
+      getBestLiftReportRows(
+        meet,
+        division
+      )
+    )
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  return `
+    <main class="best-lifts-page">
+
+      <div class="standings-screen-toolbar no-print">
+        <div>
+          <button
+            id="printBestLifts"
+            type="button"
+            class="compact-button"
+          >
+            Print
+          </button>
+
+          <div class="standings-copy-menu">
+            <button
+              id="copyBestLiftsMenu"
+              type="button"
+              class="compact-button"
+            >
+              Copy ▾
+            </button>
+
+            <div
+              id="bestLiftsCopyOptions"
+              class="standings-copy-options"
+              hidden
+            >
+              <button
+                type="button"
+                data-copy-best-lifts="spreadsheet"
+              >
+                Copy for Spreadsheet
+              </button>
+
+              <button
+                type="button"
+                data-copy-best-lifts="formatted"
+              >
+                Copy Formatted
+              </button>
+            </div>
+          </div>
+
+          <button
+            id="resetBestLiftsSort"
+            type="button"
+            class="compact-button"
+          >
+            Reset Sort
+          </button>
+        </div>
+
+        <div class="standings-toolbar-note">
+          Click a column heading to sort. Sorting does not change official Best Lift placing.
+        </div>
+      </div>
+
+      ${renderBestLifterDivisionTabs(meet)}
+
+      <section class="standings-print-heading">
+        <h1 class="print-only">
+          ${escapeHtml(meet.state.meet.name)}
+        </h1>
+        <h2>
+          ${escapeHtml(division.name)} Best Lifts
+        </h2>
+      </section>
+
+      <section class="standings-panel best-lifts-panel">
+        <div class="standings-panel-heading">
+          <h2>Best Lifts</h2>
+          <span>Top 3 in each lift and weight group</span>
+        </div>
+
+        <div class="standings-table-scroll">
+          <table class="standings-table best-lifts-table">
+            <thead>
+              <tr>
+                ${renderBestLiftSortHeader('Lift', 'lift')}
+                ${renderBestLiftSortHeader('Weight Group', 'weightGroup')}
+                ${renderBestLiftSortHeader('Place', 'place')}
+                ${renderBestLiftSortHeader('Lifter #', 'lifterNumber')}
+                ${renderBestLiftSortHeader('Lifter', 'lifter')}
+                ${renderBestLiftSortHeader('Team', 'team')}
+                ${renderBestLiftSortHeader('Lift Weight', 'liftWeight')}
+                ${renderBestLiftSortHeader(coefficientLabel, 'coefficient')}
+                ${renderBestLiftSortHeader(`${coefficientLabel} Lift`, 'coefficientLift')}
+              </tr>
+            </thead>
+
+            <tbody>
+              ${
+                rows.length === 0
+                  ? `
+                    <tr>
+                      <td
+                        colspan="9"
+                        class="standings-empty-row"
+                      >
+                        No completed lift data is available for Best Lift calculations.
+                      </td>
+                    </tr>
+                  `
+                  : rows
+                      .map(
+                        row => `
+                          <tr>
+                            <td>${escapeHtml(row.liftLabel)}</td>
+                            <td>${escapeHtml(row.weightGroup)}</td>
+                            <td class="numeric">${row.place}</td>
+                            <td class="numeric">${row.lifterNumber}</td>
+                            <td class="lifter-name">${escapeHtml(row.lifterName)}</td>
+                            <td>${escapeHtml(row.teamName)}</td>
+                            <td class="numeric standings-total">${row.liftWeight}</td>
+                            <td class="numeric">${row.coefficient.toFixed(4)}</td>
+                            <td class="numeric standings-total">${row.coefficientLift.toFixed(2)}</td>
+                          </tr>
+                        `
+                      )
+                      .join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  `
+}
+
+
+function getBestLiftSpreadsheetText(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedBestLiftRows(
+      getBestLiftReportRows(
+        meet,
+        division
+      )
+    )
+
+  const lines =
+    [
+      meet.state.meet.name,
+      `${division.name} Best Lifts`,
+      '',
+      [
+        'Lift',
+        'Weight Group',
+        'Place',
+        'Lifter #',
+        'Lifter',
+        'Team',
+        'Lift Weight',
+        coefficientLabel,
+        `${coefficientLabel} Lift`,
+      ].join('\t'),
+    ]
+
+  rows.forEach(
+    row => {
+      lines.push(
+        [
+          row.liftLabel,
+          row.weightGroup,
+          row.place,
+          row.lifterNumber,
+          row.lifterName,
+          row.teamName,
+          row.liftWeight,
+          row.coefficient.toFixed(4),
+          row.coefficientLift.toFixed(2),
+        ].join('\t')
+      )
+    }
+  )
+
+  return lines.join(
+    '\n'
+  )
+}
+
+
+function getBestLiftFormattedHtml(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const coefficientLabel =
+    getBestLifterCoefficientLabel(
+      division
+    )
+
+  const rows =
+    getSortedBestLiftRows(
+      getBestLiftReportRows(
+        meet,
+        division
+      )
+    )
+
+  const th =
+    'border:1px solid #9ca3af;background:#dbe7f3;padding:6px 8px;font-weight:700;'
+
+  const td =
+    'border:1px solid #cbd5e1;padding:5px 7px;'
+
+  const body =
+    rows
+      .map(
+        row => `
+          <tr>
+            <td style="${td}">${escapeHtml(row.liftLabel)}</td>
+            <td style="${td}">${escapeHtml(row.weightGroup)}</td>
+            <td style="${td}text-align:center">${row.place}</td>
+            <td style="${td}text-align:center">${row.lifterNumber}</td>
+            <td style="${td}">${escapeHtml(row.lifterName)}</td>
+            <td style="${td}">${escapeHtml(row.teamName)}</td>
+            <td style="${td}text-align:right;font-weight:700">${row.liftWeight}</td>
+            <td style="${td}text-align:right">${row.coefficient.toFixed(4)}</td>
+            <td style="${td}text-align:right;font-weight:700">${row.coefficientLift.toFixed(2)}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#111827;">
+      <h2 style="margin:0 0 2px;">
+        ${escapeHtml(meet.state.meet.name)}
+      </h2>
+      <h3 style="margin:0 0 14px;">
+        ${escapeHtml(division.name)} Best Lifts
+      </h3>
+
+      <table style="border-collapse:collapse;width:100%;font-size:12px;">
+        <thead>
+          <tr>
+            <th style="${th}">Lift</th>
+            <th style="${th}">Weight Group</th>
+            <th style="${th}">Place</th>
+            <th style="${th}">Lifter #</th>
+            <th style="${th}">Lifter</th>
+            <th style="${th}">Team</th>
+            <th style="${th}">Lift Weight</th>
+            <th style="${th}">${escapeHtml(coefficientLabel)}</th>
+            <th style="${th}">${escapeHtml(`${coefficientLabel} Lift`)}</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+  `
+}
+
+
+async function copyBestLiftsSpreadsheet():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  await navigator.clipboard.writeText(
+    getBestLiftSpreadsheetText(
+      meet
+    )
+  )
+
+  window.alert(
+    'Best Lifts copied for spreadsheet paste.'
+  )
+}
+
+
+async function copyBestLiftsFormatted():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getBestLiftSpreadsheetText(
+      meet
+    )
+
+  const html =
+    getBestLiftFormattedHtml(
+      meet
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob(
+            [plainText],
+            {
+              type:
+                'text/plain',
+            }
+          ),
+        'text/html':
+          new Blob(
+            [html],
+            {
+              type:
+                'text/html',
+            }
+          ),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Formatted Best Lifts copied. Paste into email or Word.'
+  )
+}
+
+
+function wireBestLifts():
+  void {
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-best-lifter-division]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const divisionId =
+              Number(
+                button.dataset
+                  .bestLifterDivision
+              )
+
+            if (
+              !Number.isFinite(
+                divisionId
+              )
+            ) {
+              return
+            }
+
+            selectedDivisionId =
+              divisionId
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-best-lift-sort]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const column =
+              button.dataset
+                .bestLiftSort as
+                  BestLiftSortColumn
+
+            if (
+              bestLiftSortColumn ===
+              column
+            ) {
+              bestLiftSortAscending =
+                !bestLiftSortAscending
+            } else {
+              bestLiftSortColumn =
+                column
+
+              bestLiftSortAscending =
+                ![
+                  'liftWeight',
+                  'coefficientLift',
+                ].includes(
+                  column
+                )
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#resetBestLiftsSort'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        bestLiftSortColumn =
+          'lift'
+
+        bestLiftSortAscending =
+          true
+
+        renderApp()
+      }
+    )
+
+  const copyMenu =
+    document
+      .querySelector<HTMLButtonElement>(
+        '#copyBestLiftsMenu'
+      )
+
+  const copyOptions =
+    document
+      .querySelector<HTMLDivElement>(
+        '#bestLiftsCopyOptions'
+      )
+
+  copyMenu
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+
+        if (
+          copyOptions ===
+          null
+        ) {
+          return
+        }
+
+        const opening =
+          copyOptions.hidden
+
+        closeAllReportMenus()
+
+        copyOptions.hidden =
+          !opening
+      }
+    )
+
+  copyOptions
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-copy-best-lifts]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            closeAllReportMenus()
+
+            if (
+              button.dataset
+                .copyBestLifts ===
+              'formatted'
+            ) {
+              void copyBestLiftsFormatted()
+            } else {
+              void copyBestLiftsSpreadsheet()
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printBestLifts'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        closeAllReportMenus()
+        window.print()
+      }
+    )
+
+  installReportMenuClickAway()
 }
 
 
@@ -8961,6 +11438,51 @@ function renderHelp():
           <strong>Suggested practice sequence:</strong>
           Start with Squat. The first imports are designed to build confidence.
           Continue through Bench and Deadlift as the exercises become progressively more complex.
+        </div>
+      </section>
+
+      <section class="help-section">
+        <div class="help-section-heading">
+          <div>
+            <h2>Development Test Meets</h2>
+            <p>
+              PowerScore also includes ready-to-use Test versions of both training meets for development work.
+            </p>
+          </div>
+        </div>
+
+        <div class="help-reference-grid">
+          <article class="help-reference-card">
+            <h3>PowerScore Test - Best Lift</h3>
+            <p>
+              Uses the same realistic roster and scenarios as Best Lift Training,
+              but all simulated PlatformManager results are already loaded.
+            </p>
+          </article>
+
+          <article class="help-reference-card">
+            <h3>PowerScore Test - All Attempts</h3>
+            <p>
+              Uses the same realistic all-attempt roster and scenarios,
+              with all PlatformManager round results already loaded.
+            </p>
+          </article>
+
+          <article class="help-reference-card">
+            <h3>No Import Required</h3>
+            <p>
+              The Test Meets do not use a live PlatformManager MeetID.
+              They are intended for Standings, Reports, sorting, printing, and other development testing.
+            </p>
+          </article>
+
+          <article class="help-reference-card">
+            <h3>Training vs. Test</h3>
+            <p>
+              Use Training Meets to practice the import workflow.
+              Use Test Meets when you need realistic completed data immediately.
+            </p>
+          </article>
         </div>
       </section>
 
@@ -21941,6 +24463,60 @@ function wireNavigation(): void {
 
   document
     .querySelector<HTMLButtonElement>(
+      '#navBestLifts'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        currentPage =
+          'best-lifts'
+
+        renderApp()
+      }
+    )
+
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#navBestLifters'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        currentPage =
+          'best-lifters'
+
+        renderApp()
+      }
+    )
+
+
+  document
+    .querySelector<HTMLButtonElement>(
       '#navStandings'
     )
     ?.addEventListener(
@@ -23901,6 +26477,12 @@ function renderApp(): void {
               'standings'
             ? renderStandings()
             : currentPage ===
+                'best-lifters'
+              ? renderBestLifters()
+              : currentPage ===
+                  'best-lifts'
+                ? renderBestLifts()
+                : currentPage ===
               'platform-issues'
             ? renderPlatformImportIssues()
             : currentPage ===
@@ -23922,6 +26504,30 @@ function renderApp(): void {
     wireCompetition()
     wireCompetitionStatusShortcuts()
     wireSelectAllOnEditableInputs()
+
+    return
+  }
+
+  if (
+    currentPage ===
+    'best-lifts'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+
+    wireBestLifts()
+
+    return
+  }
+
+  if (
+    currentPage ===
+    'best-lifters'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+
+    wireBestLifters()
 
     return
   }

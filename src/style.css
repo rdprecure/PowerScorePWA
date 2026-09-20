@@ -3638,3 +3638,86 @@ select {
 .standings-copy-scope-options button:hover {
   background: #edf4fb;
 }
+
+
+/* ============================================================
+   Best Lifters
+   ============================================================ */
+
+.best-lifters-page {
+  padding: 10px;
+
+  background: #f5f8fb;
+}
+
+.best-lifters-panel {
+  width: 100%;
+}
+
+.best-lifters-table {
+  min-width: 1050px;
+}
+
+.best-lifters-table td:first-child {
+  font-weight: 700;
+}
+
+@media print {
+  .best-lifters-page {
+    padding: 0 !important;
+
+    background: white !important;
+  }
+
+  .best-lifters-panel {
+    border: 0;
+  }
+
+  .best-lifters-table {
+    min-width: 0;
+
+    font-size: 8.5pt;
+  }
+}
+
+
+/* ============================================================
+   Best Lifts
+   ============================================================ */
+
+.best-lifts-page {
+  padding: 10px;
+
+  background: #f5f8fb;
+}
+
+.best-lifts-panel {
+  width: 100%;
+}
+
+.best-lifts-table {
+  min-width: 900px;
+}
+
+.best-lifts-table td:first-child,
+.best-lifts-table td:nth-child(2) {
+  font-weight: 700;
+}
+
+@media print {
+  .best-lifts-page {
+    padding: 0 !important;
+
+    background: white !important;
+  }
+
+  .best-lifts-panel {
+    border: 0;
+  }
+
+  .best-lifts-table {
+    min-width: 0;
+
+    font-size: 8.5pt;
+  }
+}
