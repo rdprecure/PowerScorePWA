@@ -7,6 +7,8 @@ import {
 import {
   hasLaterAttemptResultInSequence,
   hasLaterBestLiftResultInSequence,
+  hasPeerAttemptResult,
+  hasPeerBestLiftResult,
   isAttemptResultMissing,
   isBestLiftResultMissing,
 } from './competitionMissingResults'
@@ -441,6 +443,108 @@ describe('competition missing-result review', () => {
         [current, later],
         'squat',
         'attempt1',
+      ),
+    ).toBe(true)
+  })
+
+  test('peer best-lift result can expose a missing result for a highest-number imported lifter', () => {
+    const current =
+      makeLifter({
+        lifterNumber: 999,
+        divisionId: 1,
+        weightClass: '275',
+        bestLiftResults: {
+          squat: 500,
+          bench: 185,
+          deadlift: null,
+        },
+      })
+
+    const peer =
+      makeLifter({
+        lifterNumber: 42,
+        divisionId: 1,
+        weightClass: '275',
+        bestLiftResults: {
+          squat: 480,
+          bench: 260,
+          deadlift: 410,
+        },
+      })
+
+    expect(
+      hasPeerBestLiftResult(
+        current,
+        [
+          current,
+          peer,
+        ],
+        'deadlift',
+      ),
+    ).toBe(true)
+  })
+
+  test('peer result must be in the same division and weight class', () => {
+    const current =
+      makeLifter({
+        lifterNumber: 999,
+        divisionId: 1,
+        weightClass: '275',
+      })
+
+    const wrongClass =
+      makeLifter({
+        lifterNumber: 42,
+        divisionId: 1,
+        weightClass: '242',
+        bestLiftResults: {
+          squat: null,
+          bench: null,
+          deadlift: 410,
+        },
+      })
+
+    expect(
+      hasPeerBestLiftResult(
+        current,
+        [
+          current,
+          wrongClass,
+        ],
+        'deadlift',
+      ),
+    ).toBe(false)
+  })
+
+  test('peer attempt result can expose a missing attempt for an imported lifter', () => {
+    const current =
+      makeLifter({
+        lifterNumber: 999,
+        divisionId: 1,
+        weightClass: '275',
+      })
+
+    const peer =
+      makeLifter({
+        lifterNumber: 42,
+        divisionId: 1,
+        weightClass: '275',
+      })
+
+    peer.allAttemptResults!.deadlift.attempt3 = {
+      weight: 420,
+      status: 'good',
+    }
+
+    expect(
+      hasPeerAttemptResult(
+        current,
+        [
+          current,
+          peer,
+        ],
+        'deadlift',
+        'attempt3',
       ),
     ).toBe(true)
   })

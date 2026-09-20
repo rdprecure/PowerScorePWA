@@ -46,8 +46,21 @@ import {
 } from './domain/competitionProgress'
 
 import {
+  calculateIndividualStandings,
+  calculateTeamStandings,
+} from './domain/standings'
+
+import type {
+  IndividualStanding,
+  TeamStanding,
+} from './domain/standings'
+
+
+import {
   hasLaterAttemptResultInSequence,
   hasLaterBestLiftResultInSequence,
+  hasPeerAttemptResult,
+  hasPeerBestLiftResult,
   isAttemptResultComplete,
   isAttemptResultMissing,
   isBestLiftResultComplete,
@@ -75,6 +88,20 @@ import type {
 } from './integration/platformManager'
 
 
+import {
+  configureTrainingPlatformManagerFiles,
+  getTrainingPlatformManagerCsv,
+  listProcessedTrainingPlatformManagerFiles,
+  listTrainingPlatformManagerFiles,
+  markTrainingPlatformManagerFileProcessed,
+  resetTrainingPlatformManagerFiles,
+  TRAINING_ALL_ATTEMPTS_MEET_ID,
+  TRAINING_ALL_ATTEMPTS_PLATFORM_MEET_ID,
+  TRAINING_BEST_LIFT_MEET_ID,
+  TRAINING_BEST_LIFT_PLATFORM_MEET_ID,
+} from './training/platformManagerTraining'
+
+
 interface DivisionTeam {
   divisionId: number
   teamId: number
@@ -96,7 +123,9 @@ interface RegistrationDefaults {
 type AppPage =
   | 'registration'
   | 'competition'
+  | 'standings'
   | 'platform-issues'
+  | 'help'
 
 
 type CompetitionLift =
@@ -148,6 +177,36 @@ type BulkSortColumn =
 
 const PLATFORM_MANAGER_HANDLER_URL =
   'https://thspa.us/PlatformManager.ashx'
+
+
+type StandingsOutputScope =
+  | 'individual'
+  | 'team'
+  | 'both'
+
+type StandingsCopyFormat =
+  | 'spreadsheet'
+  | 'formatted'
+
+
+type IndividualStandingsSortColumn =
+  | 'weightClass'
+  | 'place'
+  | 'lifterNumber'
+  | 'lifter'
+  | 'team'
+  | 'bodyWeight'
+  | 'total'
+
+type TeamStandingsSortColumn =
+  | 'place'
+  | 'team'
+  | 'firsts'
+  | 'seconds'
+  | 'thirds'
+  | 'fourths'
+  | 'fifths'
+  | 'totalPoints'
 
 
 type CompetitionSortColumn =
@@ -689,6 +748,190 @@ const localMeets: LocalMeet[] = [
       { divisionId: 2, teamId: 8 },
     ],
   },
+
+  {
+    state: {
+      meet: {
+        id:
+          TRAINING_BEST_LIFT_MEET_ID,
+        name:
+          'PowerScore Training - Best Lift',
+        date:
+          '2026-10-10',
+        location:
+          'Training Only',
+        resultEntryMode:
+          'best-lift-only',
+        platformMeetId:
+          TRAINING_BEST_LIFT_PLATFORM_MEET_ID,
+      },
+
+      divisions: [
+        {
+          id: 101,
+          meetId:
+            TRAINING_BEST_LIFT_MEET_ID,
+          name:
+            'THSPA Training Boys',
+          ruleSet:
+            'THSPA',
+        },
+
+        {
+          id: 102,
+          meetId:
+            TRAINING_BEST_LIFT_MEET_ID,
+          name:
+            'THSWPA Training Girls',
+          ruleSet:
+            'THSWPA',
+        },
+      ],
+
+      teams: [
+        {
+          id: 101,
+          meetId:
+            TRAINING_BEST_LIFT_MEET_ID,
+          name:
+            'Training Mustangs',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 102,
+          meetId:
+            TRAINING_BEST_LIFT_MEET_ID,
+          name:
+            'Training Eagles',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 103,
+          meetId:
+            TRAINING_BEST_LIFT_MEET_ID,
+          name:
+            'Training Tigers',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 104,
+          meetId:
+            TRAINING_BEST_LIFT_MEET_ID,
+          name:
+            'Training Bulldogs',
+          region: null,
+          classification: null,
+        },
+      ],
+
+      lifters: [],
+    },
+
+    divisionTeams: [
+      { divisionId: 101, teamId: 101 },
+      { divisionId: 101, teamId: 102 },
+      { divisionId: 102, teamId: 103 },
+      { divisionId: 102, teamId: 104 },
+    ],
+  },
+
+  {
+    state: {
+      meet: {
+        id:
+          TRAINING_ALL_ATTEMPTS_MEET_ID,
+        name:
+          'PowerScore Training - All Attempts',
+        date:
+          '2026-10-11',
+        location:
+          'Training Only',
+        resultEntryMode:
+          'all-attempts',
+        platformMeetId:
+          TRAINING_ALL_ATTEMPTS_PLATFORM_MEET_ID,
+      },
+
+      divisions: [
+        {
+          id: 201,
+          meetId:
+            TRAINING_ALL_ATTEMPTS_MEET_ID,
+          name:
+            'THSPA Training Boys',
+          ruleSet:
+            'THSPA',
+        },
+
+        {
+          id: 202,
+          meetId:
+            TRAINING_ALL_ATTEMPTS_MEET_ID,
+          name:
+            'THSWPA Training Girls',
+          ruleSet:
+            'THSWPA',
+        },
+      ],
+
+      teams: [
+        {
+          id: 201,
+          meetId:
+            TRAINING_ALL_ATTEMPTS_MEET_ID,
+          name:
+            'Training Mustangs',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 202,
+          meetId:
+            TRAINING_ALL_ATTEMPTS_MEET_ID,
+          name:
+            'Training Eagles',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 203,
+          meetId:
+            TRAINING_ALL_ATTEMPTS_MEET_ID,
+          name:
+            'Training Tigers',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 204,
+          meetId:
+            TRAINING_ALL_ATTEMPTS_MEET_ID,
+          name:
+            'Training Bulldogs',
+          region: null,
+          classification: null,
+        },
+      ],
+
+      lifters: [],
+    },
+
+    divisionTeams: [
+      { divisionId: 201, teamId: 201 },
+      { divisionId: 201, teamId: 202 },
+      { divisionId: 202, teamId: 203 },
+      { divisionId: 202, teamId: 204 },
+    ],
+  },
 ]
 
 function populatePlatformTestMeet():
@@ -842,6 +1085,2439 @@ function populatePlatformTestMeet():
 
 
 populatePlatformTestMeet()
+
+
+const TRAINING_GENERAL_BOYS_FIRST_NAMES = [
+  'Aaron',
+  'Blake',
+  'Caleb',
+  'Cole',
+  'Connor',
+  'Derek',
+  'Ethan',
+  'Garrett',
+  'Gavin',
+  'Grant',
+  'Henry',
+  'Hunter',
+  'Isaac',
+  'Jack',
+  'Jacob',
+  'Kyle',
+  'Landon',
+  'Luke',
+  'Mason',
+  'Nathan',
+  'Owen',
+  'Parker',
+  'Ryan',
+  'Tyler',
+] as const
+
+
+const TRAINING_GENERAL_GIRLS_FIRST_NAMES = [
+  'Abigail',
+  'Allison',
+  'Avery',
+  'Brooke',
+  'Caroline',
+  'Chloe',
+  'Claire',
+  'Ella',
+  'Emily',
+  'Grace',
+  'Hannah',
+  'Hailey',
+  'Katie',
+  'Lauren',
+  'Megan',
+  'Natalie',
+  'Olivia',
+  'Paige',
+  'Rachel',
+  'Sarah',
+  'Taylor',
+  'Victoria',
+  'Whitney',
+  'Zoe',
+] as const
+
+
+const TRAINING_GENERAL_LAST_NAMES = [
+  'Anderson',
+  'Baker',
+  'Bennett',
+  'Brooks',
+  'Campbell',
+  'Carter',
+  'Collins',
+  'Cooper',
+  'Davis',
+  'Edwards',
+  'Foster',
+  'Green',
+  'Harris',
+  'Hayes',
+  'Hill',
+  'Johnson',
+  'King',
+  'Lewis',
+  'Miller',
+  'Moore',
+  'Nelson',
+  'Parker',
+  'Price',
+  'Reed',
+  'Roberts',
+  'Scott',
+  'Smith',
+  'Stewart',
+  'Taylor',
+  'Turner',
+  'Walker',
+  'Wilson',
+] as const
+
+
+const TRAINING_HISPANIC_BOYS_FIRST_NAMES = [
+  'Alejandro',
+  'Andres',
+  'Angel',
+  'Carlos',
+  'Cristian',
+  'Diego',
+  'Eduardo',
+  'Emilio',
+  'Fernando',
+  'Gabriel',
+  'Hector',
+  'Javier',
+  'Jesus',
+  'Jorge',
+  'Jose',
+  'Luis',
+  'Manuel',
+  'Marco',
+  'Mateo',
+  'Miguel',
+  'Rafael',
+  'Ricardo',
+  'Sergio',
+  'Victor',
+] as const
+
+
+const TRAINING_HISPANIC_GIRLS_FIRST_NAMES = [
+  'Adriana',
+  'Alejandra',
+  'Ana',
+  'Camila',
+  'Carolina',
+  'Daniela',
+  'Elena',
+  'Esmeralda',
+  'Gabriela',
+  'Isabella',
+  'Jasmine',
+  'Leticia',
+  'Lucia',
+  'Mariana',
+  'Marisol',
+  'Natalia',
+  'Patricia',
+  'Sofia',
+  'Valeria',
+  'Vanessa',
+  'Veronica',
+  'Ximena',
+  'Yadira',
+  'Yesenia',
+] as const
+
+
+const TRAINING_HISPANIC_LAST_NAMES = [
+  'Alvarez',
+  'Castillo',
+  'Chavez',
+  'Cruz',
+  'Delgado',
+  'Diaz',
+  'Dominguez',
+  'Flores',
+  'Garcia',
+  'Gonzales',
+  'Gonzalez',
+  'Guerrero',
+  'Gutierrez',
+  'Hernandez',
+  'Jimenez',
+  'Lopez',
+  'Martinez',
+  'Mendoza',
+  'Morales',
+  'Navarro',
+  'Ortiz',
+  'Ramirez',
+  'Reyes',
+  'Rodriguez',
+  'Salazar',
+  'Sanchez',
+  'Solis',
+  'Torres',
+  'Valdez',
+  'Vasquez',
+] as const
+
+
+const TRAINING_BLACK_BOYS_FIRST_NAMES = [
+  'Andre',
+  'Anthony',
+  'Brandon',
+  'Cameron',
+  'Darius',
+  'DeAndre',
+  'Donovan',
+  'Elijah',
+  'Isaiah',
+  'Jalen',
+  'Jamal',
+  'Jordan',
+  'Joshua',
+  'Kendrick',
+  'Malcolm',
+  'Marcus',
+  'Miles',
+  'Terrell',
+  'Trevon',
+  'Xavier',
+] as const
+
+
+const TRAINING_BLACK_GIRLS_FIRST_NAMES = [
+  'Aaliyah',
+  'Alexis',
+  'Amaya',
+  'Brianna',
+  'Destiny',
+  'Imani',
+  'Jada',
+  'Jasmine',
+  'Jordan',
+  'Kayla',
+  'Kennedy',
+  'Kiara',
+  'Maya',
+  'Nia',
+  'Raven',
+  'Simone',
+  'Tiana',
+  'Trinity',
+  'Zaria',
+  'Zoe',
+] as const
+
+
+const TRAINING_BLACK_LAST_NAMES = [
+  'Allen',
+  'Banks',
+  'Brown',
+  'Coleman',
+  'Daniels',
+  'Dixon',
+  'Freeman',
+  'Grant',
+  'Hall',
+  'Jackson',
+  'Jefferson',
+  'Jenkins',
+  'Mitchell',
+  'Robinson',
+  'Sanders',
+  'Thomas',
+  'Thompson',
+  'Washington',
+  'Williams',
+  'Wright',
+] as const
+
+
+type TrainingNameCategory =
+  | 'hispanic'
+  | 'black'
+  | 'general'
+
+
+function getTrainingNameCategory(
+  overallIndex: number,
+  seedBase: number,
+): TrainingNameCategory {
+
+  const cycleOffset =
+    getDeterministicTrainingInt(
+      seedBase + 3300,
+      0,
+      9
+    )
+
+  const cycleIndex =
+    (
+      overallIndex +
+      cycleOffset
+    ) %
+    10
+
+  if (
+    cycleIndex < 4
+  ) {
+    return 'hispanic'
+  }
+
+  if (
+    cycleIndex < 6
+  ) {
+    return 'black'
+  }
+
+  return 'general'
+}
+
+
+function getTrainingName(
+  isGirls: boolean,
+  category: TrainingNameCategory,
+  nameIndex: number,
+  classIndex: number,
+  seedBase: number,
+): {
+  firstName: string
+  lastName: string
+} {
+
+  const firstNames =
+    category === 'hispanic'
+      ? (
+          isGirls
+            ? TRAINING_HISPANIC_GIRLS_FIRST_NAMES
+            : TRAINING_HISPANIC_BOYS_FIRST_NAMES
+        )
+      : category === 'black'
+        ? (
+            isGirls
+              ? TRAINING_BLACK_GIRLS_FIRST_NAMES
+              : TRAINING_BLACK_BOYS_FIRST_NAMES
+          )
+        : (
+            isGirls
+              ? TRAINING_GENERAL_GIRLS_FIRST_NAMES
+              : TRAINING_GENERAL_BOYS_FIRST_NAMES
+          )
+
+  const lastNames =
+    category === 'hispanic'
+      ? TRAINING_HISPANIC_LAST_NAMES
+      : category === 'black'
+        ? TRAINING_BLACK_LAST_NAMES
+        : TRAINING_GENERAL_LAST_NAMES
+
+  const firstIndex =
+    (
+      nameIndex * 7 +
+      classIndex * 3 +
+      getDeterministicTrainingInt(
+        seedBase + 4100,
+        0,
+        firstNames.length - 1
+      )
+    ) %
+    firstNames.length
+
+  const lastIndex =
+    (
+      nameIndex * 11 +
+      classIndex * 5 +
+      getDeterministicTrainingInt(
+        seedBase + 4200,
+        0,
+        lastNames.length - 1
+      )
+    ) %
+    lastNames.length
+
+  return {
+    firstName:
+      firstNames[
+        firstIndex
+      ],
+    lastName:
+      lastNames[
+        lastIndex
+      ],
+  }
+}
+
+
+const TRAINING_TEAM_NAMES = [
+  'Levelland',
+  'Gainesville',
+  'Sulphur Springs',
+  'Brenham',
+  'Uvalde',
+  'Alice',
+] as const
+
+
+const TRAINING_TEAMS_PER_DIVISION =
+  6
+
+const TRAINING_MIN_LIFTERS_PER_WEIGHT_CLASS =
+  5
+
+const TRAINING_MAX_LIFTERS_PER_WEIGHT_CLASS =
+  15
+
+const TRAINING_MIN_LIFTERS_PER_TEAM =
+  12
+
+const TRAINING_MAX_LIFTERS_PER_TEAM =
+  20
+
+const TRAINING_BTEAM_LIFTERS_PER_DIVISION =
+  4
+
+
+function createTrainingMeetDefinition(
+  meetId: string,
+): LocalMeet {
+
+  const isBestLift =
+    meetId ===
+    TRAINING_BEST_LIFT_MEET_ID
+
+  const divisionBase =
+    isBestLift
+      ? 100
+      : 200
+
+  const platformMeetId =
+    isBestLift
+      ? TRAINING_BEST_LIFT_PLATFORM_MEET_ID
+      : TRAINING_ALL_ATTEMPTS_PLATFORM_MEET_ID
+
+  return {
+    state: {
+      meet: {
+        id:
+          meetId,
+        name:
+          isBestLift
+            ? 'PowerScore Training - Best Lift'
+            : 'PowerScore Training - All Attempts',
+        date:
+          isBestLift
+            ? '2026-10-10'
+            : '2026-10-11',
+        location:
+          'Training Only',
+        resultEntryMode:
+          isBestLift
+            ? 'best-lift-only'
+            : 'all-attempts',
+        platformMeetId,
+      },
+
+      divisions: [
+        {
+          id:
+            divisionBase + 1,
+          meetId,
+          name:
+            'THSPA Training Boys',
+          ruleSet:
+            'THSPA',
+        },
+
+        {
+          id:
+            divisionBase + 2,
+          meetId,
+          name:
+            'THSWPA Training Girls',
+          ruleSet:
+            'THSWPA',
+        },
+      ],
+
+      teams: [],
+
+      lifters: [],
+    },
+
+    divisionTeams: [],
+  }
+}
+
+
+function ensureTrainingMeetExists(
+  meetId: string,
+): LocalMeet {
+
+  let meet =
+    localMeets.find(
+      item =>
+        item.state.meet.id ===
+        meetId
+    )
+
+  if (
+    meet !== undefined
+  ) {
+    return meet
+  }
+
+  meet =
+    createTrainingMeetDefinition(
+      meetId
+    )
+
+  localMeets.push(
+    meet
+  )
+
+  return meet
+}
+
+
+function getDeterministicTrainingUnit(
+  seed: number,
+): number {
+
+  const value =
+    Math.sin(
+      seed * 12.9898 +
+      78.233
+    ) *
+    43758.5453
+
+  return (
+    value -
+    Math.floor(
+      value
+    )
+  )
+}
+
+
+function getDeterministicTrainingInt(
+  seed: number,
+  minimum: number,
+  maximum: number,
+): number {
+
+  return (
+    minimum +
+    Math.floor(
+      getDeterministicTrainingUnit(
+        seed
+      ) *
+      (
+        maximum -
+        minimum +
+        1
+      )
+    )
+  )
+}
+
+
+function getTrainingWeightClassCounts(
+  weightClassNames:
+    readonly string[],
+  seedBase: number,
+): number[] {
+
+  if (
+    weightClassNames.length === 0
+  ) {
+    return []
+  }
+
+  const lastIndex =
+    weightClassNames.length - 1
+
+  const counts =
+    weightClassNames.map(
+      (
+        _,
+        index
+      ) => {
+        const normalized =
+          lastIndex === 0
+            ? 0
+            : (
+                index /
+                lastIndex
+              ) *
+                2 -
+              1
+
+        const bell =
+          Math.pow(
+            Math.max(
+              0,
+              1 -
+              Math.abs(
+                normalized
+              )
+            ),
+            1.25
+          )
+
+        const baseCount =
+          TRAINING_MIN_LIFTERS_PER_WEIGHT_CLASS +
+          Math.round(
+            bell * 8
+          )
+
+        const jitter =
+          getDeterministicTrainingInt(
+            seedBase +
+              index * 17,
+            -2,
+            2
+          )
+
+        return Math.max(
+          TRAINING_MIN_LIFTERS_PER_WEIGHT_CLASS,
+          Math.min(
+            TRAINING_MAX_LIFTERS_PER_WEIGHT_CLASS,
+            baseCount +
+              jitter
+          )
+        )
+      }
+    )
+
+  const minimumTotal =
+    TRAINING_TEAMS_PER_DIVISION *
+    TRAINING_MIN_LIFTERS_PER_TEAM
+
+  const maximumTotal =
+    TRAINING_TEAMS_PER_DIVISION *
+    TRAINING_MAX_LIFTERS_PER_TEAM
+
+  const center =
+    (
+      counts.length -
+      1
+    ) / 2
+
+  const middleFirstIndexes =
+    counts
+      .map(
+        (
+          _,
+          index
+        ) =>
+          index
+      )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          Math.abs(
+            a -
+            center
+          ) -
+          Math.abs(
+            b -
+            center
+          )
+      )
+
+  let total =
+    counts.reduce(
+      (
+        sum,
+        count
+      ) =>
+        sum +
+        count,
+      0
+    )
+
+  while (
+    total <
+    minimumTotal
+  ) {
+    let changed =
+      false
+
+    for (
+      const index of
+      middleFirstIndexes
+    ) {
+      if (
+        counts[index] >=
+        TRAINING_MAX_LIFTERS_PER_WEIGHT_CLASS
+      ) {
+        continue
+      }
+
+      counts[index] +=
+        1
+
+      total +=
+        1
+
+      changed =
+        true
+
+      if (
+        total >=
+        minimumTotal
+      ) {
+        break
+      }
+    }
+
+    if (
+      !changed
+    ) {
+      break
+    }
+  }
+
+  const outsideFirstIndexes =
+    [...middleFirstIndexes]
+      .reverse()
+
+  while (
+    total >
+    maximumTotal
+  ) {
+    let changed =
+      false
+
+    for (
+      const index of
+      outsideFirstIndexes
+    ) {
+      if (
+        counts[index] <=
+        TRAINING_MIN_LIFTERS_PER_WEIGHT_CLASS
+      ) {
+        continue
+      }
+
+      counts[index] -=
+        1
+
+      total -=
+        1
+
+      changed =
+        true
+
+      if (
+        total <=
+        maximumTotal
+      ) {
+        break
+      }
+    }
+
+    if (
+      !changed
+    ) {
+      break
+    }
+  }
+
+  return counts
+}
+
+
+function getTrainingBodyWeight(
+  weightClassNames:
+    readonly string[],
+  classIndex: number,
+  lifterIndexWithinClass: number,
+  seedBase: number,
+): number {
+
+  const current =
+    Number.parseFloat(
+      weightClassNames[
+        classIndex
+      ]
+    )
+
+  const previous =
+    classIndex > 0
+      ? Number.parseFloat(
+          weightClassNames[
+            classIndex - 1
+          ]
+        )
+      : Number.NaN
+
+  if (
+    Number.isFinite(
+      current
+    )
+  ) {
+    const lower =
+      Number.isFinite(
+        previous
+      )
+        ? previous + 0.2
+        : Math.max(
+            1,
+            current - 9
+          )
+
+    const upper =
+      current - 0.2
+
+    const fraction =
+      0.15 +
+      getDeterministicTrainingUnit(
+        seedBase +
+          classIndex * 101 +
+          lifterIndexWithinClass * 7
+      ) *
+        0.7
+
+    const value =
+      lower +
+      (
+        upper -
+        lower
+      ) *
+        fraction
+
+    return Math.round(
+      value * 10
+    ) / 10
+  }
+
+  if (
+    Number.isFinite(
+      previous
+    )
+  ) {
+    return (
+      Math.round(
+        (
+          previous +
+          7 +
+          getDeterministicTrainingUnit(
+            seedBase +
+              lifterIndexWithinClass * 13
+          ) *
+            13
+        ) *
+          10
+      ) /
+      10
+    )
+  }
+
+  return 150
+}
+
+
+function rebuildTrainingTeams(
+  meet: LocalMeet,
+  boysDivisionId: number,
+  girlsDivisionId: number,
+  teamIdBase: number,
+): number[] {
+
+  meet.state.teams = []
+  meet.divisionTeams = []
+
+  const teamIds:
+    number[] =
+    []
+
+  for (
+    let index = 0;
+    index <
+    TRAINING_TEAMS_PER_DIVISION;
+    index += 1
+  ) {
+    const teamId =
+      teamIdBase +
+      index +
+      1
+
+    teamIds.push(
+      teamId
+    )
+
+    meet.state.teams.push({
+      id:
+        teamId,
+      meetId:
+        meet.state.meet.id,
+      name:
+        TRAINING_TEAM_NAMES[
+          index
+        ],
+      region:
+        null,
+      classification:
+        null,
+      isBTeam:
+        false,
+    })
+
+    meet.divisionTeams.push(
+      {
+        divisionId:
+          boysDivisionId,
+        teamId,
+      },
+
+      {
+        divisionId:
+          girlsDivisionId,
+        teamId,
+      }
+    )
+  }
+
+  return teamIds
+}
+
+
+function getTrainingTeamAssignments(
+  totalLifters: number,
+  seedBase: number,
+): number[] {
+
+  const assignments:
+    number[] =
+    []
+
+  const teamCounts =
+    Array.from(
+      {
+        length:
+          TRAINING_TEAMS_PER_DIVISION,
+      },
+      () =>
+        0
+    )
+
+  for (
+    let index = 0;
+    index <
+    totalLifters;
+    index += 1
+  ) {
+    const eligible =
+      teamCounts
+        .map(
+          (
+            count,
+            teamIndex
+          ) => ({
+            count,
+            teamIndex,
+          })
+        )
+        .filter(
+          item =>
+            item.count <
+            TRAINING_MAX_LIFTERS_PER_TEAM
+        )
+
+    const minimumCount =
+      Math.min(
+        ...eligible.map(
+          item =>
+            item.count
+        )
+      )
+
+    const smallestTeams =
+      eligible.filter(
+        item =>
+          item.count ===
+          minimumCount
+      )
+
+    const choice =
+      smallestTeams[
+        getDeterministicTrainingInt(
+          seedBase +
+            index * 19,
+          0,
+          smallestTeams.length - 1
+        )
+      ]
+
+    assignments.push(
+      choice.teamIndex
+    )
+
+    teamCounts[
+      choice.teamIndex
+    ] +=
+      1
+  }
+
+  return assignments
+}
+
+
+function populateTrainingDivision(
+  meet: LocalMeet,
+  division: Division,
+  teamIds:
+    readonly number[],
+  idBase: number,
+  firstLifterNumber: number,
+  isGirls: boolean,
+  seedBase: number,
+): void {
+
+  const weightClasses =
+    getDivisionRules(
+      division
+    ).weightClasses
+      .map(
+        item =>
+          item.name
+      )
+
+  const classCounts =
+    getTrainingWeightClassCounts(
+      weightClasses,
+      seedBase
+    )
+
+  const totalLifters =
+    classCounts.reduce(
+      (
+        sum,
+        count
+      ) =>
+        sum +
+        count,
+      0
+    )
+
+  const teamAssignments =
+    getTrainingTeamAssignments(
+      totalLifters,
+      seedBase +
+        5000
+    )
+
+  const bTeamIndexes =
+    new Set<number>()
+
+  while (
+    bTeamIndexes.size <
+    Math.min(
+      TRAINING_BTEAM_LIFTERS_PER_DIVISION,
+      totalLifters
+    )
+  ) {
+    bTeamIndexes.add(
+      getDeterministicTrainingInt(
+        seedBase +
+          7000 +
+          bTeamIndexes.size * 37,
+        0,
+        totalLifters - 1
+      )
+    )
+  }
+
+  let overallIndex =
+    0
+
+  classCounts.forEach(
+    (
+      classCount,
+      classIndex
+    ) => {
+      for (
+        let classLifterIndex = 0;
+        classLifterIndex <
+        classCount;
+        classLifterIndex += 1
+      ) {
+        const category =
+          getTrainingNameCategory(
+            overallIndex,
+            seedBase
+          )
+
+        const generatedName =
+          getTrainingName(
+            isGirls,
+            category,
+            overallIndex,
+            classIndex,
+            seedBase
+          )
+
+        let firstName =
+          generatedName.firstName
+
+        let lastName =
+          generatedName.lastName
+
+        let nameAttempt =
+          0
+
+        while (
+          meet.state.lifters.some(
+            existing =>
+              existing.firstName
+                .trim()
+                .toLocaleLowerCase() ===
+                firstName
+                  .trim()
+                  .toLocaleLowerCase() &&
+              existing.lastName
+                .trim()
+                .toLocaleLowerCase() ===
+                lastName
+                  .trim()
+                  .toLocaleLowerCase()
+          )
+        ) {
+          nameAttempt +=
+            1
+
+          const alternateName =
+            getTrainingName(
+              isGirls,
+              category,
+              overallIndex +
+                nameAttempt * 13,
+              classIndex +
+                nameAttempt,
+              seedBase +
+                nameAttempt * 101
+            )
+
+          firstName =
+            alternateName.firstName
+
+          lastName =
+            alternateName.lastName
+        }
+
+        const lifterNumber =
+          firstLifterNumber +
+          overallIndex
+
+        const lifter =
+          createDevelopmentLifter(
+            idBase +
+              overallIndex,
+            lifterNumber,
+            firstName,
+            lastName,
+            division.id,
+            teamIds[
+              teamAssignments[
+                overallIndex
+              ]
+            ],
+            'equipped'
+          )
+
+        lifter.bodyWeight =
+          getTrainingBodyWeight(
+            weightClasses,
+            classIndex,
+            classLifterIndex,
+            seedBase +
+              9000
+          )
+
+        lifter.weightClass =
+          weightClasses[
+            classIndex
+          ]
+
+        lifter.weightClassSource =
+          'automatic'
+
+        lifter.isExtraLifter =
+          bTeamIndexes.has(
+            overallIndex
+          )
+
+        meet.state.lifters.push(
+          lifter
+        )
+
+        overallIndex +=
+          1
+      }
+    }
+  )
+}
+
+
+function populateTrainingRoster(
+  meet: LocalMeet,
+  boysDivisionId: number,
+  girlsDivisionId: number,
+  teamIdBase: number,
+  idBase: number,
+): void {
+
+  meet.state.lifters = []
+
+  const boysDivision =
+    meet.state.divisions.find(
+      division =>
+        division.id ===
+        boysDivisionId
+    )
+
+  const girlsDivision =
+    meet.state.divisions.find(
+      division =>
+        division.id ===
+        girlsDivisionId
+    )
+
+  if (
+    boysDivision === undefined ||
+    girlsDivision === undefined
+  ) {
+    return
+  }
+
+  const teamIds =
+    rebuildTrainingTeams(
+      meet,
+      boysDivisionId,
+      girlsDivisionId,
+      teamIdBase
+    )
+
+  populateTrainingDivision(
+    meet,
+    boysDivision,
+    teamIds,
+    idBase,
+    1,
+    false,
+    idBase + 1100
+  )
+
+  populateTrainingDivision(
+    meet,
+    girlsDivision,
+    teamIds,
+    idBase + 1000,
+    201,
+    true,
+    idBase + 2200
+  )
+}
+
+
+function buildTrainingCsv(
+  rows:
+    readonly (
+      readonly [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+      ]
+    )[],
+): string {
+
+  return [
+    'Platform,Lifter,Round,Weight,Result,Status',
+    ...rows.map(
+      row =>
+        row.join(',')
+    ),
+    '',
+  ].join('\n')
+}
+
+
+function getTrainingLiftWeight(
+  lifter: Lifter,
+  lift:
+    CompetitionLift,
+  attemptNumber = 0,
+): number {
+
+  const bodyWeight =
+    lifter.bodyWeight ??
+    150
+
+  const lifterSeed =
+    lifter.lifterNumber *
+      97 +
+    Math.round(
+      bodyWeight * 10
+    )
+
+  const squatMultiplier =
+    1.55 +
+    getDeterministicTrainingUnit(
+      lifterSeed + 11
+    ) *
+      0.55
+
+  const squatBest =
+    bodyWeight *
+    squatMultiplier
+
+  const deadliftRatio =
+    0.80 +
+    getDeterministicTrainingUnit(
+      lifterSeed + 29
+    ) *
+      0.10
+
+  const benchRatio =
+    0.48 +
+    getDeterministicTrainingUnit(
+      lifterSeed + 47
+    ) *
+      0.14
+
+  const bestWeight =
+    lift ===
+      'squat'
+      ? squatBest
+      : lift ===
+          'deadlift'
+        ? squatBest *
+          deadliftRatio
+        : squatBest *
+          benchRatio
+
+  const round =
+    Math.max(
+      0,
+      attemptNumber
+    )
+
+  const attemptAdjustment =
+    round <= 0
+      ? 0
+      : (
+          round -
+          3
+        ) *
+          10
+
+  return Math.max(
+    45,
+    Math.round(
+      (
+        bestWeight +
+        attemptAdjustment
+      ) /
+      5
+    ) *
+      5
+  )
+}
+
+
+interface TrainingAttempt {
+  weight: number
+  result: 0 | 1
+}
+
+
+function getTrainingAttemptPlan(
+  lifter: Lifter,
+  lift: CompetitionLift,
+  platform: number,
+  lifterIndex: number,
+): readonly [
+  TrainingAttempt,
+  TrainingAttempt,
+  TrainingAttempt,
+] {
+
+  const seed =
+    lifter.lifterNumber *
+      131 +
+    platform *
+      43 +
+    lifterIndex *
+      17 +
+    (
+      lift ===
+        'squat'
+        ? 3
+        : lift ===
+            'bench'
+          ? 7
+          : 11
+    )
+
+  const opener =
+    getTrainingLiftWeight(
+      lifter,
+      lift,
+      1
+    )
+
+  const firstIncrease =
+    getDeterministicTrainingInt(
+      seed + 101,
+      1,
+      3
+    ) *
+      5
+
+  const secondIncrease =
+    getDeterministicTrainingInt(
+      seed + 211,
+      1,
+      3
+    ) *
+      5
+
+  const pattern =
+    getDeterministicTrainingInt(
+      seed + 307,
+      0,
+      4
+    )
+
+  if (
+    pattern === 0
+  ) {
+    return [
+      {
+        weight:
+          opener,
+        result: 0,
+      },
+      {
+        weight:
+          opener,
+        result: 1,
+      },
+      {
+        weight:
+          opener +
+          secondIncrease,
+        result: 1,
+      },
+    ]
+  }
+
+  if (
+    pattern === 1
+  ) {
+    const secondWeight =
+      opener +
+      firstIncrease
+
+    return [
+      {
+        weight:
+          opener,
+        result: 1,
+      },
+      {
+        weight:
+          secondWeight,
+        result: 0,
+      },
+      {
+        weight:
+          secondWeight,
+        result: 1,
+      },
+    ]
+  }
+
+  if (
+    pattern === 2
+  ) {
+    return [
+      {
+        weight:
+          opener,
+        result: 1,
+      },
+      {
+        weight:
+          opener +
+          firstIncrease,
+        result: 1,
+      },
+      {
+        weight:
+          opener +
+          firstIncrease +
+          secondIncrease,
+        result: 0,
+      },
+    ]
+  }
+
+  return [
+    {
+      weight:
+        opener,
+      result: 1,
+    },
+    {
+      weight:
+        opener +
+        firstIncrease,
+      result: 1,
+    },
+    {
+      weight:
+        opener +
+        firstIncrease +
+        secondIncrease,
+      result: 1,
+    },
+  ]
+}
+
+
+interface TrainingWeightClassGroup {
+  divisionId: number
+  weightClass: string
+  sortWeight: number
+  lifters: Lifter[]
+}
+
+
+function getTrainingWeightClassSortWeight(
+  weightClass: string,
+  fallback: number,
+): number {
+
+  const parsed =
+    Number.parseFloat(
+      weightClass
+    )
+
+  if (
+    Number.isFinite(
+      parsed
+    )
+  ) {
+    return parsed
+  }
+
+  return fallback
+}
+
+
+function getTrainingWeightClassGroups(
+  meet: LocalMeet,
+): TrainingWeightClassGroup[] {
+
+  const groups:
+    TrainingWeightClassGroup[] =
+    []
+
+  meet.state.divisions.forEach(
+    (
+      division,
+      divisionIndex
+    ) => {
+      const weightClasses =
+        getDivisionRules(
+          division
+        ).weightClasses
+          .map(
+            item =>
+              item.name
+          )
+
+      weightClasses.forEach(
+        (
+          weightClass,
+          classIndex
+        ) => {
+          const lifters =
+            meet.state.lifters
+              .filter(
+                lifter =>
+                  lifter.divisionId ===
+                    division.id &&
+                  lifter.weightClass ===
+                    weightClass
+              )
+              .sort(
+                (
+                  a,
+                  b
+                ) =>
+                  a.lifterNumber -
+                  b.lifterNumber
+              )
+
+          if (
+            lifters.length === 0
+          ) {
+            return
+          }
+
+          groups.push({
+            divisionId:
+              division.id,
+            weightClass,
+            sortWeight:
+              getTrainingWeightClassSortWeight(
+                weightClass,
+                1000 +
+                  divisionIndex * 100 +
+                  classIndex
+              ),
+            lifters,
+          })
+        }
+      )
+    }
+  )
+
+  return groups.sort(
+    (
+      a,
+      b
+    ) => {
+      if (
+        a.sortWeight !==
+        b.sortWeight
+      ) {
+        return (
+          a.sortWeight -
+          b.sortWeight
+        )
+      }
+
+      return (
+        a.divisionId -
+        b.divisionId
+      )
+    }
+  )
+}
+
+
+function getTrainingPlatformAssignments(
+  meet: LocalMeet,
+):
+  Array<{
+    platform: number
+    groups:
+      TrainingWeightClassGroup[]
+    lifters:
+      Lifter[]
+  }> {
+
+  const platformCount =
+    6
+
+  const groups =
+    getTrainingWeightClassGroups(
+      meet
+    )
+
+  const totalLifters =
+    groups.reduce(
+      (
+        sum,
+        group
+      ) =>
+        sum +
+        group.lifters.length,
+      0
+    )
+
+  const target =
+    totalLifters /
+    platformCount
+
+  const assignments:
+    Array<{
+      platform: number
+      groups:
+        TrainingWeightClassGroup[]
+      lifters:
+        Lifter[]
+    }> =
+    []
+
+  let groupIndex =
+    0
+
+  for (
+    let platform = 1;
+    platform <=
+    platformCount;
+    platform += 1
+  ) {
+    const groupsRemaining =
+      groups.length -
+      groupIndex
+
+    const platformsRemaining =
+      platformCount -
+      platform +
+      1
+
+    const platformGroups:
+      TrainingWeightClassGroup[] =
+      []
+
+    let platformLifterCount =
+      0
+
+    while (
+      groupIndex <
+      groups.length
+    ) {
+      const groupsAfterTaking =
+        groups.length -
+        (
+          groupIndex +
+          1
+        )
+
+      const mustLeaveAtLeastOneGroupPerPlatform =
+        groupsAfterTaking <
+        platformsRemaining -
+          1
+
+      if (
+        mustLeaveAtLeastOneGroupPerPlatform
+      ) {
+        break
+      }
+
+      const nextGroup =
+        groups[
+          groupIndex
+        ]
+
+      const nextTotal =
+        platformLifterCount +
+        nextGroup.lifters.length
+
+      const platformTarget =
+        target
+
+      const currentDistance =
+        Math.abs(
+          platformLifterCount -
+          platformTarget
+        )
+
+      const nextDistance =
+        Math.abs(
+          nextTotal -
+          platformTarget
+        )
+
+      const shouldTakeNext =
+        platformGroups.length === 0 ||
+        nextDistance <=
+          currentDistance ||
+        groupsRemaining ===
+          platformsRemaining
+
+      if (
+        !shouldTakeNext
+      ) {
+        break
+      }
+
+      platformGroups.push(
+        nextGroup
+      )
+
+      platformLifterCount =
+        nextTotal
+
+      groupIndex +=
+        1
+    }
+
+    assignments.push({
+      platform,
+      groups:
+        platformGroups,
+      lifters:
+        platformGroups.flatMap(
+          group =>
+            group.lifters
+        ),
+    })
+  }
+
+  // If rounding left any groups behind, append them to the final platform.
+  if (
+    groupIndex <
+    groups.length
+  ) {
+    const final =
+      assignments[
+        assignments.length -
+        1
+      ]
+
+    while (
+      groupIndex <
+      groups.length
+    ) {
+      const group =
+        groups[
+          groupIndex
+        ]
+
+      final.groups.push(
+        group
+      )
+
+      final.lifters.push(
+        ...group.lifters
+      )
+
+      groupIndex +=
+        1
+    }
+  }
+
+  return assignments
+}
+
+
+function getTrainingPlatformLifters(
+  meet: LocalMeet,
+  platform: number,
+): Lifter[] {
+
+  return (
+    getTrainingPlatformAssignments(
+      meet
+    )
+      .find(
+        assignment =>
+          assignment.platform ===
+          platform
+      )
+      ?.lifters ??
+    []
+  )
+}
+
+
+function configureBestLiftTrainingFiles(
+  meet: LocalMeet,
+): void {
+
+  const files:
+    Array<{
+      name: string
+      csv: string
+    }> =
+    []
+
+  for (
+    let platform = 1;
+    platform <= 6;
+    platform += 1
+  ) {
+    const lifters =
+      getTrainingPlatformLifters(
+        meet,
+        platform
+      )
+
+    const squatRows =
+      lifters.map(
+        lifter => [
+          platform,
+          lifter.lifterNumber,
+          0,
+          getTrainingLiftWeight(
+            lifter,
+            'squat'
+          ),
+          1,
+          0,
+        ] as const
+      )
+
+    files.push({
+      name:
+        `${TRAINING_BEST_LIFT_PLATFORM_MEET_ID}__Platform${platform}__Squat__BestLifts.csv`,
+      csv:
+        buildTrainingCsv(
+          squatRows
+        ),
+    })
+
+    const benchRows =
+      lifters.map(
+        lifter => [
+          platform,
+          lifter.lifterNumber,
+          0,
+          getTrainingLiftWeight(
+            lifter,
+            'bench'
+          ),
+          1,
+          0,
+        ] as const
+      )
+
+    if (
+      platform === 3
+    ) {
+      benchRows.push(
+        [
+          platform,
+          999,
+          0,
+          185,
+          1,
+          0,
+        ]
+      )
+    }
+
+    files.push({
+      name:
+        `${TRAINING_BEST_LIFT_PLATFORM_MEET_ID}__Platform${platform}__Bench__BestLifts.csv`,
+      csv:
+        buildTrainingCsv(
+          benchRows
+        ),
+    })
+
+    const missingIndex =
+      (
+        platform === 4 ||
+        platform === 6
+      ) &&
+      lifters.length > 2
+        ? Math.max(
+            1,
+            Math.floor(
+              lifters.length / 2
+            )
+          )
+        : -1
+
+    const statusIndex =
+      (
+        platform === 5 ||
+        platform === 6
+      ) &&
+      lifters.length > 1
+        ? Math.max(
+            0,
+            lifters.length - 2
+          )
+        : -1
+
+    const deadliftRows =
+      lifters
+        .filter(
+          (
+            _,
+            index
+          ) =>
+            index !==
+            missingIndex
+        )
+        .map(
+          lifter => {
+            const originalIndex =
+              lifters.indexOf(
+                lifter
+              )
+
+            if (
+              originalIndex ===
+              statusIndex
+            ) {
+              return [
+                platform,
+                lifter.lifterNumber,
+                0,
+                0,
+                platform === 5
+                  ? 0
+                  : 2,
+                platform === 5
+                  ? 1
+                  : 2,
+              ] as const
+            }
+
+            return [
+              platform,
+              lifter.lifterNumber,
+              0,
+              getTrainingLiftWeight(
+                lifter,
+                'deadlift'
+              ),
+              1,
+              0,
+            ] as const
+          }
+        )
+
+    files.push({
+      name:
+        `${TRAINING_BEST_LIFT_PLATFORM_MEET_ID}__Platform${platform}__Deadlift__BestLifts.csv`,
+      csv:
+        buildTrainingCsv(
+          deadliftRows
+        ),
+    })
+  }
+
+  configureTrainingPlatformManagerFiles(
+    TRAINING_BEST_LIFT_PLATFORM_MEET_ID,
+    files
+  )
+}
+
+
+function configureAllAttemptsTrainingFiles(
+  meet: LocalMeet,
+): void {
+
+  const files:
+    Array<{
+      name: string
+      csv: string
+    }> =
+    []
+
+  const lifts:
+    readonly CompetitionLift[] =
+    [
+      'squat',
+      'bench',
+      'deadlift',
+    ]
+
+  for (
+    let platform = 1;
+    platform <= 6;
+    platform += 1
+  ) {
+    const lifters =
+      getTrainingPlatformLifters(
+        meet,
+        platform
+      )
+
+    for (
+      const lift of
+      lifts
+    ) {
+      const plans:
+        Array<
+          readonly [
+            TrainingAttempt,
+            TrainingAttempt,
+            TrainingAttempt,
+          ]
+        > =
+        lifters.map(
+          (
+            lifter,
+            index
+          ) =>
+            getTrainingAttemptPlan(
+              lifter,
+              lift,
+              platform,
+              index
+            )
+        )
+
+      const missingIndex =
+        Math.max(
+          1,
+          Math.floor(
+            lifters.length / 2
+          )
+        )
+
+      const bombIndex =
+        Math.max(
+          0,
+          lifters.length - 2
+        )
+
+      const statusIndex =
+        Math.max(
+          0,
+          lifters.length - 3
+        )
+
+      if (
+        lift ===
+          'squat' &&
+        lifters.length > 0
+      ) {
+        const opener =
+          getTrainingLiftWeight(
+            lifters[
+              bombIndex
+            ],
+            lift,
+            1
+          )
+
+        plans[
+          bombIndex
+        ] = [
+          {
+            weight:
+              opener,
+            result: 0,
+          },
+          {
+            weight:
+              opener +
+              5,
+            result: 0,
+          },
+          {
+            weight:
+              opener +
+              10,
+            result: 0,
+          },
+        ]
+      }
+
+      for (
+        let round = 1;
+        round <= 3;
+        round += 1
+      ) {
+        const rows:
+          Array<
+            readonly [
+              number,
+              number,
+              number,
+              number,
+              number,
+              number,
+            ]
+          > =
+          []
+
+        lifters.forEach(
+          (
+            lifter,
+            index
+          ) => {
+            if (
+              lift !==
+                'squat' &&
+              index ===
+                bombIndex
+            ) {
+              return
+            }
+
+            if (
+              lift ===
+                'deadlift' &&
+              round ===
+                3 &&
+              (
+                platform === 5 ||
+                platform === 6
+              ) &&
+              index ===
+                statusIndex
+            ) {
+              return
+            }
+
+            if (
+              lift ===
+                'bench' &&
+              round ===
+                2 &&
+              (
+                platform === 4 ||
+                platform === 5
+              ) &&
+              index ===
+                missingIndex
+            ) {
+              return
+            }
+
+            if (
+              lift ===
+                'deadlift' &&
+              round ===
+                3 &&
+              (
+                platform === 4 ||
+                platform === 6
+              ) &&
+              index ===
+                missingIndex
+            ) {
+              return
+            }
+
+            let status =
+              0
+
+            let attempt =
+              plans[
+                index
+              ][
+                round - 1
+              ]
+
+            if (
+              lift ===
+                'deadlift' &&
+              round ===
+                2 &&
+              (
+                platform === 5 ||
+                platform === 6
+              ) &&
+              index ===
+                statusIndex
+            ) {
+              status =
+                platform === 5
+                  ? 2
+                  : 3
+
+              attempt = {
+                weight: 0,
+                result: 1,
+              }
+            }
+
+            rows.push(
+              [
+                platform,
+                lifter.lifterNumber,
+                round,
+                status === 0
+                  ? attempt.weight
+                  : 0,
+                status === 0
+                  ? attempt.result
+                  : 2,
+                status,
+              ]
+            )
+          }
+        )
+
+        if (
+          platform === 3 &&
+          lift ===
+            'bench' &&
+          round ===
+            3
+        ) {
+          rows.push(
+            [
+              platform,
+              998,
+              round,
+              205,
+              1,
+              0,
+            ]
+          )
+        }
+
+        const liftName =
+          lift ===
+            'squat'
+            ? 'Squat'
+            : lift ===
+                'bench'
+              ? 'Bench'
+              : 'Deadlift'
+
+        files.push({
+          name:
+            `${TRAINING_ALL_ATTEMPTS_PLATFORM_MEET_ID}__Platform${platform}__${liftName}__Round${round}.csv`,
+          csv:
+            buildTrainingCsv(
+              rows
+            ),
+        })
+      }
+    }
+  }
+
+  configureTrainingPlatformManagerFiles(
+    TRAINING_ALL_ATTEMPTS_PLATFORM_MEET_ID,
+    files
+  )
+}
+
+
+function populateTrainingMeet(
+  meetId: string,
+  forceReset = false,
+): void {
+
+  const meet =
+    ensureTrainingMeetExists(
+      meetId
+    )
+
+  if (
+    !forceReset &&
+    meet.state.lifters.length > 0
+  ) {
+    return
+  }
+
+  const isBestLift =
+    meetId ===
+    TRAINING_BEST_LIFT_MEET_ID
+
+  const divisionBase =
+    isBestLift
+      ? 100
+      : 200
+
+  const teamIdBase =
+    isBestLift
+      ? 1000
+      : 2000
+
+  populateTrainingRoster(
+    meet,
+    divisionBase + 1,
+    divisionBase + 2,
+    teamIdBase,
+    isBestLift
+      ? 10000
+      : 20000
+  )
+
+  if (
+    isBestLift
+  ) {
+    configureBestLiftTrainingFiles(
+      meet
+    )
+  } else {
+    configureAllAttemptsTrainingFiles(
+      meet
+    )
+  }
+}
+
+
+function openTrainingMeet(
+  meetId: string,
+  reset = false,
+): void {
+
+  populateTrainingMeet(
+    meetId,
+    reset
+  )
+
+  const meet =
+    ensureTrainingMeetExists(
+      meetId
+    )
+
+  if (
+    meet.state.lifters.length === 0
+  ) {
+    populateTrainingMeet(
+      meetId,
+      true
+    )
+  }
+
+  const platformMeetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  if (
+    reset
+  ) {
+    resetTrainingPlatformManagerFiles(
+      platformMeetId
+    )
+  }
+
+  pendingPlatformResultCountByMeetId.set(
+    platformMeetId,
+    listTrainingPlatformManagerFiles(
+      platformMeetId
+    ).length
+  )
+
+  selectedMeetId =
+    meetId
+
+  selectedDivisionId =
+    meet.state.divisions[0]?.id ??
+    null
+
+  selectedTeamId =
+    meet.state.teams[0]?.id ??
+    null
+
+  currentPage =
+    'registration'
+
+  renderApp()
+}
+
+
+populateTrainingMeet(
+  TRAINING_BEST_LIFT_MEET_ID
+)
+
+populateTrainingMeet(
+  TRAINING_ALL_ATTEMPTS_MEET_ID
+)
 
 
 function expandDevelopmentMeetLifters():
@@ -1337,6 +4013,20 @@ let competitionSortColumn:
 
 
 let competitionSortAscending =
+  true
+
+let individualStandingsSortColumn:
+  IndividualStandingsSortColumn =
+    'weightClass'
+
+let individualStandingsSortAscending =
+  true
+
+let teamStandingsSortColumn:
+  TeamStandingsSortColumn =
+    'place'
+
+let teamStandingsSortAscending =
   true
 
 
@@ -3226,6 +5916,27 @@ function saveLifterEdit(
     return false
   }
 
+  const duplicateName =
+    findDuplicateLifterName(
+      meet,
+      firstName,
+      lastName,
+      lifter.id
+    )
+
+  if (
+    duplicateName !==
+    undefined
+  ) {
+    showDuplicateLifterNameMessage(
+      duplicateName
+    )
+
+    firstInput.focus()
+
+    return false
+  }
+
   const bodyWeight =
     bodyWeightInput.value.trim() ===
     ''
@@ -4606,9 +7317,13 @@ function renderNavigation():
       </button>
 
       <button
+        id="navStandings"
         type="button"
-        class="nav-item"
-        disabled
+        class="nav-item ${
+          currentPage === 'standings'
+            ? 'active'
+            : ''
+        }"
       >
         Standings
       </button>
@@ -4627,6 +7342,19 @@ function renderNavigation():
         disabled
       >
         Reports
+      </button>
+
+      <button
+        id="navHelp"
+        type="button"
+        class="nav-item ${
+          currentPage ===
+          'help'
+            ? 'active'
+            : ''
+        }"
+      >
+        Help
       </button>
 
       ${
@@ -4780,6 +7508,1474 @@ function renderShortcutHelpDialog():
         Q means Disqualified. D is reserved exclusively for moving to Divisions.
       </p>
     </dialog>
+  `
+}
+
+
+function getStandingsTeamName(
+  meet: LocalMeet,
+  teamId: number | null,
+): string {
+  if (teamId === null) return 'Unattached'
+
+  return (
+    meet.state.teams.find(
+      team => team.id === teamId
+    )?.name ??
+    'Unknown Team'
+  )
+}
+
+
+function getStandingsData(
+  meet: LocalMeet,
+) {
+  const division = getSelectedDivision()
+
+  if (division === undefined) {
+    return {
+      division: undefined,
+      individual: [] as IndividualStanding[],
+      teams: [] as TeamStanding[],
+    }
+  }
+
+  const individual = calculateIndividualStandings(
+    meet.state.lifters
+      .filter(lifter => lifter.divisionId === division.id)
+      .map(lifter => ({
+        id: lifter.id,
+        lifterNumber: lifter.lifterNumber,
+        firstName: lifter.firstName,
+        lastName: lifter.lastName,
+        teamId: lifter.teamId,
+        bodyWeight: lifter.bodyWeight,
+        weightClass: lifter.weightClass,
+        status: lifter.status,
+        isGuest: lifter.isGuest,
+        isExtraLifter: lifter.isExtraLifter,
+        squat: getCompetitionBestLiftValue(meet, lifter, 'squat'),
+        bench: getCompetitionBestLiftValue(meet, lifter, 'bench'),
+        deadlift: getCompetitionBestLiftValue(meet, lifter, 'deadlift'),
+      }))
+  )
+
+  return {
+    division,
+    individual,
+    teams: calculateTeamStandings(individual),
+  }
+}
+
+
+function compareStandingsText(
+  a: string,
+  b: string,
+  ascending: boolean,
+): number {
+  const result = a.localeCompare(
+    b,
+    undefined,
+    {
+      sensitivity: 'base',
+      numeric: true,
+    }
+  )
+
+  return ascending ? result : -result
+}
+
+
+function getSortedIndividualStandings(
+  meet: LocalMeet,
+  rows: readonly IndividualStanding[],
+): IndividualStanding[] {
+  return [...rows].sort((a, b) => {
+    let result = 0
+
+    switch (individualStandingsSortColumn) {
+      case 'weightClass':
+        result =
+          getWeightClassSortValue(a.weightClass) -
+          getWeightClassSortValue(b.weightClass)
+
+        if (!individualStandingsSortAscending) result = -result
+
+        if (result === 0) result = a.place - b.place
+        break
+
+      case 'place':
+        result = a.place - b.place
+        break
+
+      case 'lifterNumber':
+        result = a.lifterNumber - b.lifterNumber
+        break
+
+      case 'lifter':
+        return compareStandingsText(
+          `${a.lastName}, ${a.firstName}`,
+          `${b.lastName}, ${b.firstName}`,
+          individualStandingsSortAscending
+        )
+
+      case 'team':
+        return compareStandingsText(
+          getStandingsTeamName(meet, a.teamId),
+          getStandingsTeamName(meet, b.teamId),
+          individualStandingsSortAscending
+        )
+
+      case 'bodyWeight':
+        result = a.bodyWeight - b.bodyWeight
+        break
+
+      case 'total':
+        result = a.total - b.total
+        break
+    }
+
+    if (
+      individualStandingsSortColumn !== 'weightClass' &&
+      !individualStandingsSortAscending
+    ) {
+      result = -result
+    }
+
+    if (result !== 0) return result
+    return a.lifterNumber - b.lifterNumber
+  })
+}
+
+
+function getSortedTeamStandings(
+  meet: LocalMeet,
+  rows: readonly TeamStanding[],
+): TeamStanding[] {
+  return [...rows].sort((a, b) => {
+    let result = 0
+
+    switch (teamStandingsSortColumn) {
+      case 'place': result = a.place - b.place; break
+      case 'team':
+        return compareStandingsText(
+          getStandingsTeamName(meet, a.teamId),
+          getStandingsTeamName(meet, b.teamId),
+          teamStandingsSortAscending
+        )
+      case 'firsts': result = a.firsts - b.firsts; break
+      case 'seconds': result = a.seconds - b.seconds; break
+      case 'thirds': result = a.thirds - b.thirds; break
+      case 'fourths': result = a.fourths - b.fourths; break
+      case 'fifths': result = a.fifths - b.fifths; break
+      case 'totalPoints': result = a.totalPoints - b.totalPoints; break
+    }
+
+    if (!teamStandingsSortAscending) result = -result
+    if (result !== 0) return result
+    return a.place - b.place
+  })
+}
+
+
+function renderIndividualStandingsSortHeader(
+  label: string,
+  column: IndividualStandingsSortColumn,
+): string {
+  const active = individualStandingsSortColumn === column
+
+  return `
+    <th>
+      <button
+        type="button"
+        class="standings-sort-button ${active ? 'active' : ''}"
+        data-individual-standings-sort="${column}"
+      >
+        <span>${escapeHtml(label)}</span>
+        <span>${active ? (individualStandingsSortAscending ? '▲' : '▼') : ''}</span>
+      </button>
+    </th>
+  `
+}
+
+
+function renderTeamStandingsSortHeader(
+  label: string,
+  column: TeamStandingsSortColumn,
+): string {
+  const active = teamStandingsSortColumn === column
+
+  return `
+    <th>
+      <button
+        type="button"
+        class="standings-sort-button ${active ? 'active' : ''}"
+        data-team-standings-sort="${column}"
+      >
+        <span>${escapeHtml(label)}</span>
+        <span>${active ? (teamStandingsSortAscending ? '▲' : '▼') : ''}</span>
+      </button>
+    </th>
+  `
+}
+
+
+function renderStandingsDivisionTabs(
+  meet: LocalMeet,
+): string {
+  return `
+    <div class="standings-division-tabs">
+      ${meet.state.divisions.map(
+        division => `
+          <button
+            type="button"
+            class="standings-division-tab ${division.id === selectedDivisionId ? 'active' : ''}"
+            data-standings-division="${division.id}"
+          >
+            ${escapeHtml(division.name)}
+          </button>
+        `
+      ).join('')}
+    </div>
+  `
+}
+
+
+function renderStandings(): string {
+  const meet = getSelectedMeet()
+
+  if (meet === undefined) {
+    return `
+      <main class="standings-page">
+        <div class="empty-state">Select a meet to view standings.</div>
+      </main>
+    `
+  }
+
+  const { division, individual, teams } = getStandingsData(meet)
+
+  if (division === undefined) {
+    return `
+      <main class="standings-page">
+        ${renderStandingsDivisionTabs(meet)}
+        <div class="empty-state">Select a division to view standings.</div>
+      </main>
+    `
+  }
+
+  const sortedIndividual = getSortedIndividualStandings(meet, individual)
+  const sortedTeams = getSortedTeamStandings(meet, teams)
+
+  return `
+    <main class="standings-page">
+
+      <div class="standings-screen-toolbar no-print">
+        <div>
+          <div class="standings-print-menu">
+            <button
+              id="printStandingsMenu"
+              type="button"
+              class="compact-button"
+            >
+              Print ▾
+            </button>
+
+            <div
+              id="standingsPrintOptions"
+              class="standings-print-options"
+              hidden
+            >
+              <button
+                type="button"
+                data-print-standings="individual"
+              >
+                Individual
+              </button>
+
+              <button
+                type="button"
+                data-print-standings="team"
+              >
+                Team
+              </button>
+
+              <button
+                type="button"
+                data-print-standings="both"
+              >
+                Both
+              </button>
+            </div>
+          </div>
+
+          <div class="standings-copy-menu">
+            <button id="copyStandingsMenu" type="button" class="compact-button">
+              Copy ▾
+            </button>
+
+            <div
+              id="standingsCopyOptions"
+              class="standings-copy-options"
+              hidden
+            >
+              <button
+                type="button"
+                data-copy-format="spreadsheet"
+              >
+                Copy for Spreadsheet ▸
+              </button>
+
+              <button
+                type="button"
+                data-copy-format="formatted"
+              >
+                Copy Formatted ▸
+              </button>
+
+              <div
+                id="standingsCopyScopeOptions"
+                class="standings-copy-scope-options"
+                hidden
+              >
+                <button
+                  type="button"
+                  data-copy-scope="individual"
+                >
+                  Individual
+                </button>
+
+                <button
+                  type="button"
+                  data-copy-scope="team"
+                >
+                  Team
+                </button>
+
+                <button
+                  type="button"
+                  data-copy-scope="both"
+                >
+                  Both
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            id="resetStandingsSort"
+            type="button"
+            class="compact-button"
+            title="Restore default standings sorting"
+          >
+            Reset Sort
+          </button>
+        </div>
+
+        <div class="standings-toolbar-note">
+          Click a column heading to sort. Sorting does not change official placing.
+        </div>
+      </div>
+
+      ${renderStandingsDivisionTabs(meet)}
+
+      <section class="standings-print-heading">
+        <h1 class="print-only">${escapeHtml(meet.state.meet.name)}</h1>
+        <h2>${escapeHtml(division.name)} Standings</h2>
+      </section>
+
+      <div class="standings-layout">
+
+        <section class="standings-panel individual-standings-panel">
+          <div class="standings-panel-heading">
+            <h2>Individual Standings</h2>
+            <span>${individual.length} completed lifters</span>
+          </div>
+
+          <div class="standings-table-scroll">
+            <table class="standings-table">
+              <thead>
+                <tr>
+                  ${renderIndividualStandingsSortHeader('Wt. Class', 'weightClass')}
+                  ${renderIndividualStandingsSortHeader('Place', 'place')}
+                  ${renderIndividualStandingsSortHeader('Lifter #', 'lifterNumber')}
+                  ${renderIndividualStandingsSortHeader('Lifter', 'lifter')}
+                  ${renderIndividualStandingsSortHeader('Team', 'team')}
+                  ${renderIndividualStandingsSortHeader('BWT', 'bodyWeight')}
+                  ${renderIndividualStandingsSortHeader('Total', 'total')}
+                </tr>
+              </thead>
+              <tbody>
+                ${
+                  sortedIndividual.length === 0
+                    ? '<tr><td colspan="7" class="standings-empty-row">No completed lifters yet.</td></tr>'
+                    : sortedIndividual.map(
+                        row => `
+                          <tr>
+                            <td class="numeric">${escapeHtml(row.weightClass)}</td>
+                            <td class="numeric">${row.place}</td>
+                            <td class="numeric">${row.lifterNumber}</td>
+                            <td class="lifter-name">
+                              ${escapeHtml(`${row.lastName}, ${row.firstName}`)}
+                              ${row.isExtraLifter ? '<span class="standings-extra-marker">(B)</span>' : ''}
+                            </td>
+                            <td>${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
+                            <td class="numeric">${row.bodyWeight.toFixed(1)}</td>
+                            <td class="numeric standings-total">${row.total}</td>
+                          </tr>
+                        `
+                      ).join('')
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="standings-panel team-standings-panel">
+          <div class="standings-panel-heading">
+            <h2>Team Standings</h2>
+            <span>7-5-3-2-1 scoring</span>
+          </div>
+
+          <div class="standings-table-scroll">
+            <table class="standings-table">
+              <thead>
+                <tr>
+                  ${renderTeamStandingsSortHeader('Place', 'place')}
+                  ${renderTeamStandingsSortHeader('Team', 'team')}
+                  ${renderTeamStandingsSortHeader('1st x7', 'firsts')}
+                  ${renderTeamStandingsSortHeader('2nd x5', 'seconds')}
+                  ${renderTeamStandingsSortHeader('3rd x3', 'thirds')}
+                  ${renderTeamStandingsSortHeader('4th x2', 'fourths')}
+                  ${renderTeamStandingsSortHeader('5th x1', 'fifths')}
+                  ${renderTeamStandingsSortHeader('Total Pts.', 'totalPoints')}
+                </tr>
+              </thead>
+              <tbody>
+                ${
+                  sortedTeams.length === 0
+                    ? '<tr><td colspan="8" class="standings-empty-row">No team points have been scored yet.</td></tr>'
+                    : sortedTeams.map(
+                        row => `
+                          <tr>
+                            <td class="numeric">${row.place}</td>
+                            <td>${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
+                            <td class="numeric">${row.firsts}</td>
+                            <td class="numeric">${row.seconds}</td>
+                            <td class="numeric">${row.thirds}</td>
+                            <td class="numeric">${row.fourths}</td>
+                            <td class="numeric">${row.fifths}</td>
+                            <td class="numeric standings-total">${row.totalPoints}</td>
+                          </tr>
+                        `
+                      ).join('')
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  `
+}
+
+
+function getStandingsSpreadsheetText(
+  meet: LocalMeet,
+  scope:
+    StandingsOutputScope =
+      'both',
+): string {
+
+  const {
+    division,
+    individual,
+    teams,
+  } =
+    getStandingsData(
+      meet
+    )
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const lines:
+    string[] =
+    [
+      meet.state.meet.name,
+      `${division.name} Standings`,
+    ]
+
+  if (
+    scope ===
+      'individual' ||
+    scope ===
+      'both'
+  ) {
+    lines.push(
+      '',
+      'Individual Standings',
+      [
+        'Wt. Class',
+        'Place',
+        'Lifter #',
+        'Lifter',
+        'Team',
+        'BWT',
+        'Total',
+      ].join('\t')
+    )
+
+    getSortedIndividualStandings(
+      meet,
+      individual
+    ).forEach(
+      row => {
+        lines.push(
+          [
+            row.weightClass,
+            row.place,
+            row.lifterNumber,
+            `${row.lastName}, ${row.firstName}${row.isExtraLifter ? ' (B)' : ''}`,
+            getStandingsTeamName(
+              meet,
+              row.teamId
+            ),
+            row.bodyWeight.toFixed(
+              1
+            ),
+            row.total,
+          ].join('\t')
+        )
+      }
+    )
+  }
+
+  if (
+    scope ===
+      'team' ||
+    scope ===
+      'both'
+  ) {
+    lines.push(
+      '',
+      'Team Standings',
+      [
+        'Place',
+        'Team',
+        '1st x7',
+        '2nd x5',
+        '3rd x3',
+        '4th x2',
+        '5th x1',
+        'Total Pts.',
+      ].join('\t')
+    )
+
+    getSortedTeamStandings(
+      meet,
+      teams
+    ).forEach(
+      row => {
+        lines.push(
+          [
+            row.place,
+            getStandingsTeamName(
+              meet,
+              row.teamId
+            ),
+            row.firsts,
+            row.seconds,
+            row.thirds,
+            row.fourths,
+            row.fifths,
+            row.totalPoints,
+          ].join('\t')
+        )
+      }
+    )
+  }
+
+  return lines.join('\n')
+}
+
+
+function getStandingsFormattedHtml(
+  meet: LocalMeet,
+  scope:
+    StandingsOutputScope =
+      'both',
+): string {
+
+  const {
+    division,
+    individual,
+    teams,
+  } =
+    getStandingsData(
+      meet
+    )
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const th =
+    'border:1px solid #9ca3af;background:#dbe7f3;padding:6px 8px;font-weight:700;'
+
+  const td =
+    'border:1px solid #cbd5e1;padding:5px 7px;'
+
+  const individualRows =
+    getSortedIndividualStandings(
+      meet,
+      individual
+    )
+      .map(
+        row => `
+          <tr>
+            <td style="${td}">${escapeHtml(row.weightClass)}</td>
+            <td style="${td}text-align:center">${row.place}</td>
+            <td style="${td}text-align:center">${row.lifterNumber}</td>
+            <td style="${td}">${escapeHtml(`${row.lastName}, ${row.firstName}${row.isExtraLifter ? ' (B)' : ''}`)}</td>
+            <td style="${td}">${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
+            <td style="${td}text-align:right">${row.bodyWeight.toFixed(1)}</td>
+            <td style="${td}text-align:right;font-weight:700">${row.total}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+  const teamRows =
+    getSortedTeamStandings(
+      meet,
+      teams
+    )
+      .map(
+        row => `
+          <tr>
+            <td style="${td}text-align:center">${row.place}</td>
+            <td style="${td}">${escapeHtml(getStandingsTeamName(meet, row.teamId))}</td>
+            <td style="${td}text-align:center">${row.firsts}</td>
+            <td style="${td}text-align:center">${row.seconds}</td>
+            <td style="${td}text-align:center">${row.thirds}</td>
+            <td style="${td}text-align:center">${row.fourths}</td>
+            <td style="${td}text-align:center">${row.fifths}</td>
+            <td style="${td}text-align:right;font-weight:700">${row.totalPoints}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+  const individualSection =
+    scope ===
+      'team'
+      ? ''
+      : `
+        <h3>Individual Standings</h3>
+        <table style="border-collapse:collapse;width:100%;font-size:12px;margin-bottom:18px;">
+          <thead><tr>
+            <th style="${th}">Wt. Class</th><th style="${th}">Place</th>
+            <th style="${th}">Lifter #</th><th style="${th}">Lifter</th>
+            <th style="${th}">Team</th><th style="${th}">BWT</th>
+            <th style="${th}">Total</th>
+          </tr></thead>
+          <tbody>${individualRows}</tbody>
+        </table>
+      `
+
+  const teamSection =
+    scope ===
+      'individual'
+      ? ''
+      : `
+        <h3>Team Standings</h3>
+        <table style="border-collapse:collapse;width:100%;font-size:12px;">
+          <thead><tr>
+            <th style="${th}">Place</th><th style="${th}">Team</th>
+            <th style="${th}">1st x7</th><th style="${th}">2nd x5</th>
+            <th style="${th}">3rd x3</th><th style="${th}">4th x2</th>
+            <th style="${th}">5th x1</th><th style="${th}">Total Pts.</th>
+          </tr></thead>
+          <tbody>${teamRows}</tbody>
+        </table>
+      `
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#111827;">
+      <h2 style="margin:0 0 2px;">${escapeHtml(meet.state.meet.name)}</h2>
+      <h3 style="margin:0 0 14px;">${escapeHtml(division.name)} Standings</h3>
+      ${individualSection}
+      ${teamSection}
+    </div>
+  `
+}
+
+
+async function copyStandingsForSpreadsheet(
+  scope:
+    StandingsOutputScope,
+): Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  await navigator.clipboard.writeText(
+    getStandingsSpreadsheetText(
+      meet,
+      scope
+    )
+  )
+
+  window.alert(
+    'Standings copied for spreadsheet paste.'
+  )
+}
+
+
+async function copyStandingsFormatted(
+  scope:
+    StandingsOutputScope,
+): Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const plainText =
+    getStandingsSpreadsheetText(
+      meet,
+      scope
+    )
+
+  const html =
+    getStandingsFormattedHtml(
+      meet,
+      scope
+    )
+
+  if (
+    typeof ClipboardItem !==
+      'undefined' &&
+    navigator.clipboard.write !==
+      undefined
+  ) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain':
+          new Blob(
+            [plainText],
+            {
+              type:
+                'text/plain',
+            }
+          ),
+        'text/html':
+          new Blob(
+            [html],
+            {
+              type:
+                'text/html',
+            }
+          ),
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(
+      plainText
+    )
+  }
+
+  window.alert(
+    'Formatted standings copied. Paste into email or Word.'
+  )
+}
+
+
+function wireStandings(): void {
+  document
+    .querySelectorAll<HTMLButtonElement>('[data-standings-division]')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        const divisionId = Number(button.dataset.standingsDivision)
+        if (!Number.isFinite(divisionId)) return
+
+        selectedDivisionId = divisionId
+        renderApp()
+      })
+    })
+
+  document
+    .querySelectorAll<HTMLButtonElement>('[data-individual-standings-sort]')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        const column =
+          button.dataset.individualStandingsSort as IndividualStandingsSortColumn
+
+        if (individualStandingsSortColumn === column) {
+          individualStandingsSortAscending = !individualStandingsSortAscending
+        } else {
+          individualStandingsSortColumn = column
+          individualStandingsSortAscending = column !== 'total'
+        }
+
+        renderApp()
+      })
+    })
+
+  document
+    .querySelectorAll<HTMLButtonElement>('[data-team-standings-sort]')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        const column =
+          button.dataset.teamStandingsSort as TeamStandingsSortColumn
+
+        if (teamStandingsSortColumn === column) {
+          teamStandingsSortAscending = !teamStandingsSortAscending
+        } else {
+          teamStandingsSortColumn = column
+          teamStandingsSortAscending =
+            column === 'place' || column === 'team'
+        }
+
+        renderApp()
+      })
+    })
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#resetStandingsSort'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        individualStandingsSortColumn =
+          'weightClass'
+
+        individualStandingsSortAscending =
+          true
+
+        teamStandingsSortColumn =
+          'place'
+
+        teamStandingsSortAscending =
+          true
+
+        renderApp()
+      }
+    )
+
+  const copyOptions =
+    document
+      .querySelector<HTMLDivElement>(
+        '#standingsCopyOptions'
+      )
+
+  const copyScopeOptions =
+    document
+      .querySelector<HTMLDivElement>(
+        '#standingsCopyScopeOptions'
+      )
+
+  const printOptions =
+    document
+      .querySelector<HTMLDivElement>(
+        '#standingsPrintOptions'
+      )
+
+  const copyMenu =
+    document
+      .querySelector<HTMLButtonElement>(
+        '#copyStandingsMenu'
+      )
+
+  const printMenu =
+    document
+      .querySelector<HTMLButtonElement>(
+        '#printStandingsMenu'
+      )
+
+  let selectedCopyFormat:
+    StandingsCopyFormat =
+      'spreadsheet'
+
+  const closeStandingsMenus =
+    () => {
+      if (
+        copyOptions !==
+        null
+      ) {
+        copyOptions.hidden =
+          true
+      }
+
+      if (
+        copyScopeOptions !==
+        null
+      ) {
+        copyScopeOptions.hidden =
+          true
+      }
+
+      if (
+        printOptions !==
+        null
+      ) {
+        printOptions.hidden =
+          true
+      }
+    }
+
+  copyMenu
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+
+        if (
+          copyOptions ===
+          null
+        ) {
+          return
+        }
+
+        const opening =
+          copyOptions.hidden
+
+        closeStandingsMenus()
+
+        copyOptions.hidden =
+          !opening
+      }
+    )
+
+  printMenu
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+
+        if (
+          printOptions ===
+          null
+        ) {
+          return
+        }
+
+        const opening =
+          printOptions.hidden
+
+        closeStandingsMenus()
+
+        printOptions.hidden =
+          !opening
+      }
+    )
+
+  copyOptions
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+      }
+    )
+
+  printOptions
+    ?.addEventListener(
+      'click',
+      event => {
+        event.stopPropagation()
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-copy-format]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            selectedCopyFormat =
+              button.dataset
+                .copyFormat as
+                  StandingsCopyFormat
+
+            if (
+              copyScopeOptions !==
+              null
+            ) {
+              copyScopeOptions.hidden =
+                false
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-copy-scope]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const scope =
+              button.dataset
+                .copyScope as
+                  StandingsOutputScope
+
+            closeStandingsMenus()
+
+            if (
+              selectedCopyFormat ===
+              'formatted'
+            ) {
+              void copyStandingsFormatted(
+                scope
+              )
+            } else {
+              void copyStandingsForSpreadsheet(
+                scope
+              )
+            }
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-print-standings]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            closeStandingsMenus()
+
+            const mode =
+              button.dataset
+                .printStandings ??
+              'both'
+
+            document.body.classList.remove(
+              'standings-print-individual',
+              'standings-print-team'
+            )
+
+            if (
+              mode ===
+              'individual'
+            ) {
+              document.body.classList.add(
+                'standings-print-individual'
+              )
+            } else if (
+              mode ===
+              'team'
+            ) {
+              document.body.classList.add(
+                'standings-print-team'
+              )
+            }
+
+            window.addEventListener(
+              'afterprint',
+              () => {
+                document.body.classList.remove(
+                  'standings-print-individual',
+                  'standings-print-team'
+                )
+              },
+              {
+                once: true,
+              }
+            )
+
+            window.print()
+          }
+        )
+      }
+    )
+
+  document.addEventListener(
+    'click',
+    closeStandingsMenus,
+    {
+      once: true,
+    }
+  )
+}
+
+
+function renderHelp():
+  string {
+
+  return `
+    <main class="help-page">
+
+      <section class="help-hero">
+        <div>
+          <h1>PowerScore Help</h1>
+
+          <p>
+            PowerScore is designed to follow the same basic meet workflow you already know.
+            Use this Quick Start Guide as a first-time walkthrough or as a refresher before meet day.
+          </p>
+        </div>
+
+        <div class="help-hero-note">
+          <strong>Quick reminder</strong>
+          <span>
+            Registration sets up the meet. Competition records and checks the lifting results.
+          </span>
+        </div>
+      </section>
+
+      <section class="help-section">
+        <div class="help-section-heading">
+          <div>
+            <h2>Quick Start Guide</h2>
+            <p>Follow these steps in order for a typical meet.</p>
+          </div>
+        </div>
+
+        <div class="help-workflow">
+
+          <article class="help-phase">
+            <div class="help-phase-title">
+              <span class="help-phase-number">1</span>
+              <div>
+                <h3>Before the Meet</h3>
+                <p>Set up the meet and make sure the roster is ready.</p>
+              </div>
+            </div>
+
+            <ol class="help-step-list">
+              <li>
+                <strong>Select or create the meet.</strong>
+                Enter the meet name, date, location, and result-entry mode.
+              </li>
+
+              <li>
+                <strong>Create the divisions.</strong>
+                Choose the correct association/rule set for each division.
+              </li>
+
+              <li>
+                <strong>Add the teams.</strong>
+                Attach each team to the appropriate division.
+              </li>
+
+              <li>
+                <strong>Register the lifters.</strong>
+                Verify lifter number, name, team, body weight, equipment, status, and weight class.
+              </li>
+
+              <li>
+                <strong>Generate a Platform MeetID if PlatformManager will be used.</strong>
+                The same MeetID is entered into each PlatformManager station for this meet.
+              </li>
+            </ol>
+
+            <div class="help-callout">
+              <strong>Before competition starts:</strong>
+              Resolve any lifter marked Needs Attention, Platform Incomplete, or Division Required.
+            </div>
+          </article>
+
+          <article class="help-phase">
+            <div class="help-phase-title">
+              <span class="help-phase-number">2</span>
+              <div>
+                <h3>During the Meet</h3>
+                <p>Enter results manually or bring them in from PlatformManager.</p>
+              </div>
+            </div>
+
+            <ol class="help-step-list">
+              <li>
+                <strong>Open Competition and select the division.</strong>
+                Use the weight-class tabs to narrow the display when needed.
+              </li>
+
+              <li>
+                <strong>Enter results as they become available.</strong>
+                Places, SubTotal, and Total update continuously as results are entered.
+              </li>
+
+              <li>
+                <strong>Watch for PlatformManager results.</strong>
+                When pending files exist, the Check for Platform Results button shows the number available.
+              </li>
+
+              <li>
+                <strong>Import PlatformManager files deliberately.</strong>
+                Open the Platform Results Manager, select the file or files you want, and import them.
+                Successfully imported files move to the Processed list.
+              </li>
+
+              <li>
+                <strong>Monitor overall entry progress.</strong>
+                Use Show Data Entry Progress to see how many lifters have results in each weight class.
+              </li>
+
+              <li>
+                <strong>Watch for missing-result warnings.</strong>
+                A darker red result cell and flagged column header indicate an entry that appears to have been skipped.
+              </li>
+            </ol>
+
+            <div class="help-callout">
+              <strong>Near the end of an event:</strong>
+              Use Review Missing Results to check all remaining blank or zero entries for active lifters.
+            </div>
+          </article>
+
+          <article class="help-phase">
+            <div class="help-phase-title">
+              <span class="help-phase-number">3</span>
+              <div>
+                <h3>Resolve Exceptions</h3>
+                <p>Fix issues as they are discovered instead of waiting until the end.</p>
+              </div>
+            </div>
+
+            <ol class="help-step-list">
+              <li>
+                <strong>Platform Incomplete:</strong>
+                A PlatformManager lifter was not already registered in PowerScore.
+                Supply the missing name, team, and body weight.
+              </li>
+
+              <li>
+                <strong>Division Required:</strong>
+                PowerScore could not safely determine the lifter's division.
+                Select the correct division before completing the lifter.
+              </li>
+
+              <li>
+                <strong>No BWT:</strong>
+                Enter a valid body weight so PowerScore can assign the correct weight class.
+              </li>
+
+              <li>
+                <strong>Missing result:</strong>
+                Verify the platform record or correct the result directly on the Competition page.
+              </li>
+            </ol>
+          </article>
+
+        </div>
+      </section>
+
+      <section class="help-section">
+        <div class="help-section-heading">
+          <div>
+            <h2>PlatformManager Quick Reference</h2>
+            <p>The Platform MeetID connects PlatformManager submissions to the correct PowerScore meet.</p>
+          </div>
+        </div>
+
+        <div class="help-reference-grid">
+          <article class="help-reference-card">
+            <h3>MeetID</h3>
+            <p>
+              Generate the MeetID on Registration. It uses four letters followed by four numbers.
+              Enter the same MeetID into every PlatformManager station for the meet.
+            </p>
+          </article>
+
+          <article class="help-reference-card">
+            <h3>Available Results</h3>
+            <p>
+              PowerScore checks for pending PlatformManager files while Competition is open.
+              The button shows a count when files are waiting.
+            </p>
+          </article>
+
+          <article class="help-reference-card">
+            <h3>Controlled Import</h3>
+            <p>
+              PowerScore does not blindly import every file. Select the results you want to import.
+              Processed files remain visible for reference.
+            </p>
+          </article>
+
+          <article class="help-reference-card">
+            <h3>Unexpected Lifters</h3>
+            <p>
+              If a lifter number is not registered, PowerScore creates an incomplete lifter record and
+              sends it to Platform Issues for correction.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="help-section">
+        <div class="help-section-heading">
+          <div>
+            <h2>Lifter Status Reference</h2>
+            <p>Competition status is separate from registration/readiness issues.</p>
+          </div>
+        </div>
+
+        <div class="help-status-grid">
+          <div class="help-status-item">
+            <strong>Active</strong>
+            <span>Lifter is competing normally.</span>
+          </div>
+
+          <div class="help-status-item">
+            <strong>BO</strong>
+            <span>Bombed Out. Three failed attempts in a lift also sets BO automatically.</span>
+          </div>
+
+          <div class="help-status-item">
+            <strong>SC</strong>
+            <span>Scratched. The lifter is no longer expected to receive additional results.</span>
+          </div>
+
+          <div class="help-status-item">
+            <strong>DQ</strong>
+            <span>Disqualified. The lifter is no longer expected to receive additional results.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="help-section help-shortcuts-section">
+        <div>
+          <h2>Keyboard Shortcuts</h2>
+          <p>
+            Registration and Competition both include a Shortcut Help button in the navigation bar.
+            Use it for the keyboard commands available on the page you are working in.
+          </p>
+        </div>
+
+        <div class="help-shortcut-examples">
+          <span><kbd>Tab</kbd> Move through entry fields</span>
+          <span><kbd>Enter</kbd> Advance through result entry</span>
+          <span><kbd>G</kbd> Good</span>
+          <span><kbd>R</kbd> Failed</span>
+          <span><kbd>W</kbd> Unknown</span>
+          <span><kbd>B</kbd> BO</span>
+          <span><kbd>S</kbd> SC</span>
+          <span><kbd>Q</kbd> DQ</span>
+        </div>
+      </section>
+
+      <section class="help-section help-training-meet">
+        <div class="help-section-heading">
+          <div>
+            <h2>Practice with Training Meets</h2>
+            <p>
+              Both training meets are isolated from the live PlatformManager queue.
+              Each division has six Texas-town teams, includes a small number of B-team lifters,
+              and represents every weight class currently available in PowerScore.
+              Weight-class participation follows a realistic bell curve, and the classes are distributed
+              across six mixed boys/girls platforms while keeping each weight class intact.
+            </p>
+          </div>
+        </div>
+
+        <div class="help-training-meet-grid">
+          <div>
+            <h3>Best Lift Training</h3>
+            <p>
+              MeetID <strong>TRNG1001</strong>. Uses the Best Lift entry mode.
+              Squat imports are intentionally clean across all six platforms.
+              Bench introduces an unknown lifter later in the sequence,
+              and Deadlift adds missing-result and status scenarios on selected platforms.
+            </p>
+
+            <div class="help-training-actions">
+              <button
+                id="openBestLiftTrainingMeet"
+                type="button"
+                class="compact-button"
+              >
+                Open Best Lift Training
+              </button>
+
+              <button
+                id="resetBestLiftTrainingMeet"
+                type="button"
+                class="compact-button secondary-button"
+              >
+                Reset Best Lift Training
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h3>All Attempts Training</h3>
+            <p>
+              MeetID <strong>TRNG2001</strong>. Uses three attempts per lift.
+              The Squat files begin clean across all six platforms.
+              Later Bench and Deadlift rounds introduce skipped attempts, an unknown lifter,
+              SC/DQ statuses, and a natural bomb-out.
+            </p>
+
+            <div class="help-training-actions">
+              <button
+                id="openAllAttemptsTrainingMeet"
+                type="button"
+                class="compact-button"
+              >
+                Open All Attempts Training
+              </button>
+
+              <button
+                id="resetAllAttemptsTrainingMeet"
+                type="button"
+                class="compact-button secondary-button"
+              >
+                Reset All Attempts Training
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-callout">
+          <strong>Suggested practice sequence:</strong>
+          Start with Squat. The first imports are designed to build confidence.
+          Continue through Bench and Deadlift as the exercises become progressively more complex.
+        </div>
+      </section>
+
+      <section class="help-training-placeholder">
+        <div>
+          <h2>Training Videos</h2>
+          <p>
+            Short training videos will be added here as the remaining PowerScore workflows are finalized.
+          </p>
+        </div>
+
+        <span class="help-coming-soon">Coming later</span>
+      </section>
+
+    </main>
   `
 }
 
@@ -6045,11 +10241,21 @@ function getWeightClassSortValue(
       value
     )
 
-  return Number.isFinite(
-    parsed
+  if (
+    !Number.isFinite(
+      parsed
+    )
+  ) {
+    return 9999
+  }
+
+  return (
+    value.trim().endsWith(
+      '+'
+    )
+      ? parsed + 0.1
+      : parsed
   )
-    ? parsed
-    : 9999
 }
 
 
@@ -8436,6 +12642,30 @@ function saveBulkEdit(
         )
     )
 
+  const usedNames =
+    new Map<
+      string,
+      Lifter
+    >(
+      meet.state.lifters
+        .filter(
+          lifter =>
+            !editedIds.has(
+              lifter.id
+            )
+        )
+        .map(
+          lifter => [
+            `${normalizeLifterNamePart(
+              lifter.firstName
+            )}|${normalizeLifterNamePart(
+              lifter.lastName
+            )}`,
+            lifter,
+          ]
+        )
+    )
+
   const updates:
     Array<{
       lifter: Lifter
@@ -8586,6 +12816,40 @@ function saveBulkEdit(
 
       return false
     }
+
+    const nameKey =
+      `${normalizeLifterNamePart(
+        firstName
+      )}|${normalizeLifterNamePart(
+        lastName
+      )}`
+
+    const duplicateName =
+      usedNames.get(
+        nameKey
+      )
+
+    if (
+      duplicateName !==
+      undefined
+    ) {
+      showDuplicateLifterNameMessage(
+        duplicateName
+      )
+
+      firstInput.focus()
+
+      return false
+    }
+
+    usedNames.set(
+      nameKey,
+      {
+        ...lifter,
+        firstName,
+        lastName,
+      }
+    )
 
     const bodyWeight =
       bodyWeightInput.value.trim() ===
@@ -10653,13 +14917,36 @@ function isBestLiftMissingForCompetition(
     return false
   }
 
-  return hasLaterBestLiftResultInSequence(
-    lifter,
+  const competitionLifters =
     getCompetitionLifters(
       meet
-    ),
-    lift
-  )
+    )
+
+  if (
+    hasLaterBestLiftResultInSequence(
+      lifter,
+      competitionLifters,
+      lift
+    )
+  ) {
+    return true
+  }
+
+  if (
+    isPlatformManagerCreatedLifter(
+      lifter
+    ) &&
+    lifter.weightClass !==
+      null
+  ) {
+    return hasPeerBestLiftResult(
+      lifter,
+      competitionLifters,
+      lift
+    )
+  }
+
+  return false
 }
 
 
@@ -10705,14 +14992,38 @@ function isAttemptMissingForCompetition(
     return false
   }
 
-  return hasLaterAttemptResultInSequence(
-    lifter,
+  const competitionLifters =
     getCompetitionLifters(
       meet
-    ),
-    lift,
-    attemptKey
-  )
+    )
+
+  if (
+    hasLaterAttemptResultInSequence(
+      lifter,
+      competitionLifters,
+      lift,
+      attemptKey
+    )
+  ) {
+    return true
+  }
+
+  if (
+    isPlatformManagerCreatedLifter(
+      lifter
+    ) &&
+    lifter.weightClass !==
+      null
+  ) {
+    return hasPeerAttemptResult(
+      lifter,
+      competitionLifters,
+      lift,
+      attemptKey
+    )
+  }
+
+  return false
 }
 
 
@@ -11554,7 +15865,24 @@ type PlatformImportedLifter =
   Lifter & {
     platformRegistrationState?:
       PlatformRegistrationState
+
+    platformManagerCreated?:
+      boolean
   }
+
+
+function isPlatformManagerCreatedLifter(
+  lifter: Lifter,
+): boolean {
+
+  return (
+    (
+      lifter as
+        PlatformImportedLifter
+    ).platformManagerCreated ===
+    true
+  )
+}
 
 
 function getPlatformRegistrationState(
@@ -11731,7 +16059,13 @@ function createPlatformIncompleteLifter(
       isExtraLifter: false,
       declaredDeadliftOpener:
         null,
-    }
+    };
+
+  (
+    lifter as
+      PlatformImportedLifter
+  ).platformManagerCreated =
+    true
 
   setPlatformRegistrationState(
     lifter,
@@ -13128,6 +17462,125 @@ function renderPlatformResultsDialog(
 }
 
 
+function isTrainingMeet(
+  meet: LocalMeet,
+): boolean {
+
+  return (
+    meet.state.meet.id ===
+      TRAINING_BEST_LIFT_MEET_ID ||
+    meet.state.meet.id ===
+      TRAINING_ALL_ATTEMPTS_MEET_ID
+  )
+}
+
+
+async function listAvailablePlatformResultFiles(
+  meet: LocalMeet,
+): Promise<Array<{
+  name: string
+}>> {
+
+  if (
+    isTrainingMeet(
+      meet
+    )
+  ) {
+    return listTrainingPlatformManagerFiles(
+      getNormalizedPlatformMeetId(
+        meet
+      )
+    )
+  }
+
+  return listPlatformManagerSubmissions(
+    PLATFORM_MANAGER_HANDLER_URL,
+    getNormalizedPlatformMeetId(
+      meet
+    )
+  )
+}
+
+
+async function listProcessedPlatformResultFiles(
+  meet: LocalMeet,
+): Promise<Array<{
+  name: string
+}>> {
+
+  if (
+    isTrainingMeet(
+      meet
+    )
+  ) {
+    return listProcessedTrainingPlatformManagerFiles(
+      getNormalizedPlatformMeetId(
+        meet
+      )
+    )
+  }
+
+  return listProcessedPlatformManagerSubmissions(
+    PLATFORM_MANAGER_HANDLER_URL,
+    getNormalizedPlatformMeetId(
+      meet
+    )
+  )
+}
+
+
+async function getPlatformResultCsvForMeet(
+  meet: LocalMeet,
+  filename: string,
+): Promise<string> {
+
+  if (
+    isTrainingMeet(
+      meet
+    )
+  ) {
+    return getTrainingPlatformManagerCsv(
+      getNormalizedPlatformMeetId(
+        meet
+      ),
+      filename
+    )
+  }
+
+  return getPlatformManagerSubmissionCsv(
+    PLATFORM_MANAGER_HANDLER_URL,
+    filename
+  )
+}
+
+
+async function markPlatformResultProcessedForMeet(
+  meet: LocalMeet,
+  filename: string,
+): Promise<void> {
+
+  if (
+    isTrainingMeet(
+      meet
+    )
+  ) {
+    markTrainingPlatformManagerFileProcessed(
+      getNormalizedPlatformMeetId(
+        meet
+      ),
+      filename
+    )
+
+    return
+  }
+
+  await markPlatformManagerSubmissionProcessed(
+    PLATFORM_MANAGER_HANDLER_URL,
+    filename
+  )
+}
+
+
 async function loadPlatformResultFileLists(
   meet: LocalMeet,
 ): Promise<{
@@ -13139,23 +17592,16 @@ async function loadPlatformResultFileLists(
   }>
 }> {
 
-  const meetId =
-    getNormalizedPlatformMeetId(
-      meet
-    )
-
   const [
     availableFiles,
     processedFiles,
   ] =
     await Promise.all([
-      listPlatformManagerSubmissions(
-        PLATFORM_MANAGER_HANDLER_URL,
-        meetId
+      listAvailablePlatformResultFiles(
+        meet
       ),
-      listProcessedPlatformManagerSubmissions(
-        PLATFORM_MANAGER_HANDLER_URL,
-        meetId
+      listProcessedPlatformResultFiles(
+        meet
       ),
     ])
 
@@ -13323,8 +17769,8 @@ async function importSelectedPlatformResults():
       }
 
       const csv =
-        await getPlatformManagerSubmissionCsv(
-          PLATFORM_MANAGER_HANDLER_URL,
+        await getPlatformResultCsvForMeet(
+          meet,
           filename
         )
 
@@ -13352,8 +17798,8 @@ async function importSelectedPlatformResults():
           ]
         )
 
-      await markPlatformManagerSubmissionProcessed(
-        PLATFORM_MANAGER_HANDLER_URL,
+      await markPlatformResultProcessedForMeet(
+        meet,
         filename
       )
 
@@ -13542,9 +17988,8 @@ async function refreshPlatformResultsAvailability():
 
   try {
     const files =
-      await listPlatformManagerSubmissions(
-        PLATFORM_MANAGER_HANDLER_URL,
-        meetId
+      await listAvailablePlatformResultFiles(
+        meet
       )
 
     const count =
@@ -14524,6 +18969,13 @@ function toggleMissingResultsReviewForSelectedDivision():
   } else {
     missingResultsReviewDivisions.add(
       key
+    )
+
+    selectedCompetitionWeightClass =
+      null
+
+    rememberCompetitionWeightClass(
+      meet
     )
   }
 
@@ -16156,6 +20608,65 @@ function selectCompetitionRow(
 }
 
 
+function wireHelp():
+  void {
+
+  const wireTrainingButton =
+    (
+      buttonId: string,
+      meetId: string,
+      reset: boolean,
+    ) => {
+      document
+        .querySelector<HTMLButtonElement>(
+          `#${buttonId}`
+        )
+        ?.addEventListener(
+          'click',
+          () => {
+            if (
+              reset &&
+              !window.confirm(
+                'Reset this PowerScore training meet? This clears its competition results and restores all simulated PlatformManager files.'
+              )
+            ) {
+              return
+            }
+
+            openTrainingMeet(
+              meetId,
+              reset
+            )
+          }
+        )
+    }
+
+  wireTrainingButton(
+    'openBestLiftTrainingMeet',
+    TRAINING_BEST_LIFT_MEET_ID,
+    false
+  )
+
+  wireTrainingButton(
+    'resetBestLiftTrainingMeet',
+    TRAINING_BEST_LIFT_MEET_ID,
+    true
+  )
+
+  wireTrainingButton(
+    'openAllAttemptsTrainingMeet',
+    TRAINING_ALL_ATTEMPTS_MEET_ID,
+    false
+  )
+
+  wireTrainingButton(
+    'resetAllAttemptsTrainingMeet',
+    TRAINING_ALL_ATTEMPTS_MEET_ID,
+    true
+  )
+}
+
+
 function wireCompetition():
   void {
 
@@ -16979,6 +21490,72 @@ function updateEditLifterWeightClasses():
 }
 
 
+function normalizeLifterNamePart(
+  value: string,
+): string {
+
+  return value
+    .trim()
+    .replace(
+      /\s+/g,
+      ' '
+    )
+    .toLocaleLowerCase()
+}
+
+
+function findDuplicateLifterName(
+  meet: LocalMeet,
+  firstName: string,
+  lastName: string,
+  excludeLifterId:
+    number | null =
+      null,
+): Lifter | undefined {
+
+  const normalizedFirst =
+    normalizeLifterNamePart(
+      firstName
+    )
+
+  const normalizedLast =
+    normalizeLifterNamePart(
+      lastName
+    )
+
+  if (
+    normalizedFirst === '' ||
+    normalizedLast === ''
+  ) {
+    return undefined
+  }
+
+  return meet.state.lifters.find(
+    lifter =>
+      lifter.id !==
+        excludeLifterId &&
+      normalizeLifterNamePart(
+        lifter.firstName
+      ) ===
+        normalizedFirst &&
+      normalizeLifterNamePart(
+        lifter.lastName
+      ) ===
+        normalizedLast
+  )
+}
+
+
+function showDuplicateLifterNameMessage(
+  duplicate: Lifter,
+): void {
+
+  window.alert(
+    `A lifter named ${duplicate.firstName} ${duplicate.lastName} is already registered in this meet as lifter #${duplicate.lifterNumber}.`
+  )
+}
+
+
 function commitNewLifter():
   void {
 
@@ -17101,6 +21678,26 @@ function commitNewLifter():
     )
 
     lastInput.focus()
+
+    return
+  }
+
+  const duplicateName =
+    findDuplicateLifterName(
+      meet,
+      firstName,
+      lastName
+    )
+
+  if (
+    duplicateName !==
+    undefined
+  ) {
+    showDuplicateLifterNameMessage(
+      duplicateName
+    )
+
+    firstInput.focus()
 
     return
   }
@@ -17337,6 +21934,55 @@ function wireNavigation(): void {
             meet
           )
         }
+
+        renderApp()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#navStandings'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(true) ||
+          !finishActiveEdit(true, false)
+        ) {
+          return
+        }
+
+        currentPage = 'standings'
+        renderApp()
+      }
+    )
+
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#navHelp'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        activeEntry =
+          null
+
+        currentPage =
+          'help'
 
         renderApp()
       }
@@ -19252,9 +23898,15 @@ function renderApp(): void {
         'competition'
           ? renderCompetition()
           : currentPage ===
+              'standings'
+            ? renderStandings()
+            : currentPage ===
               'platform-issues'
             ? renderPlatformImportIssues()
-            : renderRegistration()
+            : currentPage ===
+                'help'
+              ? renderHelp()
+              : renderRegistration()
       }
 
     </div>
@@ -19270,6 +23922,28 @@ function renderApp(): void {
     wireCompetition()
     wireCompetitionStatusShortcuts()
     wireSelectAllOnEditableInputs()
+
+    return
+  }
+
+  if (
+    currentPage ===
+    'standings'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+    wireStandings()
+    return
+  }
+
+  if (
+    currentPage ===
+    'help'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+
+    wireHelp()
 
     return
   }

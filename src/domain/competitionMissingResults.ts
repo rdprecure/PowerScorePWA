@@ -209,3 +209,43 @@ export function hasLaterAttemptResultInSequence(
       ),
   )
 }
+
+
+export function hasPeerBestLiftResult(
+  lifter: CompetitionProgressLifter,
+  peers: readonly CompetitionProgressLifter[],
+  lift: CompetitionProgressLift,
+): boolean {
+  return peers.some(
+    peer =>
+      peer !== lifter &&
+      peer.status === 'active' &&
+      peer.divisionId === lifter.divisionId &&
+      peer.weightClass === lifter.weightClass &&
+      isBestLiftResultComplete(
+        peer,
+        lift,
+      ),
+  )
+}
+
+
+export function hasPeerAttemptResult(
+  lifter: CompetitionProgressLifter,
+  peers: readonly CompetitionProgressLifter[],
+  lift: CompetitionProgressLift,
+  attemptKey: CompetitionProgressAttemptKey,
+): boolean {
+  return peers.some(
+    peer =>
+      peer !== lifter &&
+      peer.status === 'active' &&
+      peer.divisionId === lifter.divisionId &&
+      peer.weightClass === lifter.weightClass &&
+      isAttemptResultComplete(
+        peer,
+        lift,
+        attemptKey,
+      ),
+  )
+}
