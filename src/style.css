@@ -4076,3 +4076,553 @@ select {
     line-height: 1.05;
   }
 }
+
+
+/* ============================================================
+   Tools / Expeditor Cards
+   ============================================================ */
+
+.tools-page {
+  padding: 10px;
+
+  background: #f5f8fb;
+}
+
+.tool-panel {
+  background: white;
+  border: 1px solid #b8c7d7;
+  border-radius: 6px;
+}
+
+.tool-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 12px 14px;
+
+  background: #edf4fb;
+  border-bottom: 1px solid #b8c7d7;
+  border-radius: 6px 6px 0 0;
+}
+
+.tool-panel-heading h1 {
+  margin: 0 0 3px;
+
+  font-size: 18px;
+}
+
+.tool-panel-heading p {
+  margin: 0;
+
+  color: #526579;
+  font-size: 12px;
+}
+
+.tool-selection-count {
+  padding: 5px 8px;
+
+  background: white;
+  border: 1px solid #b8c7d7;
+  border-radius: 4px;
+
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.expeditor-source-fieldset,
+.expeditor-options-fieldset {
+  margin: 12px;
+  padding: 10px;
+
+  border: 1px solid #b8c7d7;
+  border-radius: 5px;
+}
+
+.expeditor-source-fieldset legend,
+.expeditor-options-fieldset legend {
+  padding: 0 5px;
+
+  font-weight: 700;
+}
+
+.expeditor-source-tabs {
+  display: flex;
+  gap: 24px;
+
+  margin-bottom: 10px;
+}
+
+.expeditor-source-tabs label,
+.expeditor-options-grid label,
+.expeditor-check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.expeditor-source-panel {
+  min-height: 180px;
+}
+
+.expeditor-choice-box.hidden {
+  display: none;
+}
+
+.expeditor-choice-box > strong {
+  display: block;
+
+  margin-bottom: 6px;
+}
+
+.expeditor-choice-list {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(150px, 1fr)
+    );
+  gap: 3px 12px;
+
+  max-height: 230px;
+  padding: 8px;
+
+  overflow: auto;
+
+  background: #fbfdff;
+  border: 1px solid #ccd8e4;
+}
+
+.expeditor-weight-class-list {
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(95px, 1fr)
+    );
+}
+
+.expeditor-lifter-list {
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(260px, 1fr)
+    );
+}
+
+.expeditor-check-item {
+  padding: 2px 0;
+
+  font-size: 12px;
+}
+
+.expeditor-choice-actions {
+  display: flex;
+  gap: 8px;
+
+  margin-top: 8px;
+}
+
+.expeditor-options-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(240px, 1fr)
+    );
+  gap: 8px 22px;
+}
+
+.expeditor-title-field {
+  display: grid;
+  grid-template-columns:
+    90px
+    minmax(250px, 520px);
+  gap: 8px;
+  align-items: center;
+
+  margin-top: 12px;
+}
+
+.expeditor-title-field > span {
+  font-weight: 700;
+}
+
+.expeditor-title-field input {
+  padding: 6px 8px;
+
+  border: 1px solid #aebdcb;
+  border-radius: 4px;
+}
+
+.expeditor-tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  padding: 0 12px 14px;
+}
+
+.expeditor-print-root {
+  display: none;
+}
+
+/* Physical card */
+.expeditor-sheet {
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns:
+    1fr 1fr;
+
+  width: 10.6in;
+  height: 8.05in;
+}
+
+.expeditor-half {
+  box-sizing: border-box;
+
+  padding: 0.16in 0.20in;
+}
+
+.expeditor-half.with-cut-line {
+  border-left: 1px dashed #9ca3af;
+}
+
+.expeditor-card {
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  height: 100%;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+  color: #111;
+}
+
+.expeditor-card-top {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    1.42in;
+  gap: 0.10in;
+  align-items: start;
+
+  min-height: 0.78in;
+}
+
+.expeditor-brand {
+  display: grid;
+  grid-template-columns:
+    0.88in
+    minmax(0, 1fr);
+  gap: 0.08in;
+  align-items: center;
+}
+
+.expeditor-logo-space {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  width: 0.84in;
+  height: 0.68in;
+
+  overflow: hidden;
+}
+
+.expeditor-association-logo {
+  display: block;
+
+  max-width: 0.74in;
+  max-height: 0.60in;
+
+  object-fit: contain;
+}
+
+.expeditor-card-title {
+  max-width: 2.05in;
+
+  font-size: 10pt;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.expeditor-card-id-fields {
+  display: grid;
+  gap: 0.10in;
+}
+
+.expeditor-field {
+  display: grid;
+  grid-template-columns:
+    max-content
+    minmax(0, 1fr);
+  gap: 0.06in;
+  align-items: end;
+
+  min-height: 0.24in;
+}
+
+.expeditor-field-label {
+  font-size: 8pt;
+}
+
+.expeditor-field-value {
+  min-height: 0.28in;
+
+  padding: 0 0.03in;
+
+  border-bottom: 1px solid #8b8b8b;
+
+  font-size: 16.5pt;
+  line-height: 0.27in;
+}
+
+.expeditor-center-value
+  .expeditor-field-value {
+  text-align: center;
+}
+
+.expeditor-registration-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    calc(1.08in + 9mm);
+  gap: 0.12in 0.10in;
+
+  margin: 0.05in 0 0.09in;
+}
+
+.expeditor-bwt-field {
+  width: calc(1.08in + 9mm);
+}
+
+.expeditor-division-field {
+  min-width: 0;
+}
+
+.expeditor-span-two {
+  grid-column: 1 / -1;
+}
+
+.expeditor-lift-table {
+  width: 100%;
+
+  border-collapse: collapse;
+  table-layout: fixed;
+
+  font-size: 7.8pt;
+}
+
+.expeditor-lift-table th,
+.expeditor-lift-table td {
+  border: 1px solid #444;
+}
+
+.expeditor-lift-table th {
+  height: 0.25in;
+
+  font-size: 7pt;
+  font-weight: 700;
+}
+
+.expeditor-lift-table th:first-child {
+  width: 0.83in;
+}
+
+.expeditor-lift-table th:last-child {
+  width: 0.80in;
+}
+
+.expeditor-event-cell {
+  position: relative;
+
+  height: 0.73in;
+  padding: 0.06in;
+
+  vertical-align: top;
+  text-align: center;
+}
+
+.expeditor-event-cell strong {
+  display: block;
+
+  font-size: 7.5pt;
+}
+
+.expeditor-pin-hole {
+  position: absolute;
+  bottom: 0.07in;
+  left: 0.08in;
+
+  font-size: 6.7pt;
+  line-height: 1.05;
+  text-align: left;
+}
+
+.expeditor-attempt-cell {
+  height: 0.73in;
+
+  font-size: 11pt;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.expeditor-subtotal-row td {
+  height: 0.28in;
+}
+
+.expeditor-subtotal-row td:first-child {
+  padding-right: 0.10in;
+
+  font-size: 7.5pt;
+  text-align: right;
+}
+
+.expeditor-card-bottom {
+  display: grid;
+  grid-template-columns:
+    1.25in
+    minmax(0, 1fr)
+    0.82in;
+  gap: 0.14in;
+  align-items: start;
+
+  margin-top: 0.10in;
+}
+
+.expeditor-bumps-table {
+  grid-column: 1;
+
+  width: 1.25in;
+
+  border-collapse: collapse;
+  table-layout: fixed;
+
+  font-size: 7pt;
+}
+
+.expeditor-bumps-table caption {
+  caption-side: top;
+
+  padding-bottom: 0.02in;
+
+  font-weight: 700;
+}
+
+.expeditor-bumps-table th,
+.expeditor-bumps-table td {
+  height: 0.22in;
+
+  border: 1px solid #444;
+
+  text-align: center;
+}
+
+.expeditor-total-box {
+  grid-column: 3;
+
+  display: grid;
+  grid-template-rows:
+    0.26in
+    0.73in;
+
+  font-size: 7.5pt;
+  text-align: center;
+}
+
+.expeditor-total-box span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expeditor-total-box div {
+  border: 1px solid #444;
+}
+
+.expeditor-card-footer {
+  margin-top: auto;
+  padding-top: 0.06in;
+
+  font-size: 7.5pt;
+  font-weight: 700;
+}
+
+@media (max-width: 850px) {
+  .expeditor-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body.expeditor-print-active {
+    margin: 0 !important;
+  }
+
+  body.expeditor-print-active
+    .tools-screen-content {
+    display: none !important;
+  }
+
+  body.expeditor-print-active
+    .expeditor-print-root {
+    display: block !important;
+  }
+
+  body.expeditor-print-active
+    .tools-page {
+    padding: 0 !important;
+
+    background: white !important;
+  }
+
+  body.expeditor-print-active
+    .expeditor-sheet {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  body.expeditor-print-active
+    .expeditor-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  body.expeditor-print-active
+    .expeditor-card,
+  body.expeditor-print-active
+    .expeditor-sheet {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+@page {
+  size: letter landscape;
+  margin: 0.20in;
+}
+
+
+@media print {
+  body.expeditor-print-active
+    .expeditor-association-logo {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+
+.expeditor-association-logo-thspa {
+  max-width: 0.84in;
+  max-height: 0.68in;
+}

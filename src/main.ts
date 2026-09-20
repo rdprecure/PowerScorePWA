@@ -135,6 +135,7 @@ type AppPage =
   | 'best-lifts'
   | 'summary'
   | 'detail'
+  | 'tools'
   | 'platform-issues'
   | 'help'
 
@@ -188,6 +189,81 @@ type BulkSortColumn =
 
 const PLATFORM_MANAGER_HANDLER_URL =
   'https://thspa.us/PlatformManager.ashx'
+
+
+type ExpeditorSource =
+  | 'weight-class'
+  | 'team'
+  | 'lifter'
+
+
+interface ExpeditorCardOptions {
+  leaveBodyWeightBlank: boolean
+  leaveLifterNumberBlank: boolean
+  leaveWeightClassBlank: boolean
+  omitAssociationLogo: boolean
+  includeDeclaredWeights: boolean
+  includeDividingLine: boolean
+}
+
+
+interface ExpeditorCardData {
+  lifterNumber: string
+  weightClass: string
+  divisionName: string
+  bodyWeight: string
+  lifterName: string
+  teamName: string
+  squatOpener: string
+  benchOpener: string
+  deadliftOpener: string
+  cardTitle: string
+  associationLogo: string
+  associationLogoAlt: string
+  footer: string
+  isBlank: boolean
+}
+
+
+let expeditorSource:
+  ExpeditorSource =
+    'weight-class'
+
+let expeditorSelectionDivisionId:
+  number | null =
+    null
+
+let expeditorSelectedWeightClasses =
+  new Set<string>()
+
+let expeditorSelectedTeamIds =
+  new Set<number>()
+
+let expeditorSelectedLifterIds =
+  new Set<number>()
+
+let expeditorOptions:
+  ExpeditorCardOptions = {
+    leaveBodyWeightBlank:
+      false,
+    leaveLifterNumberBlank:
+      false,
+    leaveWeightClassBlank:
+      false,
+    omitAssociationLogo:
+      false,
+    includeDeclaredWeights:
+      false,
+    includeDividingLine:
+      true,
+  }
+
+let expeditorCardTitle =
+  ''
+
+let expeditorPrintCards:
+  ExpeditorCardData[] =
+  []
 
 
 type StandingsOutputScope =
@@ -7739,11 +7815,16 @@ function renderNavigation():
       </button>
 
       <button
+        id="navTools"
         type="button"
-        class="nav-item"
-        disabled
+        class="nav-item ${
+          currentPage ===
+          'tools'
+            ? 'active'
+            : ''
+        }"
       >
-        Reports
+        Tools
       </button>
 
       <button
@@ -14573,6 +14654,1796 @@ function wireDetail():
     )
 
   installReportMenuClickAway()
+}
+
+
+function getExpeditorDivisionTeams(
+  meet: LocalMeet,
+  divisionId: number,
+): Team[] {
+
+  const teamIds =
+    new Set(
+      meet.divisionTeams
+        .filter(
+          item =>
+            item.divisionId ===
+            divisionId
+        )
+        .map(
+          item =>
+            item.teamId
+        )
+    )
+
+  return meet.state.teams
+    .filter(
+      team =>
+        teamIds.has(
+          team.id
+        )
+    )
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        a.name.localeCompare(
+          b.name,
+          undefined,
+          {
+            sensitivity:
+              'base',
+            numeric:
+              true,
+          }
+        )
+    )
+}
+
+
+function getExpeditorDivisionLifters(
+  meet: LocalMeet,
+  divisionId: number,
+): Lifter[] {
+
+  return meet.state.lifters
+    .filter(
+      lifter =>
+        lifter.divisionId ===
+        divisionId
+    )
+    .sort(
+      (
+        a,
+        b
+      ) => {
+        const last =
+          a.lastName.localeCompare(
+            b.lastName,
+            undefined,
+            {
+              sensitivity:
+                'base',
+              numeric:
+                true,
+            }
+          )
+
+        if (
+          last !== 0
+        ) {
+          return last
+        }
+
+        const first =
+          a.firstName.localeCompare(
+            b.firstName,
+            undefined,
+            {
+              sensitivity:
+                'base',
+              numeric:
+                true,
+            }
+          )
+
+        if (
+          first !== 0
+        ) {
+          return first
+        }
+
+        return (
+          a.lifterNumber -
+          b.lifterNumber
+        )
+      }
+    )
+}
+
+
+function getExpeditorWeightClasses(
+  division: Division,
+): string[] {
+
+  return getDivisionRules(
+    division
+  ).weightClasses
+    .map(
+      item =>
+        item.name
+    )
+}
+
+
+function getExpeditorDefaultCardTitle(
+  division: Division,
+): string {
+
+  switch (
+    division.ruleSet
+  ) {
+    case 'THSPA':
+      return (
+        'Texas High School ' +
+        'Powerlifting Association'
+      )
+
+    case 'THSWPA':
+      return (
+        "Texas High School Women's " +
+        'Powerlifting Association'
+      )
+
+    case 'NMAA_BOYS':
+    case 'NMAA_GIRLS':
+      return (
+        'New Mexico Activities Association'
+      )
+
+    default:
+      return 'PowerScore'
+  }
+}
+
+
+function getExpeditorAssociationLogo(
+  division: Division,
+): string {
+
+  switch (
+    division.ruleSet
+  ) {
+    case 'THSPA':
+      return (
+        '/assets/associations/' +
+        'thspa-logo.png'
+      )
+
+    case 'THSWPA':
+      return (
+        '/assets/associations/' +
+        'thswpa-logo.jpg'
+      )
+
+    case 'NMAA_BOYS':
+    case 'NMAA_GIRLS':
+      return (
+        '/assets/associations/' +
+        'nmaa-logo.png'
+      )
+
+    default:
+      return ''
+  }
+}
+
+
+function getExpeditorAssociationLogoAlt(
+  division: Division,
+): string {
+
+  switch (
+    division.ruleSet
+  ) {
+    case 'THSPA':
+      return 'THSPA logo'
+
+    case 'THSWPA':
+      return 'THSWPA logo'
+
+    case 'NMAA_BOYS':
+    case 'NMAA_GIRLS':
+      return 'NMAA logo'
+
+    default:
+      return ''
+  }
+}
+
+
+function ensureExpeditorSelections(
+  meet: LocalMeet,
+  division: Division,
+): void {
+
+  if (
+    expeditorSelectionDivisionId ===
+    division.id
+  ) {
+    return
+  }
+
+  expeditorSelectionDivisionId =
+    division.id
+
+  expeditorSelectedWeightClasses =
+    new Set(
+      getExpeditorWeightClasses(
+        division
+      )
+    )
+
+  expeditorSelectedTeamIds =
+    new Set(
+      getExpeditorDivisionTeams(
+        meet,
+        division.id
+      )
+        .map(
+          team =>
+            team.id
+        )
+    )
+
+  expeditorSelectedLifterIds =
+    new Set(
+      getExpeditorDivisionLifters(
+        meet,
+        division.id
+      )
+        .map(
+          lifter =>
+            lifter.id
+        )
+    )
+
+  expeditorCardTitle =
+    getExpeditorDefaultCardTitle(
+      division
+    )
+}
+
+
+function getExpeditorSelectedLifters(
+  meet: LocalMeet,
+  division: Division,
+): Lifter[] {
+
+  const lifters =
+    getExpeditorDivisionLifters(
+      meet,
+      division.id
+    )
+
+  switch (
+    expeditorSource
+  ) {
+    case 'team':
+      return lifters
+        .filter(
+          lifter =>
+            lifter.teamId !==
+              null &&
+            expeditorSelectedTeamIds.has(
+              lifter.teamId
+            )
+        )
+
+    case 'lifter':
+      return lifters
+        .filter(
+          lifter =>
+            expeditorSelectedLifterIds.has(
+              lifter.id
+            )
+        )
+
+    default:
+      return lifters
+        .filter(
+          lifter =>
+            lifter.weightClass !==
+              null &&
+            expeditorSelectedWeightClasses.has(
+              lifter.weightClass
+            )
+        )
+  }
+}
+
+
+function getExpeditorDeclaredWeight(
+  lifter: Lifter,
+  lift:
+    CompetitionLift,
+): string {
+
+  if (
+    !expeditorOptions
+      .includeDeclaredWeights
+  ) {
+    return ''
+  }
+
+  const attempts =
+    getAllAttemptResults(
+      lifter
+    )
+
+  const value =
+    attempts[
+      lift
+    ].attempt1.weight
+
+  if (
+    value !== null
+  ) {
+    return String(
+      value
+    )
+  }
+
+  if (
+    lift ===
+      'deadlift' &&
+    lifter.declaredDeadliftOpener !==
+      null
+  ) {
+    return String(
+      lifter.declaredDeadliftOpener
+    )
+  }
+
+  return ''
+}
+
+
+function formatExpeditorFooterDate(
+  value: string,
+): string {
+
+  const parts =
+    value.split(
+      '-'
+    )
+
+  if (
+    parts.length !== 3
+  ) {
+    return value
+  }
+
+  return (
+    `${Number(parts[1])}/` +
+    `${Number(parts[2])}/` +
+    `${parts[0]}`
+  )
+}
+
+
+function createExpeditorCardData(
+  meet: LocalMeet,
+  division: Division,
+  lifter: Lifter,
+): ExpeditorCardData {
+
+  return {
+    lifterNumber:
+      expeditorOptions
+        .leaveLifterNumberBlank
+        ? ''
+        : String(
+            lifter.lifterNumber
+          ),
+    weightClass:
+      expeditorOptions
+        .leaveWeightClassBlank
+        ? ''
+        : (
+            lifter.weightClass ??
+            ''
+          ),
+    divisionName:
+      division.name,
+    bodyWeight:
+      expeditorOptions
+        .leaveBodyWeightBlank
+        ? ''
+        : (
+            lifter.bodyWeight ===
+              null
+              ? ''
+              : lifter.bodyWeight
+                  .toFixed(1)
+          ),
+    lifterName:
+      getNonRegistrationLifterDisplayName(
+        meet,
+        lifter
+      ),
+    teamName:
+      getLifterTeamName(
+        meet,
+        lifter
+      ),
+    squatOpener:
+      getExpeditorDeclaredWeight(
+        lifter,
+        'squat'
+      ),
+    benchOpener:
+      getExpeditorDeclaredWeight(
+        lifter,
+        'bench'
+      ),
+    deadliftOpener:
+      getExpeditorDeclaredWeight(
+        lifter,
+        'deadlift'
+      ),
+    cardTitle:
+      expeditorCardTitle,
+    associationLogo:
+      expeditorOptions
+        .omitAssociationLogo
+        ? ''
+        : getExpeditorAssociationLogo(
+            division
+          ),
+    associationLogoAlt:
+      expeditorOptions
+        .omitAssociationLogo
+        ? ''
+        : getExpeditorAssociationLogoAlt(
+            division
+          ),
+    footer:
+      `${meet.state.meet.name}, ` +
+      `${formatExpeditorFooterDate(
+        meet.state.meet.date
+      )}`,
+    isBlank:
+      false,
+  }
+}
+
+
+function createBlankExpeditorCard(
+  meet: LocalMeet,
+  division: Division,
+): ExpeditorCardData {
+
+  return {
+    lifterNumber: '',
+    weightClass: '',
+    divisionName: '',
+    bodyWeight: '',
+    lifterName: '',
+    teamName: '',
+    squatOpener: '',
+    benchOpener: '',
+    deadliftOpener: '',
+    cardTitle:
+      expeditorCardTitle,
+    associationLogo:
+      expeditorOptions
+        .omitAssociationLogo
+        ? ''
+        : getExpeditorAssociationLogo(
+            division
+          ),
+    associationLogoAlt:
+      expeditorOptions
+        .omitAssociationLogo
+        ? ''
+        : getExpeditorAssociationLogoAlt(
+            division
+          ),
+    footer:
+      `${meet.state.meet.name}, ` +
+      `${formatExpeditorFooterDate(
+        meet.state.meet.date
+      )}`,
+    isBlank:
+      true,
+  }
+}
+
+
+function createTestExpeditorCard(
+  meet: LocalMeet,
+  division: Division,
+): ExpeditorCardData {
+
+  return {
+    lifterNumber:
+      '999',
+    weightClass:
+      getExpeditorWeightClasses(
+        division
+      )[0] ??
+      '',
+    divisionName:
+      division.name,
+    bodyWeight:
+      '123.4',
+    lifterName:
+      'Sample, Lifter',
+    teamName:
+      'Sample School',
+    squatOpener:
+      expeditorOptions
+        .includeDeclaredWeights
+        ? '225'
+        : '',
+    benchOpener:
+      expeditorOptions
+        .includeDeclaredWeights
+        ? '135'
+        : '',
+    deadliftOpener:
+      expeditorOptions
+        .includeDeclaredWeights
+        ? '275'
+        : '',
+    cardTitle:
+      expeditorCardTitle,
+    associationLogo:
+      expeditorOptions
+        .omitAssociationLogo
+        ? ''
+        : getExpeditorAssociationLogo(
+            division
+          ),
+    associationLogoAlt:
+      expeditorOptions
+        .omitAssociationLogo
+        ? ''
+        : getExpeditorAssociationLogoAlt(
+            division
+          ),
+    footer:
+      `${meet.state.meet.name}, ` +
+      `${formatExpeditorFooterDate(
+        meet.state.meet.date
+      )}`,
+    isBlank:
+      false,
+  }
+}
+
+
+function renderExpeditorFieldLine(
+  label: string,
+  value: string,
+  className = '',
+): string {
+
+  return `
+    <div class="expeditor-field ${className}">
+      <span class="expeditor-field-label">
+        ${escapeHtml(label)}
+      </span>
+
+      <span class="expeditor-field-value">
+        ${escapeHtml(value)}
+      </span>
+    </div>
+  `
+}
+
+
+function renderExpeditorLiftRow(
+  label: string,
+  opener: string,
+  showPinHole: boolean,
+): string {
+
+  return `
+    <tr>
+      <td class="expeditor-event-cell">
+        <strong>${escapeHtml(label)}</strong>
+
+        ${
+          showPinHole
+            ? `
+              <span class="expeditor-pin-hole">
+                Pin<br>Hole
+              </span>
+            `
+            : ''
+        }
+      </td>
+
+      <td class="expeditor-attempt-cell">
+        ${escapeHtml(opener)}
+      </td>
+
+      <td class="expeditor-attempt-cell"></td>
+      <td class="expeditor-attempt-cell"></td>
+      <td class="expeditor-attempt-cell"></td>
+    </tr>
+  `
+}
+
+
+function renderExpeditorCard(
+  card: ExpeditorCardData,
+): string {
+
+  return `
+    <article class="expeditor-card">
+
+      <div class="expeditor-card-top">
+        <div class="expeditor-brand">
+          ${
+            card.associationLogo ===
+            ''
+              ? `
+                <div class="expeditor-logo-space"></div>
+              `
+              : `
+                <div class="expeditor-logo-space">
+                  <img
+                    class="expeditor-association-logo ${
+                      card.associationLogo.includes(
+                        'thspa-logo'
+                      )
+                        ? 'expeditor-association-logo-thspa'
+                        : ''
+                    }"
+                    src="${escapeHtml(card.associationLogo)}"
+                    alt="${escapeHtml(card.associationLogoAlt)}"
+                  >
+                </div>
+              `
+          }
+
+          <div class="expeditor-card-title">
+            ${escapeHtml(card.cardTitle)}
+          </div>
+        </div>
+
+        <div class="expeditor-card-id-fields">
+          ${renderExpeditorFieldLine(
+            'Lifter #',
+            card.lifterNumber,
+            'expeditor-center-value'
+          )}
+
+          ${renderExpeditorFieldLine(
+            'Wt. Class',
+            card.weightClass,
+            'expeditor-center-value'
+          )}
+        </div>
+      </div>
+
+      <div class="expeditor-registration-grid">
+        ${renderExpeditorFieldLine(
+          'Division',
+          card.divisionName,
+          'expeditor-division-field'
+        )}
+
+        ${renderExpeditorFieldLine(
+          'BWT',
+          card.bodyWeight,
+          'expeditor-center-value expeditor-bwt-field'
+        )}
+
+        ${renderExpeditorFieldLine(
+          'Name',
+          card.lifterName,
+          'expeditor-span-two'
+        )}
+
+        ${renderExpeditorFieldLine(
+          'School',
+          card.teamName,
+          'expeditor-span-two'
+        )}
+      </div>
+
+      <table class="expeditor-lift-table">
+        <thead>
+          <tr>
+            <th>EVENT</th>
+            <th>1st Att.</th>
+            <th>2nd Att.</th>
+            <th>3rd Att.</th>
+            <th>BEST LIFT</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${renderExpeditorLiftRow(
+            'SQUAT',
+            card.squatOpener,
+            true
+          )}
+
+          ${renderExpeditorLiftRow(
+            'BENCH PRESS',
+            card.benchOpener,
+            true
+          )}
+
+          <tr class="expeditor-subtotal-row">
+            <td colspan="4">
+              SUB-TOTAL
+            </td>
+            <td></td>
+          </tr>
+
+          ${renderExpeditorLiftRow(
+            'DEADLIFT',
+            card.deadliftOpener,
+            false
+          )}
+        </tbody>
+      </table>
+
+      <div class="expeditor-card-bottom">
+        <table class="expeditor-bumps-table">
+          <caption>BUMPS</caption>
+          <thead>
+            <tr>
+              <th>1</th>
+              <th>2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="expeditor-total-box">
+          <span>TOTAL</span>
+          <div></div>
+        </div>
+      </div>
+
+      <div class="expeditor-card-footer">
+        ${escapeHtml(card.footer)}
+      </div>
+
+    </article>
+  `
+}
+
+
+function renderExpeditorPrintSheets():
+  string {
+
+  if (
+    expeditorPrintCards.length ===
+    0
+  ) {
+    return ''
+  }
+
+  const cards =
+    [...expeditorPrintCards]
+
+  if (
+    cards.length % 2 !==
+    0
+  ) {
+    cards.push({
+      ...cards[0],
+      lifterNumber: '',
+      weightClass: '',
+      divisionName: '',
+      bodyWeight: '',
+      lifterName: '',
+      teamName: '',
+      squatOpener: '',
+      benchOpener: '',
+      deadliftOpener: '',
+      footer: '',
+      isBlank: true,
+    })
+  }
+
+  const sheets:
+    string[] =
+    []
+
+  for (
+    let index = 0;
+    index <
+    cards.length;
+    index += 2
+  ) {
+    sheets.push(`
+      <section class="expeditor-sheet">
+        <div class="expeditor-half">
+          ${renderExpeditorCard(
+            cards[index]
+          )}
+        </div>
+
+        <div
+          class="expeditor-half ${
+            expeditorOptions
+              .includeDividingLine
+              ? 'with-cut-line'
+              : ''
+          }"
+        >
+          ${renderExpeditorCard(
+            cards[index + 1]
+          )}
+        </div>
+      </section>
+    `)
+  }
+
+  return `
+    <div class="expeditor-print-root">
+      ${sheets.join('')}
+    </div>
+  `
+}
+
+
+function renderExpeditorWeightClassChoices(
+  division: Division,
+): string {
+
+  return getExpeditorWeightClasses(
+    division
+  )
+    .map(
+      weightClass => `
+        <label class="expeditor-check-item">
+          <input
+            type="checkbox"
+            data-expeditor-weight-class="${escapeHtml(weightClass)}"
+            ${
+              expeditorSelectedWeightClasses.has(
+                weightClass
+              )
+                ? 'checked'
+                : ''
+            }
+          >
+          <span>
+            ${escapeHtml(weightClass)}
+          </span>
+        </label>
+      `
+    )
+    .join('')
+}
+
+
+function renderExpeditorTeamChoices(
+  meet: LocalMeet,
+  division: Division,
+): string {
+
+  return getExpeditorDivisionTeams(
+    meet,
+    division.id
+  )
+    .map(
+      team => `
+        <label class="expeditor-check-item">
+          <input
+            type="checkbox"
+            data-expeditor-team-id="${team.id}"
+            ${
+              expeditorSelectedTeamIds.has(
+                team.id
+              )
+                ? 'checked'
+                : ''
+            }
+          >
+          <span>
+            ${escapeHtml(team.name)}
+          </span>
+        </label>
+      `
+    )
+    .join('')
+}
+
+
+function renderExpeditorLifterChoices(
+  meet: LocalMeet,
+  division: Division,
+): string {
+
+  return getExpeditorDivisionLifters(
+    meet,
+    division.id
+  )
+    .map(
+      lifter => `
+        <label class="expeditor-check-item">
+          <input
+            type="checkbox"
+            data-expeditor-lifter-id="${lifter.id}"
+            ${
+              expeditorSelectedLifterIds.has(
+                lifter.id
+              )
+                ? 'checked'
+                : ''
+            }
+          >
+          <span>
+            ${escapeHtml(
+              `${lifter.lastName}, ` +
+              `${lifter.firstName} - ` +
+              `${getLifterTeamName(
+                meet,
+                lifter
+              )}`
+            )}
+          </span>
+        </label>
+      `
+    )
+    .join('')
+}
+
+
+function renderTools():
+  string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="tools-page">
+        <div class="empty-state">
+          Select a meet to use Tools.
+        </div>
+      </main>
+    `
+  }
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return `
+      <main class="tools-page">
+        ${renderBestLifterDivisionTabs(meet)}
+
+        <div class="empty-state">
+          Select a division to use Tools.
+        </div>
+      </main>
+    `
+  }
+
+  ensureExpeditorSelections(
+    meet,
+    division
+  )
+
+  const selectedCount =
+    getExpeditorSelectedLifters(
+      meet,
+      division
+    ).length
+
+  return `
+    <main class="tools-page">
+
+      <div class="tools-screen-content">
+
+        ${renderBestLifterDivisionTabs(meet)}
+
+        <section class="tool-panel">
+          <div class="tool-panel-heading">
+            <div>
+              <h1>Expeditor Cards</h1>
+              <p>
+                Print blank cards or pre-filled lifter cards for meet officials.
+                Printed two cards per 8.5×11 landscape sheet.
+              </p>
+            </div>
+
+            <div class="tool-selection-count">
+              ${selectedCount} lifter${
+                selectedCount === 1
+                  ? ''
+                  : 's'
+              } selected
+            </div>
+          </div>
+
+          <fieldset class="expeditor-source-fieldset">
+            <legend>Source</legend>
+
+            <div class="expeditor-source-tabs">
+              <label>
+                <input
+                  type="radio"
+                  name="expeditor-source"
+                  value="weight-class"
+                  ${
+                    expeditorSource ===
+                    'weight-class'
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                By Weight Class
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="expeditor-source"
+                  value="team"
+                  ${
+                    expeditorSource ===
+                    'team'
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                By Team
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="expeditor-source"
+                  value="lifter"
+                  ${
+                    expeditorSource ===
+                    'lifter'
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                By Lifter
+              </label>
+            </div>
+
+            <div class="expeditor-source-panel">
+              <div
+                class="expeditor-choice-box ${
+                  expeditorSource ===
+                  'weight-class'
+                    ? ''
+                    : 'hidden'
+                }"
+                data-expeditor-source-panel="weight-class"
+              >
+                <strong>
+                  Select Weight Classes to Print
+                </strong>
+
+                <div class="expeditor-choice-list expeditor-weight-class-list">
+                  ${renderExpeditorWeightClassChoices(
+                    division
+                  )}
+                </div>
+
+                <div class="expeditor-choice-actions">
+                  <button
+                    type="button"
+                    class="compact-button"
+                    data-expeditor-select-all="weight-class"
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    type="button"
+                    class="compact-button"
+                    data-expeditor-unselect-all="weight-class"
+                  >
+                    Unselect All
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="expeditor-choice-box ${
+                  expeditorSource ===
+                  'team'
+                    ? ''
+                    : 'hidden'
+                }"
+                data-expeditor-source-panel="team"
+              >
+                <strong>
+                  Select Teams to Print
+                </strong>
+
+                <div class="expeditor-choice-list">
+                  ${renderExpeditorTeamChoices(
+                    meet,
+                    division
+                  )}
+                </div>
+
+                <div class="expeditor-choice-actions">
+                  <button
+                    type="button"
+                    class="compact-button"
+                    data-expeditor-select-all="team"
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    type="button"
+                    class="compact-button"
+                    data-expeditor-unselect-all="team"
+                  >
+                    Unselect All
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="expeditor-choice-box ${
+                  expeditorSource ===
+                  'lifter'
+                    ? ''
+                    : 'hidden'
+                }"
+                data-expeditor-source-panel="lifter"
+              >
+                <strong>
+                  Select Lifters to Print
+                </strong>
+
+                <div class="expeditor-choice-list expeditor-lifter-list">
+                  ${renderExpeditorLifterChoices(
+                    meet,
+                    division
+                  )}
+                </div>
+
+                <div class="expeditor-choice-actions">
+                  <button
+                    type="button"
+                    class="compact-button"
+                    data-expeditor-select-all="lifter"
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    type="button"
+                    class="compact-button"
+                    data-expeditor-unselect-all="lifter"
+                  >
+                    Unselect All
+                  </button>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="expeditor-options-fieldset">
+            <legend>Options</legend>
+
+            <div class="expeditor-options-grid">
+              <label>
+                <input
+                  type="checkbox"
+                  data-expeditor-option="leaveBodyWeightBlank"
+                  ${
+                    expeditorOptions
+                      .leaveBodyWeightBlank
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                Leave BWT blank
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  data-expeditor-option="leaveLifterNumberBlank"
+                  ${
+                    expeditorOptions
+                      .leaveLifterNumberBlank
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                Leave Lifter Number blank
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  data-expeditor-option="leaveWeightClassBlank"
+                  ${
+                    expeditorOptions
+                      .leaveWeightClassBlank
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                Leave Wt. Class blank
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  data-expeditor-option="includeDeclaredWeights"
+                  ${
+                    expeditorOptions
+                      .includeDeclaredWeights
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                Include declared weights from 1st attempts
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  data-expeditor-option="omitAssociationLogo"
+                  ${
+                    expeditorOptions
+                      .omitAssociationLogo
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                Omit association logo
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  data-expeditor-option="includeDividingLine"
+                  ${
+                    expeditorOptions
+                      .includeDividingLine
+                      ? 'checked'
+                      : ''
+                  }
+                >
+                Include dividing line between cards
+              </label>
+            </div>
+
+            <label class="expeditor-title-field">
+              <span>Card Title</span>
+
+              <input
+                id="expeditorCardTitle"
+                type="text"
+                value="${escapeHtml(expeditorCardTitle)}"
+              >
+            </label>
+          </fieldset>
+
+          <div class="expeditor-tool-actions">
+            <button
+              id="printSelectedExpeditorCards"
+              type="button"
+              class="primary-action"
+              ${
+                selectedCount === 0
+                  ? 'disabled'
+                  : ''
+              }
+            >
+              Print Selected Cards
+            </button>
+
+            <button
+              id="printTestExpeditorCard"
+              type="button"
+              class="compact-button"
+            >
+              Print a Test Card
+            </button>
+
+            <button
+              id="printBlankExpeditorCard"
+              type="button"
+              class="compact-button"
+            >
+              Print Blank Cards
+            </button>
+          </div>
+        </section>
+
+      </div>
+
+      ${renderExpeditorPrintSheets()}
+
+    </main>
+  `
+}
+
+
+function startExpeditorPrint(
+  cards:
+    ExpeditorCardData[],
+): void {
+
+  expeditorPrintCards =
+    cards
+
+  renderApp()
+
+  document.body.classList.add(
+    'expeditor-print-active'
+  )
+
+  window.addEventListener(
+    'afterprint',
+    () => {
+      document.body.classList.remove(
+        'expeditor-print-active'
+      )
+
+      expeditorPrintCards =
+        []
+
+      renderApp()
+    },
+    {
+      once: true,
+    }
+  )
+
+  window.setTimeout(
+    () => {
+      window.print()
+    },
+    0
+  )
+}
+
+
+function updateExpeditorSelectedSet(
+  source:
+    ExpeditorSource,
+  selected:
+    boolean,
+  meet: LocalMeet,
+  division: Division,
+): void {
+
+  if (
+    source ===
+    'weight-class'
+  ) {
+    expeditorSelectedWeightClasses =
+      selected
+        ? new Set(
+            getExpeditorWeightClasses(
+              division
+            )
+          )
+        : new Set()
+
+    return
+  }
+
+  if (
+    source ===
+    'team'
+  ) {
+    expeditorSelectedTeamIds =
+      selected
+        ? new Set(
+            getExpeditorDivisionTeams(
+              meet,
+              division.id
+            )
+              .map(
+                team =>
+                  team.id
+              )
+          )
+        : new Set()
+
+    return
+  }
+
+  expeditorSelectedLifterIds =
+    selected
+      ? new Set(
+          getExpeditorDivisionLifters(
+            meet,
+            division.id
+          )
+            .map(
+              lifter =>
+                lifter.id
+            )
+        )
+      : new Set()
+}
+
+
+function wireTools():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return
+  }
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-best-lifter-division]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const divisionId =
+              Number(
+                button.dataset
+                  .bestLifterDivision
+              )
+
+            if (
+              !Number.isFinite(
+                divisionId
+              )
+            ) {
+              return
+            }
+
+            selectedDivisionId =
+              divisionId
+
+            expeditorSelectionDivisionId =
+              null
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      'input[name="expeditor-source"]'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'change',
+          () => {
+            expeditorSource =
+              input.value as
+                ExpeditorSource
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-expeditor-weight-class]'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'change',
+          () => {
+            const value =
+              input.dataset
+                .expeditorWeightClass
+
+            if (
+              value ===
+              undefined
+            ) {
+              return
+            }
+
+            if (
+              input.checked
+            ) {
+              expeditorSelectedWeightClasses.add(
+                value
+              )
+            } else {
+              expeditorSelectedWeightClasses.delete(
+                value
+              )
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-expeditor-team-id]'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'change',
+          () => {
+            const value =
+              Number(
+                input.dataset
+                  .expeditorTeamId
+              )
+
+            if (
+              !Number.isFinite(
+                value
+              )
+            ) {
+              return
+            }
+
+            if (
+              input.checked
+            ) {
+              expeditorSelectedTeamIds.add(
+                value
+              )
+            } else {
+              expeditorSelectedTeamIds.delete(
+                value
+              )
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-expeditor-lifter-id]'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'change',
+          () => {
+            const value =
+              Number(
+                input.dataset
+                  .expeditorLifterId
+              )
+
+            if (
+              !Number.isFinite(
+                value
+              )
+            ) {
+              return
+            }
+
+            if (
+              input.checked
+            ) {
+              expeditorSelectedLifterIds.add(
+                value
+              )
+            } else {
+              expeditorSelectedLifterIds.delete(
+                value
+              )
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-expeditor-select-all]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            updateExpeditorSelectedSet(
+              button.dataset
+                .expeditorSelectAll as
+                  ExpeditorSource,
+              true,
+              meet,
+              division
+            )
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-expeditor-unselect-all]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            updateExpeditorSelectedSet(
+              button.dataset
+                .expeditorUnselectAll as
+                  ExpeditorSource,
+              false,
+              meet,
+              division
+            )
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-expeditor-option]'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'change',
+          () => {
+            const option =
+              input.dataset
+                .expeditorOption as
+                  keyof
+                    ExpeditorCardOptions
+
+            expeditorOptions[
+              option
+            ] =
+              input.checked
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#expeditorCardTitle'
+    )
+    ?.addEventListener(
+      'input',
+      event => {
+        expeditorCardTitle =
+          (
+            event.currentTarget as
+              HTMLInputElement
+          ).value
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printSelectedExpeditorCards'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        const lifters =
+          getExpeditorSelectedLifters(
+            meet,
+            division
+          )
+
+        if (
+          lifters.length ===
+          0
+        ) {
+          window.alert(
+            'No lifters are selected.'
+          )
+
+          return
+        }
+
+        startExpeditorPrint(
+          lifters.map(
+            lifter =>
+              createExpeditorCardData(
+                meet,
+                division,
+                lifter
+              )
+          )
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printTestExpeditorCard'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        startExpeditorPrint([
+          createTestExpeditorCard(
+            meet,
+            division
+          ),
+          createTestExpeditorCard(
+            meet,
+            division
+          ),
+        ])
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printBlankExpeditorCard'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        startExpeditorPrint([
+          createBlankExpeditorCard(
+            meet,
+            division
+          ),
+          createBlankExpeditorCard(
+            meet,
+            division
+          ),
+        ])
+      }
+    )
 }
 
 
@@ -28146,6 +30017,33 @@ function wireNavigation(): void {
 
   document
     .querySelector<HTMLButtonElement>(
+      '#navTools'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        currentPage =
+          'tools'
+
+        renderApp()
+      }
+    )
+
+
+  document
+    .querySelector<HTMLButtonElement>(
       '#navHelp'
     )
     ?.addEventListener(
@@ -30098,6 +31996,9 @@ function renderApp(): void {
                       'detail'
                     ? renderDetail()
                     : currentPage ===
+                        'tools'
+                      ? renderTools()
+                      : currentPage ===
               'platform-issues'
             ? renderPlatformImportIssues()
             : currentPage ===
@@ -30119,6 +32020,18 @@ function renderApp(): void {
     wireCompetition()
     wireCompetitionStatusShortcuts()
     wireSelectAllOnEditableInputs()
+
+    return
+  }
+
+  if (
+    currentPage ===
+    'tools'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+
+    wireTools()
 
     return
   }
