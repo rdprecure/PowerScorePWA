@@ -225,6 +225,39 @@ interface ExpeditorCardData {
 }
 
 
+interface RunnerSheetRowData {
+  lifterNumber: string
+  lifterName: string
+  schoolName: string
+  bestSquat: string
+  bestBench: string
+  bestDeadlift: string
+}
+
+
+interface RunnerSheetPageData {
+  meetTitle: string
+  meetLocationAndDate: string
+  weightClass: string
+  rows: RunnerSheetRowData[]
+}
+
+
+let runnerSheetSelectionDivisionId:
+  number | null =
+    null
+
+let runnerSheetSelectedWeightClasses =
+  new Set<string>()
+
+let runnerSheetForceBlankBestLiftColumns =
+  true
+
+let runnerSheetPrintPages:
+  RunnerSheetPageData[] =
+  []
+
+
 let expeditorSource:
   ExpeditorSource =
     'weight-class'
@@ -14657,6 +14690,555 @@ function wireDetail():
 }
 
 
+function getRunnerSheetWeightClasses(
+  division: Division,
+): string[] {
+
+  return getDivisionRules(
+    division
+  ).weightClasses
+    .map(
+      item =>
+        item.name
+    )
+}
+
+
+function ensureRunnerSheetSelections(
+  division: Division,
+): void {
+
+  if (
+    runnerSheetSelectionDivisionId ===
+    division.id
+  ) {
+    return
+  }
+
+  runnerSheetSelectionDivisionId =
+    division.id
+
+  runnerSheetSelectedWeightClasses =
+    new Set(
+      getRunnerSheetWeightClasses(
+        division
+      )
+    )
+}
+
+
+function getRunnerSheetLifters(
+  meet: LocalMeet,
+  division: Division,
+  weightClass: string,
+): Lifter[] {
+
+  return meet.state.lifters
+    .filter(
+      lifter =>
+        lifter.divisionId ===
+          division.id &&
+        lifter.weightClass ===
+          weightClass
+    )
+    .sort(
+      (
+        a,
+        b
+      ) => {
+        const numberDifference =
+          a.lifterNumber -
+          b.lifterNumber
+
+        if (
+          numberDifference !== 0
+        ) {
+          return numberDifference
+        }
+
+        const last =
+          a.lastName.localeCompare(
+            b.lastName,
+            undefined,
+            {
+              sensitivity:
+                'base',
+              numeric:
+                true,
+            }
+          )
+
+        if (
+          last !== 0
+        ) {
+          return last
+        }
+
+        return a.firstName.localeCompare(
+          b.firstName,
+          undefined,
+          {
+            sensitivity:
+              'base',
+            numeric:
+              true,
+          }
+        )
+      }
+    )
+}
+
+
+function hasThreeFailedAttemptsForLift(
+  lifter: Lifter,
+  lift: CompetitionLift,
+): boolean {
+
+  const attempts =
+    getAllAttemptResults(
+      lifter
+    )[lift]
+
+  return (
+    attempts.attempt1.status ===
+      'bad' &&
+    attempts.attempt2.status ===
+      'bad' &&
+    attempts.attempt3.status ===
+      'bad'
+  )
+}
+
+
+function getRunnerSheetBombedLift(
+  meet: LocalMeet,
+  lifter: Lifter,
+): CompetitionLift | null {
+
+  if (
+    hasThreeFailedAttemptsForLift(
+      lifter,
+      'squat'
+    )
+  ) {
+    return 'squat'
+  }
+
+  if (
+    hasThreeFailedAttemptsForLift(
+      lifter,
+      'bench'
+    )
+  ) {
+    return 'bench'
+  }
+
+  if (
+    hasThreeFailedAttemptsForLift(
+      lifter,
+      'deadlift'
+    )
+  ) {
+    return 'deadlift'
+  }
+
+  const squatValue =
+    getCompetitionBestLiftValue(
+      meet,
+      lifter,
+      'squat'
+    )
+
+  const benchValue =
+    getCompetitionBestLiftValue(
+      meet,
+      lifter,
+      'bench'
+    )
+
+  const deadliftValue =
+    getCompetitionBestLiftValue(
+      meet,
+      lifter,
+      'deadlift'
+    )
+
+  if (
+    squatValue === null
+  ) {
+    return 'squat'
+  }
+
+  if (
+    benchValue === null
+  ) {
+    return 'bench'
+  }
+
+  if (
+    deadliftValue === null
+  ) {
+    return 'deadlift'
+  }
+
+  return null
+}
+
+
+function shouldShowRunnerSheetBombedIndicator(
+  meet: LocalMeet,
+  lifter: Lifter,
+  lift: CompetitionLift,
+): boolean {
+
+  const bombedLift =
+    getRunnerSheetBombedLift(
+      meet,
+      lifter
+    )
+
+  if (
+    bombedLift === null
+  ) {
+    return false
+  }
+
+  switch (
+    bombedLift
+  ) {
+    case 'squat':
+      return true
+
+    case 'bench':
+      return lift !== 'squat'
+
+    case 'deadlift':
+      return lift === 'deadlift'
+  }
+}
+
+
+function formatRunnerSheetBestLift(
+  meet: LocalMeet,
+  lifter: Lifter,
+  lift: CompetitionLift,
+): string {
+
+  if (
+    runnerSheetForceBlankBestLiftColumns
+  ) {
+    return ''
+  }
+
+  if (
+    lifter.status ===
+      'scratched'
+  ) {
+    return '----SC----'
+  }
+
+  if (
+    lifter.status ===
+      'disqualified'
+  ) {
+    return '----DQ----'
+  }
+
+  if (
+    lifter.status ===
+      'bombed' &&
+    shouldShowRunnerSheetBombedIndicator(
+      meet,
+      lifter,
+      lift
+    )
+  ) {
+    return '----BO----'
+  }
+
+  const value =
+    getCompetitionBestLiftValue(
+      meet,
+      lifter,
+      lift
+    )
+
+  return value ===
+    null
+      ? ''
+      : String(
+          value
+        )
+}
+
+
+function createRunnerSheetPageData(
+  meet: LocalMeet,
+  division: Division,
+  weightClass: string,
+): RunnerSheetPageData {
+
+  const location =
+    meet.state.meet.location
+      .trim()
+
+  const date =
+    formatExpeditorFooterDate(
+      meet.state.meet.date
+    )
+
+  return {
+    meetTitle:
+      `${meet.state.meet.name} - ` +
+      `${division.name}`,
+    meetLocationAndDate:
+      location.length > 0
+        ? `${location} ${date}`
+        : date,
+    weightClass,
+    rows:
+      getRunnerSheetLifters(
+        meet,
+        division,
+        weightClass
+      )
+        .map(
+          lifter => ({
+            lifterNumber:
+              String(
+                lifter.lifterNumber
+              ),
+            lifterName:
+              getNonRegistrationLifterDisplayName(
+                meet,
+                lifter
+              ),
+            schoolName:
+              getLifterTeamName(
+                meet,
+                lifter
+              ),
+            bestSquat:
+              formatRunnerSheetBestLift(
+                meet,
+                lifter,
+                'squat'
+              ),
+            bestBench:
+              formatRunnerSheetBestLift(
+                meet,
+                lifter,
+                'bench'
+              ),
+            bestDeadlift:
+              formatRunnerSheetBestLift(
+                meet,
+                lifter,
+                'deadlift'
+              ),
+          })
+        ),
+  }
+}
+
+
+function getRunnerSheetPrintPages(
+  meet: LocalMeet,
+  division: Division,
+): RunnerSheetPageData[] {
+
+  return getRunnerSheetWeightClasses(
+    division
+  )
+    .filter(
+      weightClass =>
+        runnerSheetSelectedWeightClasses.has(
+          weightClass
+        )
+    )
+    .map(
+      weightClass =>
+        createRunnerSheetPageData(
+          meet,
+          division,
+          weightClass
+        )
+    )
+    .filter(
+      page =>
+        page.rows.length > 0
+    )
+}
+
+
+function renderRunnerSheetWeightClassChoices(
+  division: Division,
+): string {
+
+  return getRunnerSheetWeightClasses(
+    division
+  )
+    .map(
+      weightClass => `
+        <label class="runner-sheet-check-item">
+          <input
+            type="checkbox"
+            data-runner-sheet-weight-class="${escapeHtml(weightClass)}"
+            ${
+              runnerSheetSelectedWeightClasses.has(
+                weightClass
+              )
+                ? 'checked'
+                : ''
+            }
+          >
+          <span>
+            ${escapeHtml(weightClass)}
+          </span>
+        </label>
+      `
+    )
+    .join('')
+}
+
+
+function renderRunnerSheetPage(
+  page: RunnerSheetPageData,
+): string {
+
+  return `
+    <section class="runner-sheet-page">
+      <header class="runner-sheet-header">
+        <div class="runner-sheet-meet-title">
+          ${escapeHtml(page.meetTitle)}
+        </div>
+
+        <div class="runner-sheet-location-date">
+          ${escapeHtml(page.meetLocationAndDate)}
+        </div>
+
+        <div class="runner-sheet-report-title">
+          Runner Sheet - ${escapeHtml(page.weightClass)} Class
+        </div>
+      </header>
+
+      <table class="runner-sheet-table">
+        <colgroup>
+          <col class="runner-sheet-number-column">
+          <col class="runner-sheet-lifter-column">
+          <col class="runner-sheet-school-column">
+          <col class="runner-sheet-lift-column">
+          <col class="runner-sheet-lift-column">
+          <col class="runner-sheet-lift-column">
+        </colgroup>
+
+        <thead>
+          <tr>
+            <th>Lifter #</th>
+            <th>Lifter</th>
+            <th>School</th>
+            <th>Best Squat</th>
+            <th>Best Bench Press</th>
+            <th>Best Deadlift</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${page.rows
+            .map(
+              row => `
+                <tr>
+                  <td class="runner-sheet-number-cell">
+                    ${escapeHtml(row.lifterNumber)}
+                  </td>
+                  <td>
+                    ${escapeHtml(row.lifterName)}
+                  </td>
+                  <td>
+                    ${escapeHtml(row.schoolName)}
+                  </td>
+                  <td class="runner-sheet-lift-cell">
+                    ${escapeHtml(row.bestSquat)}
+                  </td>
+                  <td class="runner-sheet-lift-cell">
+                    ${escapeHtml(row.bestBench)}
+                  </td>
+                  <td class="runner-sheet-lift-cell">
+                    ${escapeHtml(row.bestDeadlift)}
+                  </td>
+                </tr>
+              `
+            )
+            .join('')}
+        </tbody>
+      </table>
+
+      <div class="runner-sheet-footer">
+        BO=Bombed out, SC=Scratched, DQ=Disqualified
+      </div>
+    </section>
+  `
+}
+
+
+function renderRunnerSheetPrintPages():
+  string {
+
+  return `
+    <div class="runner-sheet-print-root">
+      ${runnerSheetPrintPages
+        .map(
+          page =>
+            renderRunnerSheetPage(
+              page
+            )
+        )
+        .join('')}
+    </div>
+  `
+}
+
+
+function startRunnerSheetPrint(
+  pages:
+    RunnerSheetPageData[],
+): void {
+
+  runnerSheetPrintPages =
+    pages
+
+  renderApp()
+
+  document.body.classList.add(
+    'runner-sheet-print-active'
+  )
+
+  window.addEventListener(
+    'afterprint',
+    () => {
+      document.body.classList.remove(
+        'runner-sheet-print-active'
+      )
+
+      runnerSheetPrintPages =
+        []
+
+      renderApp()
+    },
+    {
+      once: true,
+    }
+  )
+
+  window.setTimeout(
+    () => {
+      window.print()
+    },
+    0
+  )
+}
+
+
 function getExpeditorDivisionTeams(
   meet: LocalMeet,
   divisionId: number,
@@ -15642,10 +16224,18 @@ function renderTools():
     `
   }
 
+  ensureRunnerSheetSelections(
+    division
+  )
+
   ensureExpeditorSelections(
     meet,
     division
   )
+
+  const runnerSheetSelectedCount =
+    runnerSheetSelectedWeightClasses
+      .size
 
   const selectedCount =
     getExpeditorSelectedLifters(
@@ -15659,6 +16249,86 @@ function renderTools():
       <div class="tools-screen-content">
 
         ${renderBestLifterDivisionTabs(meet)}
+
+        <section class="tool-panel runner-sheet-tool-panel">
+          <div class="tool-panel-heading">
+            <div>
+              <h1>Runner Sheets</h1>
+              <p>
+                Print one runner sheet per selected weight class.
+                Lifters are listed in lifter-number order.
+              </p>
+            </div>
+
+            <div class="tool-selection-count">
+              ${runnerSheetSelectedCount} class${
+                runnerSheetSelectedCount === 1
+                  ? ''
+                  : 'es'
+              } selected
+            </div>
+          </div>
+
+          <fieldset class="runner-sheet-fieldset">
+            <legend>Select Weight Classes to Print</legend>
+
+            <div class="runner-sheet-weight-class-list">
+              ${renderRunnerSheetWeightClassChoices(
+                division
+              )}
+            </div>
+
+            <div class="runner-sheet-choice-actions">
+              <button
+                type="button"
+                class="compact-button"
+                id="selectAllRunnerSheetWeightClasses"
+              >
+                Select All
+              </button>
+
+              <button
+                type="button"
+                class="compact-button"
+                id="unselectAllRunnerSheetWeightClasses"
+              >
+                Unselect All
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset class="runner-sheet-fieldset">
+            <legend>Options</legend>
+
+            <label class="runner-sheet-option">
+              <input
+                id="runnerSheetForceBlankBestLiftColumns"
+                type="checkbox"
+                ${
+                  runnerSheetForceBlankBestLiftColumns
+                    ? 'checked'
+                    : ''
+                }
+              >
+              Force blanks into the best-lift columns
+            </label>
+          </fieldset>
+
+          <div class="runner-sheet-tool-actions">
+            <button
+              id="printRunnerSheets"
+              type="button"
+              class="primary-action"
+              ${
+                runnerSheetSelectedCount === 0
+                  ? 'disabled'
+                  : ''
+              }
+            >
+              Print Runner Sheets
+            </button>
+          </div>
+        </section>
 
         <section class="tool-panel">
           <div class="tool-panel-heading">
@@ -15982,6 +16652,8 @@ function renderTools():
 
       </div>
 
+      ${renderRunnerSheetPrintPages()}
+
       ${renderExpeditorPrintSheets()}
 
     </main>
@@ -16133,11 +16805,129 @@ function wireTools():
             selectedDivisionId =
               divisionId
 
+            runnerSheetSelectionDivisionId =
+              null
+
             expeditorSelectionDivisionId =
               null
 
             renderApp()
           }
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-runner-sheet-weight-class]'
+    )
+    .forEach(
+      input => {
+        input.addEventListener(
+          'change',
+          () => {
+            const value =
+              input.dataset
+                .runnerSheetWeightClass
+
+            if (
+              value ===
+              undefined
+            ) {
+              return
+            }
+
+            if (
+              input.checked
+            ) {
+              runnerSheetSelectedWeightClasses.add(
+                value
+              )
+            } else {
+              runnerSheetSelectedWeightClasses.delete(
+                value
+              )
+            }
+
+            renderApp()
+          }
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#selectAllRunnerSheetWeightClasses'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        runnerSheetSelectedWeightClasses =
+          new Set(
+            getRunnerSheetWeightClasses(
+              division
+            )
+          )
+
+        renderApp()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#unselectAllRunnerSheetWeightClasses'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        runnerSheetSelectedWeightClasses =
+          new Set()
+
+        renderApp()
+      }
+    )
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#runnerSheetForceBlankBestLiftColumns'
+    )
+    ?.addEventListener(
+      'change',
+      event => {
+        runnerSheetForceBlankBestLiftColumns =
+          (
+            event.currentTarget as
+              HTMLInputElement
+          ).checked
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#printRunnerSheets'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        const pages =
+          getRunnerSheetPrintPages(
+            meet,
+            division
+          )
+
+        if (
+          pages.length ===
+          0
+        ) {
+          window.alert(
+            'No selected weight classes contain lifters.'
+          )
+
+          return
+        }
+
+        startRunnerSheetPrint(
+          pages
         )
       }
     )
