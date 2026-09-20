@@ -8,4 +8,6 @@ export interface Meet {
   date: string
   location: string
   resultEntryMode: ResultEntryMode
+  /** 8-character authorization code shared with PlatformManager stations. */
+  platformMeetId?: string
 }

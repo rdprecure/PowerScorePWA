@@ -35,8 +35,44 @@ import {
 } from './domain/lifterCompetitionReadiness'
 
 import {
+  countAttemptProgressResults,
+  countAttemptProgressResultsNoBwt,
+  countBestLiftProgressResults,
+  countBestLiftProgressResultsNoBwt,
+  getCompetitionProgressCellState,
+  getExpectedNoBwtProgressLifters,
+  getExpectedProgressLiftersForClass,
+  getNoBwtProgressLifters,
+} from './domain/competitionProgress'
+
+import {
+  hasLaterAttemptResultInSequence,
+  hasLaterBestLiftResultInSequence,
+  isAttemptResultComplete,
+  isAttemptResultMissing,
+  isBestLiftResultComplete,
+  isBestLiftResultMissing,
+} from './domain/competitionMissingResults'
+
+
+import {
   getDivisionRules,
 } from './rules/divisionRules'
+
+import {
+  createPlatformMeetId,
+  getPlatformManagerSubmissionCsv,
+  listPlatformManagerSubmissions,
+  listProcessedPlatformManagerSubmissions,
+  markPlatformManagerSubmissionProcessed,
+  parsePlatformManagerFilename,
+  parsePlatformManagerSubmission,
+} from './integration/platformManager'
+
+import type {
+  PlatformManagerSubmission,
+  PlatformManagerLifterStatus,
+} from './integration/platformManager'
 
 
 interface DivisionTeam {
@@ -60,6 +96,7 @@ interface RegistrationDefaults {
 type AppPage =
   | 'registration'
   | 'competition'
+  | 'platform-issues'
 
 
 type CompetitionLift =
@@ -109,6 +146,10 @@ type BulkSortColumn =
   | 'readiness'
 
 
+const PLATFORM_MANAGER_HANDLER_URL =
+  'https://thspa.us/PlatformManager.ashx'
+
+
 type CompetitionSortColumn =
   | 'lifterNumber'
   | 'lifter'
@@ -119,6 +160,7 @@ type CompetitionSortColumn =
   | 'bestSquat'
   | 'bestBench'
   | 'bestDeadlift'
+  | 'subtotal'
   | 'total'
 
 
@@ -521,7 +563,7 @@ const localMeets: LocalMeet[] = [
     state: {
       meet: {
         id: 'second-development-meet',
-        name: 'Second Development Meet',
+        name: 'Platform Test 1',
         date: '2026-10-03',
         location: '',
         resultEntryMode:
@@ -534,20 +576,273 @@ const localMeets: LocalMeet[] = [
           meetId:
             'second-development-meet',
           name:
-            'Division 1',
+            'THSPA Boys',
           ruleSet:
             'THSPA',
         },
+
+        {
+          id: 2,
+          meetId:
+            'second-development-meet',
+          name:
+            'THSWPA Girls',
+          ruleSet:
+            'THSWPA',
+        },
       ],
 
-      teams: [],
+      teams: [
+        {
+          id: 1,
+          meetId:
+            'second-development-meet',
+          name:
+            'Mustangs',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 2,
+          meetId:
+            'second-development-meet',
+          name:
+            'Eagles',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 3,
+          meetId:
+            'second-development-meet',
+          name:
+            'Bulldogs',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 4,
+          meetId:
+            'second-development-meet',
+          name:
+            'Tigers',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 5,
+          meetId:
+            'second-development-meet',
+          name:
+            'Lady Mustangs',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 6,
+          meetId:
+            'second-development-meet',
+          name:
+            'Lady Eagles',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 7,
+          meetId:
+            'second-development-meet',
+          name:
+            'Lady Bulldogs',
+          region: null,
+          classification: null,
+        },
+
+        {
+          id: 8,
+          meetId:
+            'second-development-meet',
+          name:
+            'Lady Tigers',
+          region: null,
+          classification: null,
+        },
+      ],
 
       lifters: [],
     },
 
-    divisionTeams: [],
+    divisionTeams: [
+      { divisionId: 1, teamId: 1 },
+      { divisionId: 1, teamId: 2 },
+      { divisionId: 1, teamId: 3 },
+      { divisionId: 1, teamId: 4 },
+
+      { divisionId: 2, teamId: 5 },
+      { divisionId: 2, teamId: 6 },
+      { divisionId: 2, teamId: 7 },
+      { divisionId: 2, teamId: 8 },
+    ],
   },
 ]
+
+function populatePlatformTestMeet():
+  void {
+
+  const meet =
+    localMeets.find(
+      item =>
+        item.state.meet.id ===
+        'second-development-meet'
+    )
+
+  if (
+    meet === undefined ||
+    meet.state.lifters.length > 0
+  ) {
+    return
+  }
+
+  const boys = [
+    ['Aaron', 'Bennett'],
+    ['Brandon', 'Carter'],
+    ['Cody', 'Dawson'],
+    ['Derek', 'Ellis'],
+    ['Evan', 'Foster'],
+    ['Garrett', 'Griffin'],
+    ['Henry', 'Hayes'],
+    ['Isaiah', 'Irwin'],
+    ['Jason', 'Jenkins'],
+    ['Kevin', 'Knight'],
+    ['Lucas', 'Lawson'],
+    ['Marcus', 'Miller'],
+    ['Nathan', 'Norris'],
+    ['Owen', 'Owens'],
+    ['Preston', 'Parker'],
+    ['Quinton', 'Qualls'],
+    ['Ryan', 'Reed'],
+    ['Samuel', 'Sutton'],
+    ['Trevor', 'Taylor'],
+    ['Victor', 'Vargas'],
+    ['William', 'Walker'],
+    ['Xavier', 'Young'],
+    ['Zachary', 'Zimmerman'],
+    ['Cole', 'Andrews'],
+  ] as const
+
+  const boysBodyWeights = [
+    166.2, 167.8, 168.5, 169.7, 170.4, 171.6,
+    172.3, 173.9, 174.5, 175.2, 176.8, 177.4,
+    178.1, 179.3, 180.6, 166.9, 168.8, 170.9,
+    172.7, 174.8, 176.1, 177.9, 179.8, 180.9,
+  ]
+
+  const girls = [
+    ['Alyssa', 'Baker'],
+    ['Brooke', 'Collins'],
+    ['Caitlyn', 'Davis'],
+    ['Danielle', 'Edwards'],
+    ['Emily', 'Franklin'],
+    ['Gabriella', 'Garza'],
+    ['Hailey', 'Harris'],
+    ['Isabella', 'Ingram'],
+    ['Jasmine', 'Johnson'],
+    ['Kayla', 'King'],
+    ['Lauren', 'Lewis'],
+    ['Megan', 'Moore'],
+    ['Nicole', 'Nelson'],
+    ['Olivia', 'Ortega'],
+    ['Paige', 'Phillips'],
+    ['Rachel', 'Roberts'],
+    ['Samantha', 'Scott'],
+    ['Taylor', 'Thomas'],
+    ['Vanessa', 'Valdez'],
+    ['Whitney', 'White'],
+    ['Zoe', 'Zuniga'],
+  ] as const
+
+  const girlsBodyWeights = [
+    149.2, 150.6, 151.8, 153.1, 154.4, 155.7,
+    157.2, 158.5, 159.9, 161.3, 162.6, 163.8,
+    164.7, 149.9, 152.4, 154.9, 157.7, 160.4,
+    162.1, 163.4, 164.3,
+  ]
+
+  for (
+    let index = 0;
+    index < boys.length;
+    index += 1
+  ) {
+    const lifterNumber =
+      index + 1
+
+    const lifter =
+      createDevelopmentLifter(
+        lifterNumber,
+        lifterNumber,
+        boys[index][0],
+        boys[index][1],
+        1,
+        (index % 4) + 1,
+        'equipped',
+      )
+
+    lifter.bodyWeight =
+      boysBodyWeights[index]
+
+    lifter.weightClass =
+      '181'
+
+    lifter.weightClassSource =
+      'automatic'
+
+    meet.state.lifters.push(
+      lifter
+    )
+  }
+
+  for (
+    let index = 0;
+    index < girls.length;
+    index += 1
+  ) {
+    const lifterNumber =
+      50 + index
+
+    const lifter =
+      createDevelopmentLifter(
+        100 + lifterNumber,
+        lifterNumber,
+        girls[index][0],
+        girls[index][1],
+        2,
+        5 + (index % 4),
+        'equipped',
+      )
+
+    lifter.bodyWeight =
+      girlsBodyWeights[index]
+
+    lifter.weightClass =
+      '165'
+
+    lifter.weightClassSource =
+      'automatic'
+
+    meet.state.lifters.push(
+      lifter
+    )
+  }
+}
+
+
+populatePlatformTestMeet()
+
 
 function expandDevelopmentMeetLifters():
   void {
@@ -1049,6 +1344,21 @@ const competitionWeightClassByDivision =
   new Map<string, string | null>()
 
 
+const missingResultsReviewDivisions =
+  new Set<string>()
+
+
+const PLATFORM_RESULTS_POLL_INTERVAL_MS =
+  15000
+
+let platformResultsPollTimer:
+  number | null =
+    null
+
+const pendingPlatformResultCountByMeetId =
+  new Map<string, number>()
+
+
 function getCompetitionDivisionKey(
   meetId: string,
   divisionId: number,
@@ -1258,6 +1568,214 @@ function createMeetId():
       .toString(36)
       .slice(2, 8)
   )
+}
+
+
+function generateSelectedPlatformMeetId():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const existing =
+    meet.state.meet
+      .platformMeetId
+
+  if (
+    existing !== undefined &&
+    existing !== '' &&
+    !window.confirm(
+      `Generate a new Platform MeetID?\n\nThe current MeetID ${existing} will no longer match PlatformManager stations using the old code.`
+    )
+  ) {
+    return
+  }
+
+  meet.state.meet.platformMeetId =
+    createPlatformMeetId()
+
+  renderApp()
+}
+
+
+function getNormalizedPlatformMeetId(
+  meet: LocalMeet,
+): string {
+
+  return meet.state.meet
+    .platformMeetId
+    ?.trim()
+    .toUpperCase() ??
+    ''
+}
+
+
+function togglePlatformMeetIdVisibility(
+  inputId: string,
+  buttonId: string,
+): void {
+
+  const input =
+    document.querySelector<HTMLInputElement>(
+      `#${inputId}`
+    )
+
+  const button =
+    document.querySelector<HTMLButtonElement>(
+      `#${buttonId}`
+    )
+
+  if (
+    input === null ||
+    button === null ||
+    input.value === ''
+  ) {
+    return
+  }
+
+  const showing =
+    input.type === 'text'
+
+  input.type =
+    showing
+      ? 'password'
+      : 'text'
+
+  button.textContent =
+    showing
+      ? 'View'
+      : 'Hide'
+}
+
+
+async function copySelectedPlatformMeetId():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  if (
+    meetId === ''
+  ) {
+    return
+  }
+
+  try {
+    await navigator.clipboard
+      .writeText(
+        meetId
+      )
+  } catch {
+    const textarea =
+      document.createElement(
+        'textarea'
+      )
+
+    textarea.value =
+      meetId
+
+    textarea.style.position =
+      'fixed'
+
+    textarea.style.opacity =
+      '0'
+
+    document.body.appendChild(
+      textarea
+    )
+
+    textarea.select()
+    document.execCommand(
+      'copy'
+    )
+    textarea.remove()
+  }
+
+  const button =
+    document.querySelector<HTMLButtonElement>(
+      '#copyPlatformMeetId, #copyCompetitionPlatformMeetId'
+    )
+
+  if (
+    button !== null
+  ) {
+    const original =
+      button.textContent ??
+      'Copy'
+
+    button.textContent =
+      'Copied'
+
+    window.setTimeout(
+      () => {
+        button.textContent =
+          original
+      },
+      1200
+    )
+  }
+}
+
+
+function wirePlatformMeetIdControls():
+  void {
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#viewPlatformMeetId'
+    )
+    ?.addEventListener(
+      'click',
+      () =>
+        togglePlatformMeetIdVisibility(
+          'platformMeetIdDisplay',
+          'viewPlatformMeetId'
+        )
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#viewCompetitionPlatformMeetId'
+    )
+    ?.addEventListener(
+      'click',
+      () =>
+        togglePlatformMeetIdVisibility(
+          'competitionPlatformMeetIdDisplay',
+          'viewCompetitionPlatformMeetId'
+        )
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '#copyPlatformMeetId, #copyCompetitionPlatformMeetId'
+    )
+    .forEach(
+      button =>
+        button.addEventListener(
+          'click',
+          () => {
+            void copySelectedPlatformMeetId()
+          }
+        )
+    )
 }
 
 
@@ -2192,6 +2710,11 @@ function getEditFormSnapshot(
       '#editLifterStatus'
     )
 
+  const platformTeam =
+    document.querySelector<HTMLSelectElement>(
+      '#editLifterTeam'
+    )
+
   if (
     number === null ||
     first === null ||
@@ -2247,6 +2770,9 @@ function getEditFormSnapshot(
       'bteam',
     status:
       lifterStatus.value,
+    teamId:
+      platformTeam?.value ??
+      '',
   })
 }
 
@@ -2609,6 +3135,11 @@ function saveLifterEdit(
       '#editLifterStatus'
     )
 
+  const platformTeamInput =
+    document.querySelector<HTMLSelectElement>(
+      '#editLifterTeam'
+    )
+
   if (
     lifter === undefined ||
     division === undefined ||
@@ -2617,7 +3148,6 @@ function saveLifterEdit(
     lastInput === null ||
     bodyWeightInput === null ||
     classInput === null ||
-    gradeInput === null ||
     equipmentInput === null ||
     teamStatusInput === null ||
     lifterStatusInput === null
@@ -2745,7 +3275,7 @@ function saveLifterEdit(
       'Grade must be 9, 10, 11, or 12.'
     )
 
-    gradeInput.focus()
+    gradeInput?.focus()
 
     return false
   }
@@ -2777,6 +3307,13 @@ function saveLifterEdit(
       lastName,
       bodyWeight,
       grade,
+      teamId:
+        platformTeamInput === null ||
+        platformTeamInput.value === ''
+          ? lifter.teamId
+          : Number(
+              platformTeamInput.value
+            ),
       equipmentType:
         equipmentInput.value as
           Lifter['equipmentType'],
@@ -2847,6 +3384,10 @@ function saveLifterEdit(
   Object.assign(
     lifter,
     updated
+  )
+
+  refreshPlatformRegistrationState(
+    lifter
   )
 
   registrationDefaults = {
@@ -4088,6 +4629,29 @@ function renderNavigation():
         Reports
       </button>
 
+      ${
+        (() => {
+          const issueCount =
+            getSelectedMeet() === undefined
+              ? 0
+              : getPlatformImportIssues(
+                  getSelectedMeet()!
+                ).length
+
+          return issueCount > 0
+            ? `
+              <button
+                id="navPlatformIssues"
+                type="button"
+                class="nav-item ${currentPage === 'platform-issues' ? 'active' : ''}"
+              >
+                Platform Issues (${issueCount})
+              </button>
+            `
+            : ''
+        })()
+      }
+
       <button
         id="shortcutHelp"
         type="button"
@@ -5046,6 +5610,22 @@ function getLifterReadinessLabel(
 ): string {
 
   if (
+    isPlatformDivisionRequired(
+      lifter
+    )
+  ) {
+    return 'Division Required'
+  }
+
+  if (
+    isPlatformRegistrationIncomplete(
+      lifter
+    )
+  ) {
+    return 'Platform Incomplete'
+  }
+
+  if (
     lifter.status !==
     'active'
   ) {
@@ -5700,14 +6280,42 @@ function renderLifterEditRow(
 
       ${
         showTeamColumn
-          ? `
-            <div
-              class="entry-fixed-cell"
-              title="${escapeHtml(getLifterTeamName(meet, lifter))}"
-            >
-              ${escapeHtml(getLifterTeamName(meet, lifter))}
-            </div>
-          `
+          ? isPlatformRegistrationIncomplete(
+              lifter
+            )
+            ? `
+              <select
+                id="editLifterTeam"
+                class="grid-select"
+                aria-label="Team"
+              >
+                <option value="">Select team</option>
+                ${
+                  meet.state.teams
+                    .filter(
+                      team =>
+                        meet.divisionTeams.some(
+                          link =>
+                            link.divisionId === lifter.divisionId &&
+                            link.teamId === team.id
+                        )
+                    )
+                    .map(
+                      team =>
+                        `<option value="${team.id}" ${lifter.teamId === team.id ? 'selected' : ''}>${escapeHtml(team.name)}${team.isBTeam === true ? ' (B Team)' : ''}</option>`
+                    )
+                    .join('')
+                }
+              </select>
+            `
+            : `
+              <div
+                class="entry-fixed-cell"
+                title="${escapeHtml(getLifterTeamName(meet, lifter))}"
+              >
+                ${escapeHtml(getLifterTeamName(meet, lifter))}
+              </div>
+            `
           : ''
       }
 
@@ -5797,7 +6405,7 @@ function renderLifterEditRow(
         id="editLifterValidationStatus"
         class="readiness editing-status"
       >
-        Editing
+        ${isPlatformDivisionRequired(lifter) ? 'Division Required' : isPlatformRegistrationIncomplete(lifter) ? 'Platform Incomplete' : 'Editing'}
       </div>
 
       <div></div>
@@ -5872,7 +6480,13 @@ function renderRegisteredLifterRows(
             </div>
 
             <div class="cell-name">
-              ${escapeHtml(lifter.lastName)}, ${escapeHtml(lifter.firstName)}
+              ${
+                isPlatformRegistrationIncomplete(lifter) &&
+                lifter.firstName.trim() === '' &&
+                lifter.lastName.trim() === ''
+                  ? '<strong>NAME REQUIRED</strong>'
+                  : `${escapeHtml(lifter.lastName)}, ${escapeHtml(lifter.firstName)}`
+              }
             </div>
 
             ${
@@ -8581,6 +9195,50 @@ function renderRegistration():
                     }
                   </div>
 
+                  <div class="registration-platform-meet-id">
+                    <span>Platform MeetID:</span>
+                    ${
+                      meet.state.meet.platformMeetId
+                        ? `
+                          <input
+                            id="platformMeetIdDisplay"
+                            type="password"
+                            value="${escapeHtml(getNormalizedPlatformMeetId(meet))}"
+                            readonly
+                            autocomplete="off"
+                            aria-label="Platform MeetID"
+                            style="width:92px; font-family:monospace; text-align:center;"
+                          >
+                          <button
+                            id="viewPlatformMeetId"
+                            type="button"
+                            class="compact-button secondary-button"
+                          >
+                            View
+                          </button>
+                          <button
+                            id="copyPlatformMeetId"
+                            type="button"
+                            class="compact-button secondary-button"
+                          >
+                            Copy
+                          </button>
+                        `
+                        : '<strong>Not generated</strong>'
+                    }
+                    <button
+                      id="generatePlatformMeetId"
+                      type="button"
+                      class="compact-button secondary-button"
+                    >
+                      ${
+                        meet.state.meet.platformMeetId
+                          ? 'Regenerate'
+                          : 'Generate'
+                      }
+                    </button>
+                  </div>
+
                   <div class="registration-actions">
                     ${
                       isBulkEditing
@@ -8936,22 +9594,57 @@ function formatCompetitionDisplayWeight(
 }
 
 
-function calculateCompetitionTotal(
+function calculateCompetitionSubTotal(
   results: CompetitionBestLiftResults,
 ): number | null {
 
+  const values =
+    [
+      results.squat,
+      results.bench,
+    ].filter(
+      value =>
+        value !== null
+    ) as number[]
+
   if (
-    results.squat === null ||
-    results.bench === null ||
-    results.deadlift === null
+    values.length === 0
   ) {
     return null
   }
 
-  return (
-    results.squat +
-    results.bench +
-    results.deadlift
+  return values.reduce(
+    (sum, value) =>
+      sum + value,
+    0
+  )
+}
+
+
+function calculateCompetitionTotal(
+  results: CompetitionBestLiftResults,
+): number | null {
+
+  const values =
+    [
+      results.squat,
+      results.bench,
+      results.deadlift,
+    ].filter(
+      value =>
+        value !== null
+    ) as number[]
+
+  if (
+    values.length === 0
+  ) {
+    return null
+  }
+
+  return values.reduce(
+    (sum, value) =>
+      sum + value,
+    0
   )
 }
 
@@ -9035,6 +9728,30 @@ function getCompetitionTotalForLifter(
   }
 
   return calculateCompetitionTotal(
+    getBestLiftResults(
+      lifter
+    )
+  )
+}
+
+
+function getCompetitionSubTotalForLifter(
+  meet: LocalMeet,
+  lifter: Lifter,
+): number | null {
+
+  if (
+    meet.state.meet.resultEntryMode ===
+    'all-attempts'
+  ) {
+    return calculateCompetitionSubTotal(
+      getAllAttemptBestLifts(
+        lifter
+      )
+    )
+  }
+
+  return calculateCompetitionSubTotal(
     getBestLiftResults(
       lifter
     )
@@ -9286,6 +10003,22 @@ function compareCompetitionLifters(
 
       break
 
+    case 'subtotal':
+      result =
+        compareCompetitionOptionalNumbers(
+          getCompetitionSubTotalForLifter(
+            meet,
+            a
+          ),
+          getCompetitionSubTotalForLifter(
+            meet,
+            b
+          ),
+          competitionSortAscending
+        )
+
+      break
+
     case 'total':
       result =
         compareCompetitionOptionalNumbers(
@@ -9320,6 +10053,8 @@ function compareCompetitionLifters(
 function renderCompetitionSortHeader(
   label: string,
   column: CompetitionSortColumn,
+  extraClass = '',
+  competitionColumn = '',
 ): string {
 
   const active =
@@ -9335,7 +10070,14 @@ function renderCompetitionSortHeader(
     )
 
   return `
-    <div class="competition-sort-header-cell">
+    <div
+      class="competition-sort-header-cell ${extraClass}"
+      ${
+        competitionColumn === ''
+          ? ''
+          : `data-missing-result-column="${competitionColumn}"`
+      }
+    >
       <button
         type="button"
         class="competition-sort-button ${
@@ -9361,6 +10103,45 @@ function renderCompetitionSortHeader(
 }
 
 
+function getCompetitionRunningTotalForLifter(
+  meet: LocalMeet,
+  lifter: Lifter,
+): number | null {
+
+  const results =
+    meet.state.meet.resultEntryMode ===
+      'all-attempts'
+        ? getAllAttemptBestLifts(
+            lifter
+          )
+        : getBestLiftResults(
+            lifter
+          )
+
+  const completed =
+    [
+      results.squat,
+      results.bench,
+      results.deadlift,
+    ].filter(
+      value =>
+        value !== null
+    ) as number[]
+
+  if (
+    completed.length === 0
+  ) {
+    return null
+  }
+
+  return completed.reduce(
+    (sum, value) =>
+      sum + value,
+    0
+  )
+}
+
+
 function getCompetitionPlace(
   meet: LocalMeet,
   lifter: Lifter,
@@ -9376,14 +10157,14 @@ function getCompetitionPlace(
     return null
   }
 
-  const total =
-    getCompetitionTotalForLifter(
+  const runningTotal =
+    getCompetitionRunningTotalForLifter(
       meet,
       lifter
     )
 
   if (
-    total === null
+    runningTotal === null
   ) {
     return null
   }
@@ -9399,7 +10180,7 @@ function getCompetitionPlace(
           candidate.status ===
             'active' &&
           !candidate.isGuest &&
-          getCompetitionTotalForLifter(
+          getCompetitionRunningTotalForLifter(
             meet,
             candidate
           ) !==
@@ -9409,13 +10190,13 @@ function getCompetitionPlace(
         (a, b) => {
 
           const totalA =
-            getCompetitionTotalForLifter(
+            getCompetitionRunningTotalForLifter(
               meet,
               a
             ) ?? 0
 
           const totalB =
-            getCompetitionTotalForLifter(
+            getCompetitionRunningTotalForLifter(
               meet,
               b
             ) ?? 0
@@ -9479,11 +10260,11 @@ function getCompetitionPlace(
       ]
 
     if (
-      getCompetitionTotalForLifter(
+      getCompetitionRunningTotalForLifter(
         meet,
         previous
       ) ===
-        total &&
+        runningTotal &&
       previous.bodyWeight ===
         lifter.bodyWeight
     ) {
@@ -9807,6 +10588,394 @@ function getCompetitionStatusSummary(
 }
 
 
+function getMissingResultsReviewKey(
+  meet: LocalMeet,
+  divisionId: number,
+): string {
+
+  return (
+    `${meet.state.meet.id}:` +
+    `${divisionId}`
+  )
+}
+
+
+function isMissingResultsReviewEnabled(
+  meet: LocalMeet,
+  divisionId: number,
+): boolean {
+
+  return missingResultsReviewDivisions.has(
+    getMissingResultsReviewKey(
+      meet,
+      divisionId
+    )
+  )
+}
+
+
+function isBestLiftMissingForCompetition(
+  meet: LocalMeet,
+  lifter: Lifter,
+  lift: CompetitionLift,
+): boolean {
+
+  const reviewEnabled =
+    lifter.divisionId !== null &&
+    isMissingResultsReviewEnabled(
+      meet,
+      lifter.divisionId
+    )
+
+  if (
+    isBestLiftResultComplete(
+      lifter,
+      lift
+    )
+  ) {
+    return false
+  }
+
+  if (
+    isBestLiftResultMissing(
+      lifter,
+      lift,
+      reviewEnabled
+    )
+  ) {
+    return true
+  }
+
+  if (
+    lifter.status !==
+      'active'
+  ) {
+    return false
+  }
+
+  return hasLaterBestLiftResultInSequence(
+    lifter,
+    getCompetitionLifters(
+      meet
+    ),
+    lift
+  )
+}
+
+
+function isAttemptMissingForCompetition(
+  meet: LocalMeet,
+  lifter: Lifter,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+): boolean {
+
+  const reviewEnabled =
+    lifter.divisionId !== null &&
+    isMissingResultsReviewEnabled(
+      meet,
+      lifter.divisionId
+    )
+
+  if (
+    isAttemptResultComplete(
+      lifter,
+      lift,
+      attemptKey
+    )
+  ) {
+    return false
+  }
+
+  if (
+    isAttemptResultMissing(
+      lifter,
+      lift,
+      attemptKey,
+      reviewEnabled
+    )
+  ) {
+    return true
+  }
+
+  if (
+    lifter.status !==
+      'active'
+  ) {
+    return false
+  }
+
+  return hasLaterAttemptResultInSequence(
+    lifter,
+    getCompetitionLifters(
+      meet
+    ),
+    lift,
+    attemptKey
+  )
+}
+
+
+function doesBestLiftColumnHaveMissingResults(
+  meet: LocalMeet,
+  lift: CompetitionLift,
+): boolean {
+
+  return getCompetitionLifters(
+    meet
+  ).some(
+    lifter =>
+      isBestLiftMissingForCompetition(
+        meet,
+        lifter,
+        lift
+      )
+  )
+}
+
+
+function doesAttemptColumnHaveMissingResults(
+  meet: LocalMeet,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+): boolean {
+
+  return getCompetitionLifters(
+    meet
+  ).some(
+    lifter =>
+      isAttemptMissingForCompetition(
+        meet,
+        lifter,
+        lift,
+        attemptKey
+      )
+  )
+}
+
+
+function getMissingHeaderLabel(
+  label: string,
+  missing: boolean,
+): string {
+
+  return missing
+    ? `${label} ⚠`
+    : label
+}
+
+
+function renderCompetitionAttemptHeader(
+  meet: LocalMeet,
+  label: string,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+): string {
+
+  const missing =
+    doesAttemptColumnHaveMissingResults(
+      meet,
+      lift,
+      attemptKey
+    )
+
+  return `
+    <div
+      class="${
+        missing
+          ? 'competition-header-missing-result'
+          : ''
+      }"
+      data-missing-result-column="${lift}-${attemptKey}"
+    >
+      ${escapeHtml(
+        getMissingHeaderLabel(
+          label,
+          missing
+        )
+      ).replace(
+        ' ',
+        '<br>'
+      )}
+    </div>
+  `
+}
+
+
+function updateCompetitionMissingResultIndicators(
+  meet: LocalMeet,
+): void {
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-best-lift]'
+    )
+    .forEach(
+      input => {
+        const lifterId =
+          Number(
+            input.dataset
+              .competitionLifterId
+          )
+
+        const lift =
+          input.dataset
+            .bestLift as
+              CompetitionLift | undefined
+
+        const lifter =
+          getCompetitionLifterById(
+            lifterId
+          )
+
+        const cell =
+          input.closest<HTMLElement>(
+            '.competition-result-cell'
+          )
+
+        if (
+          lifter === undefined ||
+          lift === undefined ||
+          cell === null
+        ) {
+          return
+        }
+
+        cell.classList.toggle(
+          'competition-missing-result-cell',
+          isBestLiftMissingForCompetition(
+            meet,
+            lifter,
+            lift
+          )
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLInputElement>(
+      '[data-attempt-weight]'
+    )
+    .forEach(
+      input => {
+        const lifterId =
+          Number(
+            input.dataset
+              .competitionLifterId
+          )
+
+        const lift =
+          input.dataset
+            .attemptLift as
+              CompetitionLift | undefined
+
+        const attemptKey =
+          input.dataset
+            .attemptKey as
+              CompetitionAttemptKey | undefined
+
+        const lifter =
+          getCompetitionLifterById(
+            lifterId
+          )
+
+        const cell =
+          input.closest<HTMLElement>(
+            '.competition-attempt-cell'
+          )
+
+        if (
+          lifter === undefined ||
+          lift === undefined ||
+          attemptKey === undefined ||
+          cell === null
+        ) {
+          return
+        }
+
+        cell.classList.toggle(
+          'competition-missing-result-cell',
+          isAttemptMissingForCompetition(
+            meet,
+            lifter,
+            lift,
+            attemptKey
+          )
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLElement>(
+      '[data-missing-result-column]'
+    )
+    .forEach(
+      header => {
+        const column =
+          header.dataset
+            .missingResultColumn ??
+          ''
+
+        let missing =
+          false
+
+        if (
+          column.startsWith(
+            'best-'
+          )
+        ) {
+          const lift =
+            column.replace(
+              'best-',
+              ''
+            ) as CompetitionLift
+
+          missing =
+            doesBestLiftColumnHaveMissingResults(
+              meet,
+              lift
+            )
+        } else {
+          const [
+            lift,
+            attemptKey,
+          ] =
+            column.split(
+              '-'
+            ) as [
+              CompetitionLift,
+              CompetitionAttemptKey,
+            ]
+
+          missing =
+            doesAttemptColumnHaveMissingResults(
+              meet,
+              lift,
+              attemptKey
+            )
+        }
+
+        header.classList.toggle(
+          'competition-header-missing-result',
+          missing
+        )
+
+        const warning =
+          header.querySelector<HTMLElement>(
+            '.competition-missing-header-warning'
+          )
+
+        if (
+          warning !== null
+        ) {
+          warning.hidden =
+            !missing
+        }
+      }
+    )
+}
+
+
 function renderBestLiftCompetitionRows(
   meet: LocalMeet,
 ): string {
@@ -9837,6 +11006,11 @@ function renderBestLiftCompetitionRows(
       const results =
         getBestLiftResults(
           lifter
+        )
+
+      const subtotal =
+        calculateCompetitionSubTotal(
+          results
         )
 
       const total =
@@ -9902,6 +11076,7 @@ function renderBestLiftCompetitionRows(
 
           ${
             renderBestLiftInput(
+              meet,
               lifter,
               'squat',
               results.squat
@@ -9910,6 +11085,7 @@ function renderBestLiftCompetitionRows(
 
           ${
             renderBestLiftInput(
+              meet,
               lifter,
               'bench',
               results.bench
@@ -9918,11 +11094,19 @@ function renderBestLiftCompetitionRows(
 
           ${
             renderBestLiftInput(
+              meet,
               lifter,
               'deadlift',
               results.deadlift
             )
           }
+
+          <div
+            class="competition-total"
+            data-best-subtotal="${lifter.id}"
+          >
+            ${formatCompetitionDisplayWeight(subtotal)}
+          </div>
 
           <div
             class="competition-total"
@@ -9964,13 +11148,27 @@ function renderBestLiftCompetitionRows(
 
 
 function renderBestLiftInput(
+  meet: LocalMeet,
   lifter: Lifter,
   lift: CompetitionLift,
   value: number | null,
 ): string {
 
+  const missing =
+    isBestLiftMissingForCompetition(
+      meet,
+      lifter,
+      lift
+    )
+
   return `
-    <div class="competition-result-cell">
+    <div
+      class="competition-result-cell ${
+        missing
+          ? 'competition-missing-result-cell'
+          : ''
+      }"
+    >
       <input
         class="competition-result-input"
         type="text"
@@ -10091,6 +11289,7 @@ function renderAttemptStatusCycle(
 
 
 function renderAttemptCell(
+  meet: LocalMeet,
   lifter: Lifter,
   lift: CompetitionLift,
   attemptKey: CompetitionAttemptKey,
@@ -10102,9 +11301,21 @@ function renderAttemptCell(
       lifter
     )
 
+  const missing =
+    isAttemptMissingForCompetition(
+      meet,
+      lifter,
+      lift,
+      attemptKey
+    )
+
   return `
     <div
-      class="competition-attempt-cell attempt-${attempt.status}"
+      class="competition-attempt-cell attempt-${attempt.status} ${
+        missing
+          ? 'competition-missing-result-cell'
+          : ''
+      }"
       data-attempt-cell
     >
       <input
@@ -10173,6 +11384,11 @@ function renderAllAttemptCompetitionRows(
           lifter
         )
 
+      const subtotal =
+        calculateCompetitionSubTotal(
+          best
+        )
+
       const total =
         calculateCompetitionTotal(
           best
@@ -10234,17 +11450,17 @@ function renderAllAttemptCompetitionRows(
             )}
           </div>
 
-          ${renderAttemptCell(lifter, 'squat', 'attempt1', attempts.squat.attempt1)}
-          ${renderAttemptCell(lifter, 'squat', 'attempt2', attempts.squat.attempt2)}
-          ${renderAttemptCell(lifter, 'squat', 'attempt3', attempts.squat.attempt3)}
+          ${renderAttemptCell(meet, lifter, 'squat', 'attempt1', attempts.squat.attempt1)}
+          ${renderAttemptCell(meet, lifter, 'squat', 'attempt2', attempts.squat.attempt2)}
+          ${renderAttemptCell(meet, lifter, 'squat', 'attempt3', attempts.squat.attempt3)}
 
-          ${renderAttemptCell(lifter, 'bench', 'attempt1', attempts.bench.attempt1)}
-          ${renderAttemptCell(lifter, 'bench', 'attempt2', attempts.bench.attempt2)}
-          ${renderAttemptCell(lifter, 'bench', 'attempt3', attempts.bench.attempt3)}
+          ${renderAttemptCell(meet, lifter, 'bench', 'attempt1', attempts.bench.attempt1)}
+          ${renderAttemptCell(meet, lifter, 'bench', 'attempt2', attempts.bench.attempt2)}
+          ${renderAttemptCell(meet, lifter, 'bench', 'attempt3', attempts.bench.attempt3)}
 
-          ${renderAttemptCell(lifter, 'deadlift', 'attempt1', attempts.deadlift.attempt1)}
-          ${renderAttemptCell(lifter, 'deadlift', 'attempt2', attempts.deadlift.attempt2)}
-          ${renderAttemptCell(lifter, 'deadlift', 'attempt3', attempts.deadlift.attempt3)}
+          ${renderAttemptCell(meet, lifter, 'deadlift', 'attempt1', attempts.deadlift.attempt1)}
+          ${renderAttemptCell(meet, lifter, 'deadlift', 'attempt2', attempts.deadlift.attempt2)}
+          ${renderAttemptCell(meet, lifter, 'deadlift', 'attempt3', attempts.deadlift.attempt3)}
 
           <div
             class="competition-best-summary"
@@ -10265,6 +11481,13 @@ function renderAllAttemptCompetitionRows(
             data-attempt-best="${lifter.id}-deadlift"
           >
             ${formatCompetitionDisplayWeight(best.deadlift)}
+          </div>
+
+          <div
+            class="competition-total"
+            data-attempt-subtotal="${lifter.id}"
+          >
+            ${formatCompetitionDisplayWeight(subtotal)}
           </div>
 
           <div
@@ -10296,6 +11519,3139 @@ function renderAllAttemptCompetitionRows(
       `
     }
   ).join('')
+}
+
+
+
+function getPlatformManagerStatusPriority(
+  status: PlatformManagerLifterStatus,
+): number {
+
+  switch (
+    status
+  ) {
+    case 'disqualified':
+      return 3
+
+    case 'scratched':
+      return 2
+
+    case 'bombed':
+      return 1
+
+    default:
+      return 0
+  }
+}
+
+
+type PlatformRegistrationState =
+  | 'incomplete'
+  | 'division-required'
+
+
+type PlatformImportedLifter =
+  Lifter & {
+    platformRegistrationState?:
+      PlatformRegistrationState
+  }
+
+
+function getPlatformRegistrationState(
+  lifter: Lifter,
+): PlatformRegistrationState | undefined {
+
+  return (
+    lifter as PlatformImportedLifter
+  ).platformRegistrationState
+}
+
+
+function isPlatformRegistrationIncomplete(
+  lifter: Lifter,
+): boolean {
+
+  return getPlatformRegistrationState(
+    lifter
+  ) !== undefined
+}
+
+
+function isPlatformDivisionRequired(
+  lifter: Lifter,
+): boolean {
+
+  return getPlatformRegistrationState(
+    lifter
+  ) === 'division-required'
+}
+
+
+function setPlatformRegistrationState(
+  lifter: Lifter,
+  state: PlatformRegistrationState | undefined,
+): void {
+
+  const imported =
+    lifter as PlatformImportedLifter
+
+  if (
+    state === undefined
+  ) {
+    delete imported.platformRegistrationState
+  } else {
+    imported.platformRegistrationState =
+      state
+  }
+}
+
+
+function setPlatformRegistrationIncomplete(
+  lifter: Lifter,
+  incomplete: boolean,
+): void {
+
+  setPlatformRegistrationState(
+    lifter,
+    incomplete
+      ? 'incomplete'
+      : undefined
+  )
+}
+
+
+function hasCompletePlatformRegistration(
+  lifter: Lifter,
+): boolean {
+
+  return (
+    lifter.firstName.trim() !== '' &&
+    lifter.lastName.trim() !== '' &&
+    lifter.teamId !== null &&
+    lifter.bodyWeight !== null &&
+    Number.isFinite(lifter.bodyWeight) &&
+    lifter.bodyWeight > 0
+  )
+}
+
+
+function refreshPlatformRegistrationState(
+  lifter: Lifter,
+): void {
+
+  if (
+    !isPlatformRegistrationIncomplete(
+      lifter
+    )
+  ) {
+    return
+  }
+
+  if (
+    hasCompletePlatformRegistration(
+      lifter
+    )
+  ) {
+    setPlatformRegistrationIncomplete(
+      lifter,
+      false
+    )
+  }
+}
+
+
+function inferPlatformManagerDivisionId(
+  submission: PlatformManagerSubmission,
+  lifterByNumber: Map<number, Lifter>,
+): number | null {
+
+  const divisionIds =
+    new Set<number>()
+
+  for (
+    const row of submission.rows
+  ) {
+    const known =
+      lifterByNumber.get(
+        row.lifterNumber
+      )
+
+    if (
+      known === undefined ||
+      isPlatformRegistrationIncomplete(
+        known
+      )
+    ) {
+      continue
+    }
+
+    divisionIds.add(
+      known.divisionId
+    )
+  }
+
+  if (
+    divisionIds.size !== 1
+  ) {
+    return null
+  }
+
+  return [...divisionIds][0]
+}
+
+
+function createPlatformIncompleteLifter(
+  meet: LocalMeet,
+  lifterNumber: number,
+  divisionId: number | null,
+): Lifter {
+
+  const lifter:
+    Lifter = {
+      id:
+        getNextLifterId(
+          meet.state
+        ),
+      lifterNumber,
+      firstName: '',
+      lastName: '',
+      divisionId:
+        divisionId ?? 0,
+      teamId: null,
+      bodyWeight: null,
+      weightClass: null,
+      weightClassSource:
+        'automatic',
+      equipmentType:
+        'equipped',
+      age: null,
+      grade: null,
+      status: 'active',
+      isGuest: false,
+      isExtraLifter: false,
+      declaredDeadliftOpener:
+        null,
+    }
+
+  setPlatformRegistrationState(
+    lifter,
+    divisionId === null
+      ? 'division-required'
+      : 'incomplete'
+  )
+
+  meet.state.lifters.push(
+    lifter
+  )
+
+  return lifter
+}
+
+
+function applyPlatformManagerSubmissions(
+  meet: LocalMeet,
+  submissions: PlatformManagerSubmission[],
+): {
+  rowCount: number
+  lifterCount: number
+  addedLifters: Array<{
+    lifterNumber: number
+    divisionId: number | null
+    divisionName: string
+  }>
+} {
+
+  const lifterByNumber =
+    new Map<number, Lifter>(
+      meet.state.lifters.map(
+        lifter => [
+          lifter.lifterNumber,
+          lifter,
+        ]
+      )
+    )
+
+  const importedStatuses =
+    new Map<number, PlatformManagerLifterStatus>()
+
+  let rowCount = 0
+
+  const addedLifters:
+    Array<{
+      lifterNumber: number
+      divisionId: number | null
+      divisionName: string
+    }> =
+      []
+
+  for (
+    const submission of submissions
+  ) {
+    for (
+      const row of submission.rows
+    ) {
+      let lifter =
+        lifterByNumber.get(
+          row.lifterNumber
+        )
+
+      if (
+        lifter === undefined
+      ) {
+        const divisionId =
+          inferPlatformManagerDivisionId(
+            submission,
+            lifterByNumber
+          )
+
+        lifter =
+          createPlatformIncompleteLifter(
+            meet,
+            row.lifterNumber,
+            divisionId
+          )
+
+        lifterByNumber.set(
+          row.lifterNumber,
+          lifter
+        )
+
+        const division =
+          divisionId === null
+            ? undefined
+            : meet.state.divisions.find(
+                item =>
+                  item.id ===
+                  divisionId
+              )
+
+        addedLifters.push({
+          lifterNumber:
+            row.lifterNumber,
+          divisionId,
+          divisionName:
+            divisionId === null
+              ? 'Division Required'
+              : division?.name ??
+                `Division ${divisionId}`,
+        })
+      }
+
+      if (
+        submission.descriptor.mode ===
+        'best-lifts'
+      ) {
+        const results =
+          ensureBestLiftResults(
+            lifter
+          )
+
+        results[
+          submission.descriptor.lift
+        ] =
+          row.result === 'good' &&
+          row.weight > 0
+            ? row.weight
+            : null
+      } else {
+        const attemptKey =
+          `attempt${row.round}` as
+            CompetitionAttemptKey
+
+        const attempt =
+          ensureAllAttemptResults(
+            lifter
+          )[
+            submission.descriptor.lift
+          ][attemptKey]
+
+        attempt.weight =
+          row.weight
+
+        attempt.status =
+          row.result
+      }
+
+      const existingStatus =
+        importedStatuses.get(
+          lifter.id
+        )
+
+      if (
+        existingStatus === undefined ||
+        getPlatformManagerStatusPriority(
+          row.status
+        ) >
+        getPlatformManagerStatusPriority(
+          existingStatus
+        )
+      ) {
+        importedStatuses.set(
+          lifter.id,
+          row.status
+        )
+      }
+
+      rowCount += 1
+    }
+  }
+
+  for (
+    const [
+      lifterId,
+      importedStatus,
+    ] of importedStatuses
+  ) {
+    const lifter =
+      meet.state.lifters.find(
+        item =>
+          item.id ===
+          lifterId
+      )
+
+    if (
+      lifter === undefined
+    ) {
+      continue
+    }
+
+    if (
+      importedStatus ===
+      'disqualified'
+    ) {
+      lifter.status =
+        'disqualified'
+    } else if (
+      importedStatus ===
+      'scratched'
+    ) {
+      lifter.status =
+        'scratched'
+    } else if (
+      importedStatus ===
+        'bombed' ||
+      hasThreeFailedAttemptsOnLift(
+        lifter
+      )
+    ) {
+      lifter.status =
+        'bombed'
+    } else {
+      lifter.status =
+        'active'
+    }
+  }
+
+  return {
+    rowCount,
+    lifterCount:
+      importedStatuses.size,
+    addedLifters,
+  }
+}
+
+
+function getPlatformImportIssues(
+  meet: LocalMeet,
+): Lifter[] {
+
+  return meet.state.lifters
+    .filter(
+      lifter =>
+        isPlatformRegistrationIncomplete(
+          lifter
+        )
+    )
+    .sort(
+      (a, b) => {
+        const aDivision =
+          isPlatformDivisionRequired(a)
+            ? Number.MAX_SAFE_INTEGER
+            : a.divisionId
+
+        const bDivision =
+          isPlatformDivisionRequired(b)
+            ? Number.MAX_SAFE_INTEGER
+            : b.divisionId
+
+        return (
+          aDivision - bDivision ||
+          a.lifterNumber - b.lifterNumber
+        )
+      }
+    )
+}
+
+
+function getPlatformIssueLabel(
+  lifter: Lifter,
+): string {
+
+  return isPlatformDivisionRequired(
+    lifter
+  )
+    ? 'Division Required'
+    : 'Platform Incomplete'
+}
+
+
+function renderPlatformIssueTeamOptions(
+  meet: LocalMeet,
+  divisionId: number,
+  selectedTeamId: number | null,
+): string {
+
+  const teams =
+    getTeamsForDivision(
+      meet,
+      divisionId
+    )
+
+  return `
+    <option value="">Select team</option>
+    ${
+      teams
+        .map(
+          team =>
+            `<option value="${team.id}" ${selectedTeamId === team.id ? 'selected' : ''}>${escapeHtml(team.name)}${team.isBTeam === true ? ' (B Team)' : ''}</option>`
+        )
+        .join('')
+    }
+  `
+}
+
+
+function renderPlatformImportIssues(): string {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return `
+      <main class="workspace registration-workspace">
+        <section class="workspace-panel" style="padding: 18px;">
+          <strong>No Meet Selected</strong>
+        </section>
+      </main>
+    `
+  }
+
+  const issues =
+    getPlatformImportIssues(
+      meet
+    )
+
+  if (
+    issues.length === 0
+  ) {
+    return `
+      <main class="workspace registration-workspace">
+        <section class="workspace-panel" style="padding: 18px;">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
+            <div>
+              <strong>Platform Import Issues</strong>
+              <div style="margin-top:6px;">There are no unresolved PlatformManager import issues.</div>
+            </div>
+            <button id="returnToRegistrationFromIssues" type="button" class="compact-button">Return to Registration</button>
+          </div>
+        </section>
+      </main>
+    `
+  }
+
+  return `
+    <main class="workspace registration-workspace">
+      <section class="workspace-panel" style="padding: 16px; overflow:auto;">
+        <div style="display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:14px;">
+          <div>
+            <strong style="font-size:1.05rem;">Platform Import Issues</strong>
+            <div style="margin-top:5px; max-width:900px;">
+              Complete the missing registration information below. PowerScore will not guess a division when the PlatformManager file does not identify one unambiguously.
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+            <button id="createDivisionFromIssues" type="button" class="compact-button">+ Create Division</button>
+            <button id="savePlatformIssues" type="button" class="compact-button">Save Completed Lifters</button>
+            <button id="returnToRegistrationFromIssues" type="button" class="compact-button">Close</button>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:90px minmax(170px,1.15fr) minmax(135px,1fr) minmax(135px,1fr) minmax(180px,1.2fr) 95px minmax(150px,1fr); gap:6px 8px; align-items:center; min-width:980px;">
+          <strong>Lifter #</strong>
+          <strong>Division</strong>
+          <strong>First Name</strong>
+          <strong>Last Name</strong>
+          <strong>Team</strong>
+          <strong>BWT</strong>
+          <strong>Issue</strong>
+
+          ${
+            issues
+              .map(
+                lifter => {
+                  const divisionValid =
+                    meet.state.divisions.some(
+                      division =>
+                        division.id ===
+                        lifter.divisionId
+                    ) &&
+                    !isPlatformDivisionRequired(
+                      lifter
+                    )
+
+                  return `
+                    <div data-platform-issue-row="${lifter.id}" style="display:contents;">
+                      <strong>#${lifter.lifterNumber}</strong>
+
+                      <select data-platform-issue-division="${lifter.id}" class="grid-select">
+                        <option value="">Select division</option>
+                        ${
+                          meet.state.divisions
+                            .map(
+                              division =>
+                                `<option value="${division.id}" ${divisionValid && lifter.divisionId === division.id ? 'selected' : ''}>${escapeHtml(division.name)}</option>`
+                            )
+                            .join('')
+                        }
+                      </select>
+
+                      <input data-platform-issue-first="${lifter.id}" class="grid-input" type="text" value="${escapeHtml(lifter.firstName)}" placeholder="First name">
+
+                      <input data-platform-issue-last="${lifter.id}" class="grid-input" type="text" value="${escapeHtml(lifter.lastName)}" placeholder="Last name">
+
+                      <select data-platform-issue-team="${lifter.id}" class="grid-select" ${divisionValid ? '' : 'disabled'}>
+                        ${
+                          divisionValid
+                            ? renderPlatformIssueTeamOptions(
+                                meet,
+                                lifter.divisionId,
+                                lifter.teamId
+                              )
+                            : '<option value="">Select division first</option>'
+                        }
+                      </select>
+
+                      <input data-platform-issue-bwt="${lifter.id}" class="grid-input number-input" type="number" min="0" step="0.1" value="${lifter.bodyWeight ?? ''}" placeholder="BWT">
+
+                      <div class="readiness ${isPlatformDivisionRequired(lifter) ? 'needs-attention' : ''}">
+                        ${getPlatformIssueLabel(lifter)}
+                      </div>
+                    </div>
+                  `
+                }
+              )
+              .join('')
+          }
+        </div>
+
+        <div style="margin-top:14px;">
+          <strong>Required to clear an issue:</strong>
+          Division, first name, last name, team, and body weight. Weight class is recalculated automatically from the selected division and BWT. Competition status is preserved.
+        </div>
+      </section>
+    </main>
+  `
+}
+
+
+function wirePlatformImportIssues(): void {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#returnToRegistrationFromIssues'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        currentPage =
+          'registration'
+
+        renderApp()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#createDivisionFromIssues'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        currentPage =
+          'registration'
+
+        activeEntry =
+          'division'
+
+        selectedTeamId =
+          null
+
+        renderApp()
+
+        focusElement(
+          '#newDivisionName'
+        )
+      }
+    )
+
+  document
+    .querySelectorAll<HTMLSelectElement>(
+      '[data-platform-issue-division]'
+    )
+    .forEach(
+      divisionSelect =>
+        divisionSelect.addEventListener(
+          'change',
+          () => {
+            const lifterId =
+              Number(
+                divisionSelect.dataset.platformIssueDivision
+              )
+
+            const teamSelect =
+              document.querySelector<HTMLSelectElement>(
+                `[data-platform-issue-team="${lifterId}"]`
+              )
+
+            if (
+              teamSelect === null
+            ) {
+              return
+            }
+
+            const divisionId =
+              Number(
+                divisionSelect.value
+              )
+
+            if (
+              !Number.isFinite(divisionId) ||
+              divisionId <= 0
+            ) {
+              teamSelect.disabled =
+                true
+
+              teamSelect.innerHTML =
+                '<option value="">Select division first</option>'
+
+              return
+            }
+
+            teamSelect.disabled =
+              false
+
+            teamSelect.innerHTML =
+              renderPlatformIssueTeamOptions(
+                meet,
+                divisionId,
+                null
+              )
+          }
+        )
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#savePlatformIssues'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        const issues =
+          getPlatformImportIssues(
+            meet
+          )
+
+        let completed = 0
+        let remaining = 0
+
+        for (
+          const lifter of issues
+        ) {
+          const divisionSelect =
+            document.querySelector<HTMLSelectElement>(
+              `[data-platform-issue-division="${lifter.id}"]`
+            )
+
+          const firstInput =
+            document.querySelector<HTMLInputElement>(
+              `[data-platform-issue-first="${lifter.id}"]`
+            )
+
+          const lastInput =
+            document.querySelector<HTMLInputElement>(
+              `[data-platform-issue-last="${lifter.id}"]`
+            )
+
+          const teamSelect =
+            document.querySelector<HTMLSelectElement>(
+              `[data-platform-issue-team="${lifter.id}"]`
+            )
+
+          const bodyWeightInput =
+            document.querySelector<HTMLInputElement>(
+              `[data-platform-issue-bwt="${lifter.id}"]`
+            )
+
+          if (
+            divisionSelect === null ||
+            firstInput === null ||
+            lastInput === null ||
+            teamSelect === null ||
+            bodyWeightInput === null
+          ) {
+            remaining += 1
+            continue
+          }
+
+          const divisionId =
+            Number(
+              divisionSelect.value
+            )
+
+          const division =
+            meet.state.divisions.find(
+              item =>
+                item.id ===
+                divisionId
+            )
+
+          if (
+            division === undefined
+          ) {
+            setPlatformRegistrationState(
+              lifter,
+              'division-required'
+            )
+
+            lifter.teamId =
+              null
+
+            remaining += 1
+            continue
+          }
+
+          lifter.divisionId =
+            division.id
+
+          lifter.firstName =
+            firstInput.value.trim()
+
+          lifter.lastName =
+            lastInput.value.trim()
+
+          const teamId =
+            Number(
+              teamSelect.value
+            )
+
+          lifter.teamId =
+            meet.state.teams.some(
+              team =>
+                team.id === teamId &&
+                getTeamsForDivision(
+                  meet,
+                  division.id
+                ).some(
+                  divisionTeam =>
+                    divisionTeam.id === team.id
+                )
+            )
+              ? teamId
+              : null
+
+          const bodyWeight =
+            Number(
+              bodyWeightInput.value
+            )
+
+          lifter.bodyWeight =
+            Number.isFinite(bodyWeight) &&
+            bodyWeight > 0
+              ? bodyWeight
+              : null
+
+          if (
+            lifter.bodyWeight !== null
+          ) {
+            try {
+              const rules =
+                getDivisionRules(
+                  division
+                )
+
+              lifter.weightClass =
+                getAutomaticWeightClass(
+                  lifter.bodyWeight,
+                  rules.weightClasses
+                )
+
+              lifter.weightClassSource =
+                'automatic'
+            } catch {
+              lifter.weightClass =
+                null
+            }
+          } else {
+            lifter.weightClass =
+              null
+          }
+
+          if (
+            hasCompletePlatformRegistration(
+              lifter
+            )
+          ) {
+            setPlatformRegistrationState(
+              lifter,
+              undefined
+            )
+
+            completed += 1
+          } else {
+            setPlatformRegistrationState(
+              lifter,
+              'incomplete'
+            )
+
+            remaining += 1
+          }
+        }
+
+        if (
+          remaining === 0
+        ) {
+          currentPage =
+            'registration'
+        }
+
+        renderApp()
+
+        window.alert(
+          remaining === 0
+            ? `Platform issues resolved. ${completed} lifter(s) completed.`
+            : `${completed} lifter(s) completed. ${remaining} issue(s) still require information.`
+        )
+      }
+    )
+}
+
+
+
+function resetSelectedCompetitionDivision():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return
+  }
+
+  const lifters =
+    meet.state.lifters.filter(
+      lifter =>
+        lifter.divisionId ===
+        division.id
+    )
+
+  if (
+    lifters.length === 0
+  ) {
+    window.alert(
+      'There are no lifters in the selected division to reset.'
+    )
+
+    return
+  }
+
+  if (
+    !window.confirm(
+      `Reset ${division.name} for testing?\n\nThis will clear all competition weights/results for ${lifters.length} lifter(s) and return BO/SC/DQ lifter status to Active.\n\nRegistration data will not be changed.`
+    )
+  ) {
+    return
+  }
+
+  for (
+    const lifter of lifters
+  ) {
+    lifter.status =
+      'active'
+
+    lifter.bestLiftResults = {
+      squat: null,
+      bench: null,
+      deadlift: null,
+    }
+
+    lifter.allAttemptResults =
+      createEmptyAllAttemptResults()
+
+    competitionAutoBombedLifterIds.delete(
+      lifter.id
+    )
+  }
+
+  renderApp()
+
+  window.alert(
+    `${division.name} has been reset for testing.`
+  )
+}
+
+
+function getPlatformResultSetLabel(
+  filename: string,
+): string {
+
+  try {
+    const descriptor =
+      parsePlatformManagerFilename(
+        filename
+      )
+
+    return (
+      descriptor.mode ===
+      'best-lifts'
+        ? 'BestLifts'
+        : `Round ${descriptor.round}`
+    )
+  } catch {
+    return 'Unknown'
+  }
+}
+
+
+function getPlatformResultLiftLabel(
+  filename: string,
+): string {
+
+  try {
+    const descriptor =
+      parsePlatformManagerFilename(
+        filename
+      )
+
+    switch (
+      descriptor.lift
+    ) {
+      case 'squat':
+        return 'Squat'
+
+      case 'bench':
+        return 'Bench'
+
+      case 'deadlift':
+        return 'Deadlift'
+    }
+  } catch {
+    return 'Unknown'
+  }
+}
+
+
+function getPlatformResultPlatformLabel(
+  filename: string,
+): string {
+
+  try {
+    const descriptor =
+      parsePlatformManagerFilename(
+        filename
+      )
+
+    return descriptor.platform
+  } catch {
+    return '?'
+  }
+}
+
+
+function isPlatformResultFileCompatible(
+  meet: LocalMeet,
+  filename: string,
+): boolean {
+
+  try {
+    const descriptor =
+      parsePlatformManagerFilename(
+        filename
+      )
+
+    const expectedMode =
+      meet.state.meet
+        .resultEntryMode ===
+        'all-attempts'
+          ? 'round'
+          : 'best-lifts'
+
+    return (
+      descriptor.mode ===
+      expectedMode
+    )
+  } catch {
+    return false
+  }
+}
+
+
+function sortPlatformResultFiles(
+  files: Array<{
+    name: string
+  }>,
+): Array<{
+  name: string
+}> {
+
+  const liftOrder =
+    new Map<string, number>([
+      ['squat', 1],
+      ['bench', 2],
+      ['deadlift', 3],
+    ])
+
+  return [
+    ...files,
+  ].sort(
+    (a, b) => {
+      try {
+        const aDescriptor =
+          parsePlatformManagerFilename(
+            a.name
+          )
+
+        const bDescriptor =
+          parsePlatformManagerFilename(
+            b.name
+          )
+
+        const aPlatform =
+          Number(
+            aDescriptor.platform
+          )
+
+        const bPlatform =
+          Number(
+            bDescriptor.platform
+          )
+
+        if (
+          Number.isFinite(
+            aPlatform
+          ) &&
+          Number.isFinite(
+            bPlatform
+          ) &&
+          aPlatform !==
+          bPlatform
+        ) {
+          return (
+            aPlatform -
+            bPlatform
+          )
+        }
+
+        const platformCompare =
+          aDescriptor.platform.localeCompare(
+            bDescriptor.platform,
+            undefined,
+            {
+              numeric: true,
+            }
+          )
+
+        if (
+          platformCompare !==
+          0
+        ) {
+          return platformCompare
+        }
+
+        const liftCompare =
+          (
+            liftOrder.get(
+              aDescriptor.lift
+            ) ??
+            99
+          ) -
+          (
+            liftOrder.get(
+              bDescriptor.lift
+            ) ??
+            99
+          )
+
+        if (
+          liftCompare !==
+          0
+        ) {
+          return liftCompare
+        }
+
+        return (
+          aDescriptor.round -
+          bDescriptor.round
+        )
+      } catch {
+        return a.name.localeCompare(
+          b.name
+        )
+      }
+    }
+  )
+}
+
+
+function closePlatformResultsDialog():
+  void {
+
+  const dialog =
+    document.querySelector<HTMLDialogElement>(
+      '#platformResultsDialog'
+    )
+
+  if (
+    dialog !== null
+  ) {
+    dialog.close()
+    dialog.remove()
+  }
+}
+
+
+function getOriginalProcessedPlatformFilename(
+  filename: string,
+): string {
+
+  return filename.replace(
+    /__20\d{2}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?=\.csv$)/i,
+    ''
+  )
+}
+
+
+function renderProcessedPlatformResultRows(
+  files: Array<{
+    name: string
+  }>,
+): string {
+
+  if (
+    files.length === 0
+  ) {
+    return `
+      <tr>
+        <td
+          colspan="4"
+          class="platform-results-empty"
+        >
+          No processed files for this MeetID.
+        </td>
+      </tr>
+    `
+  }
+
+  return [
+    ...files,
+  ]
+    .reverse()
+    .map(
+      file => {
+        const originalName =
+          getOriginalProcessedPlatformFilename(
+            file.name
+          )
+
+        return `
+          <tr>
+            <td>
+              ${escapeHtml(
+                getPlatformResultPlatformLabel(
+                  originalName
+                )
+              )}
+            </td>
+            <td>
+              ${escapeHtml(
+                getPlatformResultLiftLabel(
+                  originalName
+                )
+              )}
+            </td>
+            <td>
+              ${escapeHtml(
+                getPlatformResultSetLabel(
+                  originalName
+                )
+              )}
+            </td>
+            <td class="platform-results-filename">
+              ${escapeHtml(file.name)}
+            </td>
+          </tr>
+        `
+      }
+    )
+    .join('')
+}
+
+
+function renderPlatformResultsDialog(
+  meet: LocalMeet,
+  availableFiles: Array<{
+    name: string
+  }>,
+  processedFiles: Array<{
+    name: string
+  }>,
+): void {
+
+  closePlatformResultsDialog()
+
+  const sortedAvailableFiles =
+    sortPlatformResultFiles(
+      availableFiles
+    )
+
+  const dialog =
+    document.createElement(
+      'dialog'
+    )
+
+  dialog.id =
+    'platformResultsDialog'
+
+  dialog.className =
+    'platform-results-dialog platform-results-dialog-wide'
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  const availableRows =
+    sortedAvailableFiles.length ===
+      0
+        ? `
+          <tr>
+            <td
+              colspan="6"
+              class="platform-results-empty"
+            >
+              No pending PlatformManager result files were found for this MeetID.
+            </td>
+          </tr>
+        `
+        : sortedAvailableFiles
+          .map(
+            file => {
+              const compatible =
+                isPlatformResultFileCompatible(
+                  meet,
+                  file.name
+                )
+
+              return `
+                <tr class="${
+                  compatible
+                    ? ''
+                    : 'platform-results-incompatible'
+                }">
+                  <td class="platform-results-select">
+                    <input
+                      type="checkbox"
+                      name="platformResultFile"
+                      value="${escapeHtml(file.name)}"
+                      ${
+                        compatible
+                          ? ''
+                          : 'disabled'
+                      }
+                      aria-label="Select ${escapeHtml(file.name)}"
+                    >
+                  </td>
+                  <td>
+                    ${escapeHtml(
+                      getPlatformResultPlatformLabel(
+                        file.name
+                      )
+                    )}
+                  </td>
+                  <td>
+                    ${escapeHtml(
+                      getPlatformResultLiftLabel(
+                        file.name
+                      )
+                    )}
+                  </td>
+                  <td>
+                    ${escapeHtml(
+                      getPlatformResultSetLabel(
+                        file.name
+                      )
+                    )}
+                  </td>
+                  <td class="platform-results-filename">
+                    ${escapeHtml(file.name)}
+                  </td>
+                  <td>
+                    ${
+                      compatible
+                        ? 'Ready'
+                        : 'Different entry mode'
+                    }
+                  </td>
+                </tr>
+              `
+            }
+          )
+          .join('')
+
+  dialog.innerHTML = `
+    <div class="platform-results-dialog-content">
+
+      <div class="platform-results-dialog-header">
+        <div>
+          <strong>Platform Results Manager</strong>
+          <span>
+            MeetID ${escapeHtml(meetId)}
+          </span>
+        </div>
+
+        <button
+          id="closePlatformResultsDialog"
+          type="button"
+          class="compact-button secondary-button"
+        >
+          Close
+        </button>
+      </div>
+
+      <p class="platform-results-help">
+        Select one or more available result files to import. Files are imported sequentially and moved to Processed only after each file imports successfully.
+      </p>
+
+      <div class="platform-results-two-pane">
+
+        <section class="platform-results-pane">
+          <div class="platform-results-pane-header">
+            <strong>Available</strong>
+
+            <label class="platform-results-select-all">
+              <input
+                id="selectAllPlatformResults"
+                type="checkbox"
+              >
+              Select all ready
+            </label>
+          </div>
+
+          <div class="platform-results-table-wrap">
+            <table class="platform-results-table platform-results-table-available">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Plat</th>
+                  <th>Lift</th>
+                  <th>Set</th>
+                  <th>Filename</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${availableRows}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="platform-results-pane">
+          <div class="platform-results-pane-header">
+            <strong>Processed</strong>
+            <span>
+              ${processedFiles.length} file(s)
+            </span>
+          </div>
+
+          <div class="platform-results-table-wrap">
+            <table class="platform-results-table platform-results-table-processed">
+              <thead>
+                <tr>
+                  <th>Plat</th>
+                  <th>Lift</th>
+                  <th>Set</th>
+                  <th>Filename</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${renderProcessedPlatformResultRows(
+                  processedFiles
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="platform-results-dialog-actions">
+        <span>
+          ${
+            sortedAvailableFiles.length
+          }
+          available file(s)
+        </span>
+
+        <div>
+          <button
+            id="refreshPlatformResults"
+            type="button"
+            class="compact-button secondary-button"
+          >
+            Refresh
+          </button>
+
+          <button
+            id="importSelectedPlatformResults"
+            type="button"
+            class="compact-button"
+            ${
+              sortedAvailableFiles.some(
+                file =>
+                  isPlatformResultFileCompatible(
+                    meet,
+                    file.name
+                  )
+              )
+                ? ''
+                : 'disabled'
+            }
+          >
+            Import Selected Files
+          </button>
+        </div>
+      </div>
+
+    </div>
+  `
+
+  document.body.appendChild(
+    dialog
+  )
+
+  dialog
+    .querySelector<HTMLButtonElement>(
+      '#closePlatformResultsDialog'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        closePlatformResultsDialog()
+      }
+    )
+
+  dialog
+    .querySelector<HTMLButtonElement>(
+      '#refreshPlatformResults'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        void refreshPlatformResultsDialog()
+      }
+    )
+
+  dialog
+    .querySelector<HTMLInputElement>(
+      '#selectAllPlatformResults'
+    )
+    ?.addEventListener(
+      'change',
+      event => {
+        const checked =
+          (
+            event.currentTarget as
+              HTMLInputElement
+          ).checked
+
+        dialog
+          .querySelectorAll<HTMLInputElement>(
+            'input[name="platformResultFile"]:not(:disabled)'
+          )
+          .forEach(
+            checkbox => {
+              checkbox.checked =
+                checked
+            }
+          )
+      }
+    )
+
+  dialog
+    .querySelector<HTMLButtonElement>(
+      '#importSelectedPlatformResults'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        void importSelectedPlatformResults()
+      }
+    )
+
+  dialog.addEventListener(
+    'cancel',
+    event => {
+      event.preventDefault()
+      closePlatformResultsDialog()
+    }
+  )
+
+  dialog.showModal()
+}
+
+
+async function loadPlatformResultFileLists(
+  meet: LocalMeet,
+): Promise<{
+  availableFiles: Array<{
+    name: string
+  }>
+  processedFiles: Array<{
+    name: string
+  }>
+}> {
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  const [
+    availableFiles,
+    processedFiles,
+  ] =
+    await Promise.all([
+      listPlatformManagerSubmissions(
+        PLATFORM_MANAGER_HANDLER_URL,
+        meetId
+      ),
+      listProcessedPlatformManagerSubmissions(
+        PLATFORM_MANAGER_HANDLER_URL,
+        meetId
+      ),
+    ])
+
+  return {
+    availableFiles,
+    processedFiles,
+  }
+}
+
+
+async function refreshPlatformResultsDialog():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    closePlatformResultsDialog()
+    return
+  }
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  if (
+    !/^[A-Z]{4}\d{4}$/.test(
+      meetId
+    )
+  ) {
+    closePlatformResultsDialog()
+
+    window.alert(
+      'Generate a Platform MeetID on Registration before checking PlatformManager results.'
+    )
+
+    return
+  }
+
+  try {
+    const {
+      availableFiles,
+      processedFiles,
+    } =
+      await loadPlatformResultFileLists(
+        meet
+      )
+
+    pendingPlatformResultCountByMeetId.set(
+      meetId,
+      availableFiles.length
+    )
+
+    updatePlatformResultsAvailabilityButton(
+      availableFiles.length
+    )
+
+    renderPlatformResultsDialog(
+      meet,
+      availableFiles,
+      processedFiles
+    )
+  } catch (
+    error
+  ) {
+    closePlatformResultsDialog()
+
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to retrieve PlatformManager results.'
+    )
+  }
+}
+
+
+async function importSelectedPlatformResults():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  const dialog =
+    document.querySelector<HTMLDialogElement>(
+      '#platformResultsDialog'
+    )
+
+  if (
+    meet === undefined ||
+    dialog === null
+  ) {
+    return
+  }
+
+  const selectedFiles =
+    Array.from(
+      dialog.querySelectorAll<HTMLInputElement>(
+        'input[name="platformResultFile"]:checked'
+      )
+    )
+      .map(
+        checkbox =>
+          checkbox.value
+      )
+
+  if (
+    selectedFiles.length === 0
+  ) {
+    window.alert(
+      'Select at least one PlatformManager result file to import.'
+    )
+
+    return
+  }
+
+  const importButton =
+    dialog.querySelector<HTMLButtonElement>(
+      '#importSelectedPlatformResults'
+    )
+
+  if (
+    importButton !== null
+  ) {
+    importButton.disabled =
+      true
+
+    importButton.textContent =
+      `Importing 0 of ${selectedFiles.length}...`
+  }
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  const expectedMode =
+    meet.state.meet
+      .resultEntryMode ===
+      'all-attempts'
+        ? 'round'
+        : 'best-lifts'
+
+  let importedFileCount = 0
+  let importedRowCount = 0
+  const updatedLifterIds =
+    new Set<number>()
+
+  try {
+    for (
+      let index = 0;
+      index < selectedFiles.length;
+      index += 1
+    ) {
+      const filename =
+        selectedFiles[index]
+
+      if (
+        importButton !== null
+      ) {
+        importButton.textContent =
+          `Importing ${index + 1} of ${selectedFiles.length}...`
+      }
+
+      const csv =
+        await getPlatformManagerSubmissionCsv(
+          PLATFORM_MANAGER_HANDLER_URL,
+          filename
+        )
+
+      const submission =
+        parsePlatformManagerSubmission(
+          filename,
+          csv,
+          meetId
+        )
+
+      if (
+        submission.descriptor.mode !==
+        expectedMode
+      ) {
+        throw new Error(
+          `${filename} does not match this meet's Competition result-entry mode.`
+        )
+      }
+
+      const summary =
+        applyPlatformManagerSubmissions(
+          meet,
+          [
+            submission,
+          ]
+        )
+
+      await markPlatformManagerSubmissionProcessed(
+        PLATFORM_MANAGER_HANDLER_URL,
+        filename
+      )
+
+      importedFileCount +=
+        1
+
+      importedRowCount +=
+        summary.rowCount
+
+      for (
+        const lifter of
+        meet.state.lifters
+      ) {
+        if (
+          submission.rows.some(
+            row =>
+              row.lifterNumber ===
+              lifter.lifterNumber
+          )
+        ) {
+          updatedLifterIds.add(
+            lifter.id
+          )
+        }
+      }
+    }
+
+    renderApp()
+
+    void refreshPlatformResultsAvailability()
+
+    let message =
+      `PlatformManager import complete.\n\n` +
+      `Files imported: ${importedFileCount}\n` +
+      `Rows imported: ${importedRowCount}\n` +
+      `Lifters updated: ${updatedLifterIds.size}`
+
+    const issues =
+      getPlatformImportIssues(
+        meet
+      )
+
+    if (
+      issues.length > 0
+    ) {
+      const divisionRequiredCount =
+        issues.filter(
+          issue =>
+            issue.divisionId ===
+            null
+        ).length
+
+      message +=
+        `\n\nPlatform issues found: ${issues.length}` +
+        `\n  Incomplete lifters: ${issues.length - divisionRequiredCount}` +
+        `\n  Division required: ${divisionRequiredCount}`
+    }
+
+    window.alert(
+      message
+    )
+
+    if (
+      issues.length > 0
+    ) {
+      closePlatformResultsDialog()
+
+      currentPage =
+        'platform-issues'
+
+      renderApp()
+
+      return
+    }
+
+    await refreshPlatformResultsDialog()
+  } catch (
+    error
+  ) {
+    const detail =
+      error instanceof Error
+        ? error.message
+        : 'Unknown import error.'
+
+    window.alert(
+      `PlatformManager import stopped.\n\n` +
+      `Files successfully imported before the error: ${importedFileCount}\n\n` +
+      detail
+    )
+
+    await refreshPlatformResultsDialog()
+  }
+}
+
+
+function getPendingPlatformResultCount(
+  meet: LocalMeet,
+): number {
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  return (
+    pendingPlatformResultCountByMeetId.get(
+      meetId
+    ) ??
+    0
+  )
+}
+
+
+function updatePlatformResultsAvailabilityButton(
+  count: number,
+): void {
+
+  const button =
+    document.querySelector<HTMLButtonElement>(
+      '#checkPlatformResults'
+    )
+
+  if (
+    button === null
+  ) {
+    return
+  }
+
+  button.classList.toggle(
+    'platform-results-available',
+    count > 0
+  )
+
+  button.textContent =
+    count > 0
+      ? `Check for Platform Results (${count})`
+      : 'Check for Platform Results'
+
+  button.title =
+    count > 0
+      ? `${count} pending PlatformManager result file(s) are available for this meet.`
+      : 'No pending PlatformManager result files are currently available.'
+}
+
+
+async function refreshPlatformResultsAvailability():
+  Promise<void> {
+
+  if (
+    currentPage !==
+    'competition'
+  ) {
+    return
+  }
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  if (
+    !/^[A-Z]{4}\d{4}$/.test(
+      meetId
+    )
+  ) {
+    pendingPlatformResultCountByMeetId.set(
+      meetId,
+      0
+    )
+
+    updatePlatformResultsAvailabilityButton(
+      0
+    )
+
+    return
+  }
+
+  try {
+    const files =
+      await listPlatformManagerSubmissions(
+        PLATFORM_MANAGER_HANDLER_URL,
+        meetId
+      )
+
+    const count =
+      files.length
+
+    pendingPlatformResultCountByMeetId.set(
+      meetId,
+      count
+    )
+
+    updatePlatformResultsAvailabilityButton(
+      count
+    )
+  } catch {
+    // Background availability checks are advisory only.
+    // Do not interrupt the meet clerk if one check fails.
+  }
+}
+
+
+function stopPlatformResultsAvailabilityPolling():
+  void {
+
+  if (
+    platformResultsPollTimer !==
+    null
+  ) {
+    window.clearInterval(
+      platformResultsPollTimer
+    )
+
+    platformResultsPollTimer =
+      null
+  }
+}
+
+
+function startPlatformResultsAvailabilityPolling():
+  void {
+
+  stopPlatformResultsAvailabilityPolling()
+
+  void refreshPlatformResultsAvailability()
+
+  platformResultsPollTimer =
+    window.setInterval(
+      () => {
+        void refreshPlatformResultsAvailability()
+      },
+      PLATFORM_RESULTS_POLL_INTERVAL_MS
+    )
+}
+
+
+async function checkPlatformResults():
+  Promise<void> {
+
+  const meet =
+    getSelectedMeet()
+
+  if (
+    meet === undefined
+  ) {
+    return
+  }
+
+  const meetId =
+    getNormalizedPlatformMeetId(
+      meet
+    )
+
+  if (
+    !/^[A-Z]{4}\d{4}$/.test(
+      meetId
+    )
+  ) {
+    window.alert(
+      'Generate a Platform MeetID on Registration before checking PlatformManager results.'
+    )
+
+    return
+  }
+
+  try {
+    const {
+      availableFiles,
+      processedFiles,
+    } =
+      await loadPlatformResultFileLists(
+        meet
+      )
+
+    pendingPlatformResultCountByMeetId.set(
+      meetId,
+      availableFiles.length
+    )
+
+    updatePlatformResultsAvailabilityButton(
+      availableFiles.length
+    )
+
+    renderPlatformResultsDialog(
+      meet,
+      availableFiles,
+      processedFiles
+    )
+  } catch (
+    error
+  ) {
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to retrieve PlatformManager results.'
+    )
+  }
+}
+
+
+function getCompetitionProgressWeightClasses(
+  meet: LocalMeet,
+): string[] {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return []
+  }
+
+  const classesWithLifters =
+    new Set(
+      meet.state.lifters
+        .filter(
+          lifter =>
+            lifter.divisionId ===
+              division.id &&
+            lifter.weightClass !==
+              null
+        )
+        .map(
+          lifter =>
+            lifter.weightClass as
+              string
+        )
+    )
+
+  try {
+    const rules =
+      getDivisionRules(
+        division
+      )
+
+    return rules.weightClasses
+      .map(
+        weightClass =>
+          weightClass.name
+      )
+      .filter(
+        name =>
+          classesWithLifters.has(
+            name
+          )
+      )
+  } catch {
+    return Array.from(
+      classesWithLifters
+    ).sort(
+      (a, b) =>
+        a.localeCompare(
+          b,
+          undefined,
+          {
+            numeric: true,
+          }
+        )
+    )
+  }
+}
+
+
+function countBestLiftProgress(
+  meet: LocalMeet,
+  weightClass: string,
+  lift: CompetitionLift,
+): number {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return 0
+  }
+
+  return countBestLiftProgressResults(
+    meet.state.lifters,
+    division.id,
+    weightClass,
+    lift
+  )
+}
+
+
+function countAttemptProgress(
+  meet: LocalMeet,
+  weightClass: string,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+): number {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return 0
+  }
+
+  return countAttemptProgressResults(
+    meet.state.lifters,
+    division.id,
+    weightClass,
+    lift,
+    attemptKey
+  )
+}
+
+
+function getCompetitionProgressClassTotal(
+  meet: LocalMeet,
+  weightClass: string,
+): number {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return 0
+  }
+
+  return meet.state.lifters.filter(
+    lifter =>
+      lifter.divisionId ===
+        division.id &&
+      lifter.weightClass ===
+        weightClass
+  ).length
+}
+
+
+function getCompetitionProgressNoBwtLifters(
+  meet: LocalMeet,
+): Lifter[] {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return []
+  }
+
+  return getNoBwtProgressLifters(
+    meet.state.lifters,
+    division.id
+  )
+}
+
+
+function countBestLiftProgressNoBwt(
+  meet: LocalMeet,
+  lift: CompetitionLift,
+): number {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return 0
+  }
+
+  return countBestLiftProgressResultsNoBwt(
+    meet.state.lifters,
+    division.id,
+    lift
+  )
+}
+
+
+function countAttemptProgressNoBwt(
+  meet: LocalMeet,
+  lift: CompetitionLift,
+  attemptKey: CompetitionAttemptKey,
+): number {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return 0
+  }
+
+  return countAttemptProgressResultsNoBwt(
+    meet.state.lifters,
+    division.id,
+    lift,
+    attemptKey
+  )
+}
+
+
+function getCompetitionProgressResultCellClass(
+  count: number,
+  expectedTotal: number,
+): string {
+
+  switch (
+    getCompetitionProgressCellState(
+      count,
+      expectedTotal
+    )
+  ) {
+    case 'complete':
+      return 'competition-progress-cell-complete'
+
+    case 'short':
+      return 'competition-progress-cell-short'
+
+    case 'zero':
+      return 'competition-progress-cell-zero'
+
+    case 'empty':
+    default:
+      return 'competition-progress-cell-empty'
+  }
+}
+
+
+function getCompetitionProgressExpectedLiftersForClass(
+  meet: LocalMeet,
+  weightClass: string,
+): Lifter[] {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return []
+  }
+
+  return getExpectedProgressLiftersForClass(
+    meet.state.lifters,
+    division.id,
+    weightClass
+  )
+}
+
+
+function getCompetitionProgressExpectedNoBwtLifters(
+  meet: LocalMeet,
+): Lifter[] {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return []
+  }
+
+  return getExpectedNoBwtProgressLifters(
+    meet.state.lifters,
+    division.id
+  )
+}
+
+
+function getCompetitionProgressLiftersForClass(
+  meet: LocalMeet,
+  weightClass: string,
+): Lifter[] {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return []
+  }
+
+  return meet.state.lifters.filter(
+    lifter =>
+      lifter.divisionId ===
+        division.id &&
+      lifter.weightClass ===
+        weightClass
+  )
+}
+
+
+function countCompetitionProgressStatus(
+  meet: LocalMeet,
+  weightClass: string,
+  status:
+    | 'bombed'
+    | 'scratched'
+    | 'disqualified',
+): number {
+
+  return getCompetitionProgressLiftersForClass(
+    meet,
+    weightClass
+  ).filter(
+    lifter =>
+      lifter.status ===
+        status
+  ).length
+}
+
+
+function countCompetitionProgressNeedsAttention(
+  meet: LocalMeet,
+  weightClass: string,
+): number {
+
+  return getCompetitionProgressLiftersForClass(
+    meet,
+    weightClass
+  ).filter(
+    lifter => {
+      if (
+        lifter.status !==
+        'active'
+      ) {
+        return false
+      }
+
+      const readiness =
+        getLifterReadinessLabel(
+          lifter,
+          meet
+        )
+
+      return (
+        readiness ===
+          'Needs Attention' ||
+        readiness ===
+          'Platform Incomplete' ||
+        readiness ===
+          'Division Required'
+      )
+    }
+  ).length
+}
+
+
+function renderCompetitionProgressSummaryRows(
+  meet: LocalMeet,
+  weightClasses: string[],
+  showNoBwt: boolean,
+): string {
+
+  const noBwtLifters =
+    getCompetitionProgressNoBwtLifters(
+      meet
+    )
+
+  const definitions:
+    Array<{
+      label: string
+      getCount:
+        (
+          weightClass: string
+        ) => number
+      getNoBwtCount:
+        () => number
+      className: string
+    }> = [
+      {
+        label: 'BO Lifters',
+        getCount:
+          weightClass =>
+            countCompetitionProgressStatus(
+              meet,
+              weightClass,
+              'bombed'
+            ),
+        getNoBwtCount:
+          () =>
+            noBwtLifters.filter(
+              lifter =>
+                lifter.status ===
+                  'bombed'
+            ).length,
+        className:
+          'competition-progress-summary-bo',
+      },
+      {
+        label: 'SC Lifters',
+        getCount:
+          weightClass =>
+            countCompetitionProgressStatus(
+              meet,
+              weightClass,
+              'scratched'
+            ),
+        getNoBwtCount:
+          () =>
+            noBwtLifters.filter(
+              lifter =>
+                lifter.status ===
+                  'scratched'
+            ).length,
+        className:
+          'competition-progress-summary-sc',
+      },
+      {
+        label: 'DQ Lifters',
+        getCount:
+          weightClass =>
+            countCompetitionProgressStatus(
+              meet,
+              weightClass,
+              'disqualified'
+            ),
+        getNoBwtCount:
+          () =>
+            noBwtLifters.filter(
+              lifter =>
+                lifter.status ===
+                  'disqualified'
+            ).length,
+        className:
+          'competition-progress-summary-dq',
+      },
+      {
+        label: 'Needs Attention',
+        getCount:
+          weightClass =>
+            countCompetitionProgressNeedsAttention(
+              meet,
+              weightClass
+            ),
+        getNoBwtCount:
+          () =>
+            noBwtLifters.filter(
+              lifter =>
+                lifter.status ===
+                  'active'
+            ).length,
+        className:
+          'competition-progress-summary-attention',
+      },
+      {
+        label: 'Total Lifters',
+        getCount:
+          weightClass =>
+            getCompetitionProgressClassTotal(
+              meet,
+              weightClass
+            ),
+        getNoBwtCount:
+          () =>
+            noBwtLifters.length,
+        className:
+          'competition-progress-summary-total',
+      },
+    ]
+
+  return definitions
+    .map(
+      definition => `
+        <tr class="competition-progress-summary-row ${definition.className}">
+          <th>
+            ${definition.label}
+          </th>
+          ${
+            weightClasses
+              .map(
+                weightClass => `
+                  <td>
+                    ${definition.getCount(
+                      weightClass
+                    )}
+                  </td>
+                `
+              )
+              .join('')
+          }
+
+          ${
+            showNoBwt
+              ? `
+                <td class="competition-progress-no-bwt-cell">
+                  ${definition.getNoBwtCount()}
+                </td>
+              `
+              : ''
+          }
+        </tr>
+      `
+    )
+    .join('')
+}
+
+
+function renderCompetitionProgressGrid(
+  meet: LocalMeet,
+): string {
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    division === undefined
+  ) {
+    return ''
+  }
+
+  const weightClasses =
+    getCompetitionProgressWeightClasses(
+      meet
+    )
+
+  const noBwtLifters =
+    getCompetitionProgressNoBwtLifters(
+      meet
+    )
+
+  const noBwtTotal =
+    noBwtLifters.length
+
+  const showNoBwt =
+    noBwtTotal > 0
+
+  if (
+    weightClasses.length === 0 &&
+    !showNoBwt
+  ) {
+    return ''
+  }
+
+  const headerCells =
+    weightClasses
+      .map(
+        weightClass => `
+          <th
+            title="${getCompetitionProgressClassTotal(
+              meet,
+              weightClass
+            )} lifter(s) registered in this class"
+          >
+            ${escapeHtml(weightClass)}
+          </th>
+        `
+      )
+      .join('') +
+    (
+      showNoBwt
+        ? `
+          <th
+            class="competition-progress-no-bwt-header"
+            title="${noBwtTotal} lifter(s) in this division have no valid body weight"
+          >
+            No BWT
+          </th>
+        `
+        : ''
+    )
+
+  let rows =
+    ''
+
+  if (
+    meet.state.meet
+      .resultEntryMode ===
+      'best-lift-only'
+  ) {
+    const rowDefinitions:
+      Array<[
+        string,
+        CompetitionLift,
+      ]> = [
+        ['Squat', 'squat'],
+        ['Bench', 'bench'],
+        ['Deadlift', 'deadlift'],
+      ]
+
+    rows =
+      rowDefinitions
+        .map(
+          ([
+            label,
+            lift,
+          ]) => {
+
+            const expectedNoBwtTotal =
+              getCompetitionProgressExpectedNoBwtLifters(
+                meet
+              ).length
+
+            const noBwtCount =
+              countBestLiftProgressNoBwt(
+                meet,
+                lift
+              )
+
+            return `
+              <tr>
+                <th>${label}</th>
+                ${
+                  weightClasses
+                    .map(
+                      weightClass => {
+                        const count =
+                          countBestLiftProgress(
+                            meet,
+                            weightClass,
+                            lift
+                          )
+
+                        const expectedTotal =
+                          getCompetitionProgressExpectedLiftersForClass(
+                            meet,
+                            weightClass
+                          ).length
+
+                        return `
+                          <td
+                            class="${getCompetitionProgressResultCellClass(
+                              count,
+                              expectedTotal
+                            )}"
+                            title="${count} result(s); ${expectedTotal} active lifter(s) expected"
+                          >
+                            ${count}
+                          </td>
+                        `
+                      }
+                    )
+                    .join('')
+                }
+
+                ${
+                  showNoBwt
+                    ? `
+                      <td
+                        class="competition-progress-no-bwt-cell ${getCompetitionProgressResultCellClass(
+                          noBwtCount,
+                          expectedNoBwtTotal
+                        )}"
+                        title="${noBwtCount} result(s); ${expectedNoBwtTotal} active no-BWT lifter(s) expected"
+                      >
+                        ${noBwtCount}
+                      </td>
+                    `
+                    : ''
+                }
+              </tr>
+            `
+          }
+        )
+        .join('')
+  } else {
+    const lifts:
+      Array<[
+        string,
+        CompetitionLift,
+      ]> = [
+        ['Squat', 'squat'],
+        ['Bench', 'bench'],
+        ['Deadlift', 'deadlift'],
+      ]
+
+    const attempts:
+      Array<[
+        string,
+        CompetitionAttemptKey,
+      ]> = [
+        ['1st', 'attempt1'],
+        ['2nd', 'attempt2'],
+        ['3rd', 'attempt3'],
+      ]
+
+    rows =
+      lifts
+        .flatMap(
+          ([
+            liftLabel,
+            lift,
+          ]) =>
+            attempts.map(
+              ([
+                attemptLabel,
+                attemptKey,
+              ]) => {
+
+                const expectedNoBwtTotal =
+                  getCompetitionProgressExpectedNoBwtLifters(
+                    meet
+                  ).length
+
+                const noBwtCount =
+                  countAttemptProgressNoBwt(
+                    meet,
+                    lift,
+                    attemptKey
+                  )
+
+                return `
+                  <tr>
+                    <th>
+                      ${attemptLabel} ${liftLabel}
+                    </th>
+                    ${
+                      weightClasses
+                        .map(
+                          weightClass => {
+                            const count =
+                              countAttemptProgress(
+                                meet,
+                                weightClass,
+                                lift,
+                                attemptKey
+                              )
+
+                            const expectedTotal =
+                              getCompetitionProgressExpectedLiftersForClass(
+                                meet,
+                                weightClass
+                              ).length
+
+                            return `
+                              <td
+                                class="${getCompetitionProgressResultCellClass(
+                                  count,
+                                  expectedTotal
+                                )}"
+                                title="${count} result(s); ${expectedTotal} active lifter(s) expected"
+                              >
+                                ${count}
+                              </td>
+                            `
+                          }
+                        )
+                        .join('')
+                    }
+
+                    ${
+                      showNoBwt
+                        ? `
+                          <td
+                            class="competition-progress-no-bwt-cell ${getCompetitionProgressResultCellClass(
+                              noBwtCount,
+                              expectedNoBwtTotal
+                            )}"
+                            title="${noBwtCount} result(s); ${expectedNoBwtTotal} active no-BWT lifter(s) expected"
+                          >
+                            ${noBwtCount}
+                          </td>
+                        `
+                        : ''
+                    }
+                  </tr>
+                `
+              }
+            )
+        )
+        .join('')
+  }
+
+  const dividerColspan =
+    weightClasses.length +
+    1 +
+    (
+      showNoBwt
+        ? 1
+        : 0
+    )
+
+  return `
+    <div class="competition-progress-panel">
+      <div class="competition-progress-title">
+        Data Entry Progress — ${escapeHtml(division.name)}
+      </div>
+
+      <div class="competition-progress-scroll">
+        <table class="competition-progress-grid">
+          <thead>
+            <tr>
+              <th>Results</th>
+              ${headerCells}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+
+            <tr class="competition-progress-divider-row">
+              <td colspan="${dividerColspan}"></td>
+            </tr>
+
+            ${renderCompetitionProgressSummaryRows(
+              meet,
+              weightClasses,
+              showNoBwt
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+
+function closeCompetitionProgressDialog():
+  void {
+
+  const dialog =
+    document.querySelector<HTMLDialogElement>(
+      '#competitionProgressDialog'
+    )
+
+  if (
+    dialog !== null
+  ) {
+    dialog.close()
+    dialog.remove()
+  }
+}
+
+
+function toggleMissingResultsReviewForSelectedDivision():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return
+  }
+
+  const key =
+    getMissingResultsReviewKey(
+      meet,
+      division.id
+    )
+
+  if (
+    missingResultsReviewDivisions.has(
+      key
+    )
+  ) {
+    missingResultsReviewDivisions.delete(
+      key
+    )
+  } else {
+    missingResultsReviewDivisions.add(
+      key
+    )
+  }
+
+  renderApp()
+}
+
+
+function showCompetitionProgressDialog():
+  void {
+
+  const meet =
+    getSelectedMeet()
+
+  const division =
+    getSelectedDivision()
+
+  if (
+    meet === undefined ||
+    division === undefined
+  ) {
+    return
+  }
+
+  closeCompetitionProgressDialog()
+
+  const reviewEnabled =
+    isMissingResultsReviewEnabled(
+      meet,
+      division.id
+    )
+
+  const dialog =
+    document.createElement(
+      'dialog'
+    )
+
+  dialog.id =
+    'competitionProgressDialog'
+
+  dialog.className =
+    'competition-progress-dialog'
+
+  dialog.innerHTML = `
+    <div class="competition-progress-dialog-content">
+
+      <div class="competition-progress-dialog-header">
+        <div>
+          <strong>Data Entry Progress</strong>
+          <span>
+            ${escapeHtml(division.name)}
+          </span>
+        </div>
+
+        <div class="competition-progress-dialog-header-actions">
+          <button
+            id="closeCompetitionProgressDialog"
+            type="button"
+            class="compact-button secondary-button"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      ${
+        reviewEnabled
+          ? `
+            <div class="competition-progress-review-note">
+              Missing Results Review is ON. Every blank or zero result for an Active lifter is now treated as missing and is flagged on the Competition page.
+            </div>
+          `
+          : `
+            <div class="competition-progress-review-note neutral">
+              Normal monitoring is active. Started result sets that are short are counted in Missing Results. Use the Review Missing Results button on the Competition page near the end of an event to scan all remaining blanks and zeros.
+            </div>
+          `
+      }
+
+      ${renderCompetitionProgressGrid(
+        meet
+      )}
+
+    </div>
+  `
+
+  document.body.appendChild(
+    dialog
+  )
+
+  dialog
+    .querySelector<HTMLButtonElement>(
+      '#closeCompetitionProgressDialog'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        closeCompetitionProgressDialog()
+      }
+    )
+
+  dialog.addEventListener(
+    'cancel',
+    event => {
+      event.preventDefault()
+      closeCompetitionProgressDialog()
+    }
+  )
+
+  dialog.showModal()
+}
+
+
+function updateCompetitionProgressGrid():
+  void {
+
+  const dialog =
+    document.querySelector<HTMLDialogElement>(
+      '#competitionProgressDialog'
+    )
+
+  if (
+    dialog === null ||
+    !dialog.open
+  ) {
+    return
+  }
+
+  showCompetitionProgressDialog()
 }
 
 
@@ -10357,7 +14713,109 @@ function renderCompetition():
     <main class="workspace competition-workspace">
       <section class="workspace-panel competition-panel">
 
-        ${renderCompetitionDivisionTabs(meet)}
+        <div class="competition-division-toolbar">
+
+          <div class="competition-division-toolbar-tabs">
+            ${renderCompetitionDivisionTabs(meet)}
+          </div>
+
+          <div class="competition-division-toolbar-actions">
+            <button
+              id="resetCompetitionDivision"
+              type="button"
+              class="compact-button secondary-button"
+              ${division === undefined ? 'disabled' : ''}
+              title="Temporary testing control"
+            >
+              Reset Division
+            </button>
+
+            <button
+              id="checkPlatformResults"
+              type="button"
+              class="compact-button secondary-button ${
+                getPendingPlatformResultCount(
+                  meet
+                ) > 0
+                  ? 'platform-results-available'
+                  : ''
+              } ${
+                getNormalizedPlatformMeetId(
+                  meet
+                ) === ''
+                  ? 'platform-results-meetid-missing'
+                  : ''
+              }"
+              aria-disabled="${
+                getNormalizedPlatformMeetId(
+                  meet
+                ) === ''
+                  ? 'true'
+                  : 'false'
+              }"
+              title="${
+                getNormalizedPlatformMeetId(
+                  meet
+                ) === ''
+                  ? 'Platform MeetID has not been set for this meet.'
+                  : (
+                      getPendingPlatformResultCount(
+                        meet
+                      ) > 0
+                        ? `${getPendingPlatformResultCount(
+                            meet
+                          )} pending PlatformManager result file(s) are available for this meet.`
+                        : 'No pending PlatformManager result files are currently available.'
+                    )
+              }"
+            >
+              ${
+                getPendingPlatformResultCount(
+                  meet
+                ) > 0
+                  ? `Check for Platform Results (${getPendingPlatformResultCount(
+                      meet
+                    )})`
+                  : 'Check for Platform Results'
+              }
+            </button>
+
+            <button
+              id="showCompetitionProgress"
+              type="button"
+              class="compact-button secondary-button"
+              ${division === undefined ? 'disabled' : ''}
+            >
+              Show Data Entry Progress
+            </button>
+
+            <button
+              id="toggleMissingResultsReview"
+              type="button"
+              class="compact-button ${
+                division !== undefined &&
+                isMissingResultsReviewEnabled(
+                  meet,
+                  division.id
+                )
+                  ? 'competition-review-active'
+                  : 'secondary-button'
+              }"
+              ${division === undefined ? 'disabled' : ''}
+            >
+              ${
+                division !== undefined &&
+                isMissingResultsReviewEnabled(
+                  meet,
+                  division.id
+                )
+                  ? 'End Missing Results Review'
+                  : 'Review Missing Results'
+              }
+            </button>
+          </div>
+
+        </div>
 
         ${
           division === undefined
@@ -10390,18 +14848,19 @@ function renderCompetition():
                         : ''
                     }
                     ${renderCompetitionSortHeader('Place', 'place')}
-                    <div>1st<br>Squat</div>
-                    <div>2nd<br>Squat</div>
-                    <div>3rd<br>Squat</div>
-                    <div>1st<br>Bench</div>
-                    <div>2nd<br>Bench</div>
-                    <div>3rd<br>Bench</div>
-                    <div>1st<br>Deadlift</div>
-                    <div>2nd<br>Deadlift</div>
-                    <div>3rd<br>Deadlift</div>
+                    ${renderCompetitionAttemptHeader(meet, '1st Squat', 'squat', 'attempt1')}
+                    ${renderCompetitionAttemptHeader(meet, '2nd Squat', 'squat', 'attempt2')}
+                    ${renderCompetitionAttemptHeader(meet, '3rd Squat', 'squat', 'attempt3')}
+                    ${renderCompetitionAttemptHeader(meet, '1st Bench', 'bench', 'attempt1')}
+                    ${renderCompetitionAttemptHeader(meet, '2nd Bench', 'bench', 'attempt2')}
+                    ${renderCompetitionAttemptHeader(meet, '3rd Bench', 'bench', 'attempt3')}
+                    ${renderCompetitionAttemptHeader(meet, '1st Deadlift', 'deadlift', 'attempt1')}
+                    ${renderCompetitionAttemptHeader(meet, '2nd Deadlift', 'deadlift', 'attempt2')}
+                    ${renderCompetitionAttemptHeader(meet, '3rd Deadlift', 'deadlift', 'attempt3')}
                     ${renderCompetitionSortHeader('Best Squat', 'bestSquat')}
                     ${renderCompetitionSortHeader('Best Bench', 'bestBench')}
                     ${renderCompetitionSortHeader('Best Deadlift', 'bestDeadlift')}
+                    ${renderCompetitionSortHeader('SubTotal', 'subtotal')}
                     ${renderCompetitionSortHeader('Total', 'total')}
                     <div>Readiness</div>
                   </div>
@@ -10431,9 +14890,10 @@ function renderCompetition():
                         : ''
                     }
                     ${renderCompetitionSortHeader('Place', 'place')}
-                    ${renderCompetitionSortHeader('Best Squat', 'bestSquat')}
-                    ${renderCompetitionSortHeader('Best Bench', 'bestBench')}
-                    ${renderCompetitionSortHeader('Best Deadlift', 'bestDeadlift')}
+                    ${renderCompetitionSortHeader(getMissingHeaderLabel('Best Squat', doesBestLiftColumnHaveMissingResults(meet, 'squat')), 'bestSquat', doesBestLiftColumnHaveMissingResults(meet, 'squat') ? 'competition-header-missing-result' : '', 'best-squat')}
+                    ${renderCompetitionSortHeader(getMissingHeaderLabel('Best Bench', doesBestLiftColumnHaveMissingResults(meet, 'bench')), 'bestBench', doesBestLiftColumnHaveMissingResults(meet, 'bench') ? 'competition-header-missing-result' : '', 'best-bench')}
+                    ${renderCompetitionSortHeader(getMissingHeaderLabel('Best Deadlift', doesBestLiftColumnHaveMissingResults(meet, 'deadlift')), 'bestDeadlift', doesBestLiftColumnHaveMissingResults(meet, 'deadlift') ? 'competition-header-missing-result' : '', 'best-deadlift')}
+                    ${renderCompetitionSortHeader('SubTotal', 'subtotal')}
                     ${renderCompetitionSortHeader('Total', 'total')}
                     <div>Status</div>
                     <div>Readiness</div>
@@ -10501,12 +14961,34 @@ function updateBestLiftTotalDisplay(
   lifter: Lifter,
 ): void {
 
+  const results =
+    getBestLiftResults(
+      lifter
+    )
+
+  const subtotal =
+    calculateCompetitionSubTotal(
+      results
+    )
+
   const total =
     calculateCompetitionTotal(
-      getBestLiftResults(
-        lifter
-      )
+      results
     )
+
+  const subtotalCell =
+    document.querySelector<HTMLElement>(
+      `[data-best-subtotal="${lifter.id}"]`
+    )
+
+  if (
+    subtotalCell !== null
+  ) {
+    subtotalCell.textContent =
+      formatCompetitionDisplayWeight(
+        subtotal
+      )
+  }
 
   const cell =
     document.querySelector<HTMLElement>(
@@ -10531,6 +15013,11 @@ function updateBestLiftTotalDisplay(
     updateCompetitionPlaceDisplays(
       meet
     )
+
+    updateCompetitionProgressGrid()
+    updateCompetitionMissingResultIndicators(
+      meet
+    )
   }
 }
 
@@ -10542,6 +15029,11 @@ function updateAttemptSummaryDisplay(
   const best =
     getAllAttemptBestLifts(
       lifter
+    )
+
+  const subtotal =
+    calculateCompetitionSubTotal(
+      best
     )
 
   const total =
@@ -10580,6 +15072,20 @@ function updateAttemptSummaryDisplay(
     }
   }
 
+  const subtotalCell =
+    document.querySelector<HTMLElement>(
+      `[data-attempt-subtotal="${lifter.id}"]`
+    )
+
+  if (
+    subtotalCell !== null
+  ) {
+    subtotalCell.textContent =
+      formatCompetitionDisplayWeight(
+        subtotal
+      )
+  }
+
   const totalCell =
     document.querySelector<HTMLElement>(
       `[data-attempt-total="${lifter.id}"]`
@@ -10601,6 +15107,11 @@ function updateAttemptSummaryDisplay(
     meet !== undefined
   ) {
     updateCompetitionPlaceDisplays(
+      meet
+    )
+
+    updateCompetitionProgressGrid()
+    updateCompetitionMissingResultIndicators(
       meet
     )
   }
@@ -10690,6 +15201,10 @@ function updateCompetitionLifterStatusDisplays(
         )
       }
     )
+
+  updateCompetitionMissingResultIndicators(
+    meet
+  )
 }
 
 
@@ -11652,6 +16167,78 @@ function wireCompetition():
   ) {
     return
   }
+
+  startPlatformResultsAvailabilityPolling()
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#showCompetitionProgress'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        showCompetitionProgressDialog()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#toggleMissingResultsReview'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        toggleMissingResultsReviewForSelectedDivision()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#resetCompetitionDivision'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        resetSelectedCompetitionDivision()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#checkPlatformResults'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        const selectedMeet =
+          getSelectedMeet()
+
+        if (
+          selectedMeet === undefined
+        ) {
+          return
+        }
+
+        const meetId =
+          getNormalizedPlatformMeetId(
+            selectedMeet
+          )
+
+        if (
+          !/^[A-Z]{4}\d{4}$/.test(
+            meetId
+          )
+        ) {
+          window.alert(
+            'The Platform MeetID has not been set for this meet.\n\nOpen Registration and generate a Platform MeetID before checking for PlatformManager results.'
+          )
+
+          return
+        }
+
+        void checkPlatformResults()
+      }
+    )
 
   document
     .querySelectorAll<HTMLButtonElement>(
@@ -12750,6 +17337,35 @@ function wireNavigation(): void {
             meet
           )
         }
+
+        renderApp()
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#navPlatformIssues'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          !finishBulkEdit(
+            true
+          ) ||
+          !finishActiveEdit(
+            true,
+            false
+          )
+        ) {
+          return
+        }
+
+        activeEntry =
+          null
+
+        currentPage =
+          'platform-issues'
 
         renderApp()
       }
@@ -14203,6 +18819,17 @@ function wireRegistrationSetup(): void {
 
   document
     .querySelector<HTMLButtonElement>(
+      '#generatePlatformMeetId'
+    )
+    ?.addEventListener(
+      'click',
+      generateSelectedPlatformMeetId
+    )
+
+  wirePlatformMeetIdControls()
+
+  document
+    .querySelector<HTMLButtonElement>(
       '#addDivision'
     )
     ?.addEventListener(
@@ -14566,6 +19193,13 @@ function wireRegistration():
 
 function renderApp(): void {
 
+  if (
+    currentPage !==
+    'competition'
+  ) {
+    stopPlatformResultsAvailabilityPolling()
+  }
+
   const app =
     document.querySelector<HTMLDivElement>(
       '#app'
@@ -14617,7 +19251,10 @@ function renderApp(): void {
         currentPage ===
         'competition'
           ? renderCompetition()
-          : renderRegistration()
+          : currentPage ===
+              'platform-issues'
+            ? renderPlatformImportIssues()
+            : renderRegistration()
       }
 
     </div>
@@ -14632,6 +19269,18 @@ function renderApp(): void {
     disableRegistrationShortcuts()
     wireCompetition()
     wireCompetitionStatusShortcuts()
+    wireSelectAllOnEditableInputs()
+
+    return
+  }
+
+  if (
+    currentPage ===
+    'platform-issues'
+  ) {
+    disableRegistrationShortcuts()
+    disableCompetitionStatusShortcuts()
+    wirePlatformImportIssues()
     wireSelectAllOnEditableInputs()
 
     return
