@@ -299,14 +299,14 @@ The print process intentionally waits for association-logo images to load/decode
 
 ## Meet Setup Wizard
 
-`+ Add` Meet offers two creation paths:
+The Meets section offers two adjacent buttons:
 
-- Normal Setup
-- Guided Setup
-
-Normal Setup creates a new Meet row and puts it directly into edit mode.
+- `+ Add` creates a new Meet row and puts it directly into edit mode.
+- `Meet Wizard` opens Guided Setup directly.
 
 Guided Setup walks a new user through meet information, divisions, teams, and how lifters will be added.
+
+The date defaults to today in the user's local time. Division and team lists start empty. Use `+ Add` to open a focused blank row. Enter on a filled row continues with another row; Enter or Escape on a blank row removes it without closing the wizard. On these two steps, Enter outside a row advances to the next step. Blank rows are discarded when moving between steps.
 
 The wizard is an optional guide over the existing data model. It must not create a separate parallel meet-configuration architecture.
 

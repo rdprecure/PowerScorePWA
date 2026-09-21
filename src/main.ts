@@ -149,14 +149,12 @@ interface StoredUserMeets {
 
 
 type MeetSetupDialogMode =
-  | 'chooser'
   | 'guided'
   | 'copy'
 
 
 type MeetWizardLifterPlan =
   | 'manual'
-  | 'platform'
   | 'later'
 
 
@@ -4904,25 +4902,22 @@ function createMeetWizardKey(
 function createEmptyMeetWizardDraft():
   MeetWizardDraft {
 
+  const today = new Date()
+  const date = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('-')
+
   return {
     name: '',
-    date: '',
+    date,
     location: '',
     resultEntryMode:
       'best-lift-only',
     usePlatformManager:
       false,
-    divisions: [
-      {
-        key:
-          createMeetWizardKey(
-            'division'
-          ),
-        name: '',
-        ruleSet:
-          'THSPA',
-      },
-    ],
+    divisions: [],
     teams: [],
     lifterPlan:
       'manual',
@@ -4944,9 +4939,6 @@ function getMeetWizardLifterPlanLabel(
   switch (
     plan
   ) {
-    case 'platform':
-      return 'PlatformManager workflow'
-
     case 'later':
       return 'Add lifters later'
 
@@ -4984,7 +4976,7 @@ function getMeetWizardUniqueTeamCount(
 }
 
 
-function openMeetSetupChooser():
+function openMeetWizard():
   void {
 
   if (
@@ -5002,16 +4994,10 @@ function openMeetSetupChooser():
   activeEntry =
     null
 
-  meetSetupDialogMode =
-    'chooser'
-
-  meetWizardDraft =
-    null
-
   meetCopyDraft =
     null
 
-  renderApp()
+  startGuidedMeetSetup()
 }
 
 
@@ -5054,6 +5040,9 @@ function startQuickMeetSetup():
   void {
 
   if (
+    !finishBulkEdit(
+      true
+    ) ||
     !finishActiveEdit(
       true,
       false
@@ -5398,21 +5387,11 @@ function syncMeetWizardStepFromDom():
         selected.value ===
           'manual' ||
         selected.value ===
-          'platform' ||
-        selected.value ===
           'later'
       )
     ) {
       draft.lifterPlan =
         selected.value
-
-      if (
-        selected.value ===
-        'platform'
-      ) {
-        draft.usePlatformManager =
-          true
-      }
     }
   }
 }
@@ -5556,10 +5535,12 @@ function goToNextMeetWizardStep():
   void {
 
   syncMeetWizardStepFromDom()
+  discardEmptyMeetWizardRows()
 
   if (
     !validateMeetWizardStep()
   ) {
+    renderApp()
     return
   }
 
@@ -5577,6 +5558,7 @@ function goToPreviousMeetWizardStep():
   void {
 
   syncMeetWizardStepFromDom()
+  discardEmptyMeetWizardRows()
 
   meetWizardStep =
     Math.max(
@@ -5588,23 +5570,39 @@ function goToPreviousMeetWizardStep():
 }
 
 
-function addMeetWizardDivision():
-  void {
+function focusMeetWizardRow(
+  type: 'division' | 'team',
+  key: string,
+): void {
+  const input = document.querySelector<HTMLInputElement>(
+    `[data-meet-wizard-${type}-row="${key}"] [data-meet-wizard-${type}-name]`
+  )
+  input?.focus()
+  input?.scrollIntoView({ block: 'nearest' })
+}
 
+
+function addMeetWizardDivision(
+  afterKey?: string,
+): void {
   syncMeetWizardStepFromDom()
 
-  meetWizardDraft
-    ?.divisions.push({
-      key:
-        createMeetWizardKey(
-          'division'
-        ),
+  const draft = meetWizardDraft
+  if (draft === null) return
+
+  let row = draft.divisions.find(division => division.name === '')
+  if (row === undefined) {
+    row = {
+      key: createMeetWizardKey('division'),
       name: '',
-      ruleSet:
-        'THSPA',
-    })
+      ruleSet: 'THSPA',
+    }
+    const index = draft.divisions.findIndex(division => division.key === afterKey)
+    draft.divisions.splice(index < 0 ? draft.divisions.length : index + 1, 0, row)
+  }
 
   renderApp()
+  focusMeetWizardRow('division', row.key)
 }
 
 
@@ -5645,23 +5643,90 @@ function removeMeetWizardDivision(
 
 function addMeetWizardTeam(
   divisionKey: string,
+  afterKey?: string,
 ): void {
-
   syncMeetWizardStepFromDom()
 
-  meetWizardDraft
-    ?.teams.push({
-      key:
-        createMeetWizardKey(
-          'team'
-        ),
+  const draft = meetWizardDraft
+  if (draft === null) return
+
+  let row = draft.teams.find(team => team.divisionKey === divisionKey && team.name === '')
+  if (row === undefined) {
+    row = {
+      key: createMeetWizardKey('team'),
       divisionKey,
       name: '',
-      isBTeam:
-        false,
-    })
+      isBTeam: false,
+    }
+    const index = draft.teams.findIndex(team => team.key === afterKey)
+    draft.teams.splice(index < 0 ? draft.teams.length : index + 1, 0, row)
+  }
 
   renderApp()
+  focusMeetWizardRow('team', row.key)
+}
+
+
+function discardEmptyMeetWizardRows(): void {
+  const draft = meetWizardDraft
+  if (draft === null) return
+
+  draft.divisions = draft.divisions.filter(division => division.name.trim() !== '')
+  const divisionKeys = new Set(draft.divisions.map(division => division.key))
+  draft.teams = draft.teams.filter(team =>
+    team.name.trim() !== '' && divisionKeys.has(team.divisionKey)
+  )
+}
+
+
+function handleMeetWizardRowKeydown(event: KeyboardEvent): void {
+  if (event.isComposing || !(event.target instanceof Element)) return
+  if (meetSetupDialogMode !== 'guided' || (meetWizardStep !== 2 && meetWizardStep !== 3)) return
+
+  const row = event.target.closest<HTMLElement>(
+    '[data-meet-wizard-division-row], [data-meet-wizard-team-row]'
+  )
+  if (row === null) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      event.stopPropagation()
+      goToNextMeetWizardStep()
+    }
+    return
+  }
+
+  const divisionKey = row.dataset.meetWizardDivisionRow
+  const teamKey = row.dataset.meetWizardTeamRow
+  const name = row.querySelector<HTMLInputElement>(
+    '[data-meet-wizard-division-name], [data-meet-wizard-team-name]'
+  )
+
+  if (event.key === 'Escape' || (event.key === 'Enter' && name?.value.trim() === '')) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (name?.value.trim() !== '') return
+
+    if (divisionKey !== undefined) {
+      removeMeetWizardDivision(divisionKey)
+      document.querySelector<HTMLButtonElement>('#addMeetWizardDivision')?.focus()
+    } else if (teamKey !== undefined) {
+      removeMeetWizardTeam(teamKey)
+      document.querySelector<HTMLButtonElement>(
+        `[data-add-meet-wizard-team="${row.dataset.divisionKey}"]`
+      )?.focus()
+    }
+    return
+  }
+
+  if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (divisionKey !== undefined) {
+      addMeetWizardDivision(divisionKey)
+    } else if (teamKey !== undefined && row.dataset.divisionKey !== undefined) {
+      addMeetWizardTeam(row.dataset.divisionKey, teamKey)
+    }
+  }
 }
 
 
@@ -5830,9 +5895,7 @@ function createMeetFromWizard():
   }
 
   const usesPlatformManager =
-    draft.usePlatformManager ||
-    draft.lifterPlan ===
-      'platform'
+    draft.usePlatformManager
 
   const newMeet:
     LocalMeet = {
@@ -6238,56 +6301,6 @@ function createMeetFromCopy():
 }
 
 
-function renderMeetSetupChooser():
-  string {
-
-  return `
-    <div class="meet-setup-intro">
-      <p>
-        Choose how you want to create the new meet.
-      </p>
-    </div>
-
-    <div class="meet-setup-choice-grid">
-      <button
-        id="startQuickMeetSetup"
-        type="button"
-        class="meet-setup-choice"
-      >
-        <span class="meet-setup-choice-title">
-          Normal Setup
-        </span>
-
-        <span class="meet-setup-choice-description">
-          Add a new meet row in Registration and enter the meet
-          information using the normal PowerScore setup process.
-        </span>
-      </button>
-
-      <button
-        id="startGuidedMeetSetup"
-        type="button"
-        class="meet-setup-choice recommended"
-      >
-        <span class="meet-setup-choice-title">
-          Guided Setup
-        </span>
-
-        <span class="meet-setup-choice-badge">
-          Recommended for new users
-        </span>
-
-        <span class="meet-setup-choice-description">
-          PowerScore walks you through the meet, divisions, teams,
-          PlatformManager setup, and how lifters will be added.
-        </span>
-      </button>
-    </div>
-  `
-}
-
-
-
 function renderMeetWizardProgress():
   string {
 
@@ -6468,7 +6481,22 @@ function renderMeetWizardStep():
           </p>
         </div>
 
-        <div class="meet-wizard-list">
+        <section class="meet-wizard-division-group">
+          <div class="column-heading">
+            <div><strong>Divisions</strong></div>
+            <button
+              id="addMeetWizardDivision"
+              type="button"
+              class="compact-button"
+            >
+              + Add
+            </button>
+          </div>
+
+        <div class="meet-wizard-team-list">
+          ${draft.divisions.length === 0
+            ? '<div class="meet-wizard-empty">No divisions added yet.</div>'
+            : ''}
           ${
             draft.divisions
               .map(
@@ -6508,13 +6536,7 @@ function renderMeetWizardStep():
           }
         </div>
 
-        <button
-          id="addMeetWizardDivision"
-          type="button"
-          class="compact-button secondary-button"
-        >
-          + Add Division
-        </button>
+        </section>
       </div>
     `
   }
@@ -6548,7 +6570,7 @@ function renderMeetWizardStep():
 
                   return `
                     <section class="meet-wizard-division-group">
-                      <div class="meet-wizard-division-group-heading">
+                      <div class="column-heading">
                         <div>
                           <strong>
                             ${escapeHtml(division.name)}
@@ -6561,10 +6583,10 @@ function renderMeetWizardStep():
 
                         <button
                           type="button"
-                          class="compact-button secondary-button"
+                          class="compact-button"
                           data-add-meet-wizard-team="${escapeHtml(division.key)}"
                         >
-                          + Add Team
+                          + Add
                         </button>
                       </div>
 
@@ -6671,30 +6693,6 @@ function renderMeetWizardStep():
             <input
               type="radio"
               name="meetWizardLifterPlan"
-              value="platform"
-              ${
-                draft.lifterPlan ===
-                'platform'
-                  ? 'checked'
-                  : ''
-              }
-            >
-
-            <span>
-              <strong>PlatformManager Workflow</strong>
-              <small>
-                Generate a Platform MeetID and use PlatformManager
-                during the meet. If results arrive for an unregistered
-                lifter, PowerScore will flag that lifter for registration
-                completion.
-              </small>
-            </span>
-          </label>
-
-          <label class="meet-wizard-radio-card">
-            <input
-              type="radio"
-              name="meetWizardLifterPlan"
               value="later"
               ${
                 draft.lifterPlan ===
@@ -6723,9 +6721,7 @@ function renderMeetWizardStep():
     )
 
   const usesPlatform =
-    draft.usePlatformManager ||
-    draft.lifterPlan ===
-      'platform'
+    draft.usePlatformManager
 
   return `
     <div class="meet-wizard-step">
@@ -6805,10 +6801,7 @@ function renderMeetWizardStep():
               draft.lifterPlan ===
               'manual'
                 ? 'If a team was added, the first team is selected and lifter entry is opened.'
-                : draft.lifterPlan ===
-                  'platform'
-                  ? 'The generated Platform MeetID will be available on Registration for use at the PlatformManager stations.'
-                  : 'You can return to Registration whenever you are ready to add teams or lifters.'
+                : 'You can return to Registration whenever you are ready to add teams or lifters.'
             }
           </p>
         </section>
@@ -7052,12 +7045,9 @@ function renderMeetSetupDialog():
 
   const title =
     meetSetupDialogMode ===
-      'chooser'
-      ? 'Create a New Meet'
-      : meetSetupDialogMode ===
-        'guided'
-        ? 'Guided Meet Setup'
-        : 'Copy Existing Meet'
+      'guided'
+      ? 'Guided Meet Setup'
+      : 'Copy Existing Meet'
 
   return `
     <dialog
@@ -7094,24 +7084,7 @@ function renderMeetSetupDialog():
 
       ${
         meetSetupDialogMode ===
-        'chooser'
-          ? `
-            <div class="meet-setup-dialog-body">
-              ${renderMeetSetupChooser()}
-            </div>
-
-            <div class="meet-setup-dialog-footer">
-              <button
-                id="cancelMeetSetup"
-                type="button"
-                class="compact-button secondary-button"
-              >
-                Cancel
-              </button>
-            </div>
-          `
-          : meetSetupDialogMode ===
-            'guided'
+        'guided'
             ? renderGuidedMeetSetup()
             : renderCopyMeetSetup()
       }
@@ -7158,6 +7131,8 @@ function wireMeetSetupDialog():
       cancel
     )
 
+  dialog.addEventListener('keydown', handleMeetWizardRowKeydown)
+
   dialog.addEventListener(
     'cancel',
     event => {
@@ -7177,24 +7152,6 @@ function wireMeetSetupDialog():
       }
     }
   )
-
-  document
-    .querySelector<HTMLButtonElement>(
-      '#startGuidedMeetSetup'
-    )
-    ?.addEventListener(
-      'click',
-      startGuidedMeetSetup
-    )
-
-  document
-    .querySelector<HTMLButtonElement>(
-      '#startQuickMeetSetup'
-    )
-    ?.addEventListener(
-      'click',
-      startQuickMeetSetup
-    )
 
   document
     .querySelector<HTMLButtonElement>(
@@ -7229,7 +7186,7 @@ function wireMeetSetupDialog():
     )
     ?.addEventListener(
       'click',
-      addMeetWizardDivision
+      () => addMeetWizardDivision()
     )
 
   document
@@ -22451,14 +22408,25 @@ function renderRegistrationSidebar():
             </span>
           </div>
 
-          <button
-            id="addMeet"
-            type="button"
-            class="compact-button"
-            data-open-entry="meet"
-          >
-            + Add
-          </button>
+          <div>
+            <button
+              id="addMeet"
+              type="button"
+              class="compact-button"
+              data-open-entry="meet"
+            >
+              + Add
+            </button>
+
+            <button
+              id="openMeetWizard"
+              type="button"
+              class="compact-button"
+              data-open-entry="meet"
+            >
+              Meet Wizard
+            </button>
+          </div>
         </div>
 
         <div class="selector-list sidebar-list">
@@ -22473,7 +22441,7 @@ function renderRegistrationSidebar():
         role="separator"
         aria-orientation="horizontal"
         aria-label="Resize Meets and Divisions sections"
-        title="Drag to resize Meets and Divisions"
+        title="Drag to resize; double-click to expand Meets to fit its rows"
       >
         <span></span>
       </div>
@@ -22525,7 +22493,7 @@ function renderRegistrationSidebar():
         role="separator"
         aria-orientation="horizontal"
         aria-label="Resize Divisions and Teams sections"
-        title="Drag to resize Divisions and Teams"
+        title="Drag to resize; double-click to expand Divisions to fit its rows"
       >
         <span></span>
       </div>
@@ -36505,6 +36473,59 @@ function wireRegistrationSidebarResizers(): void {
     .forEach(
       resizer => {
 
+        resizer.addEventListener('dblclick', event => {
+          event.preventDefault()
+
+          const kind = resizer.dataset.registrationSidebarResizer
+          if (kind !== 'meet-division' && kind !== 'division-team') return
+
+          const panel = kind === 'meet-division' ? meetPanel : divisionPanel
+          const list = panel.querySelector<HTMLElement>('.selector-list')
+          if (list === null) return
+
+          const meetHeight = meetPanel.getBoundingClientRect().height
+          const divisionHeight = divisionPanel.getBoundingClientRect().height
+          const teamHeight = teamPanel.getBoundingClientRect().height
+          const panelHeight = panel.getBoundingClientRect().height
+          const desiredHeight = Math.ceil(
+            panelHeight + Math.max(0, list.scrollHeight - list.clientHeight)
+          )
+
+          registrationMeetPanelHeight = meetHeight
+          registrationDivisionPanelHeight = divisionHeight
+
+          if (kind === 'meet-division') {
+            const availableHeight = meetHeight + divisionHeight + teamHeight
+            registrationMeetPanelHeight = clampRegistrationSidebarPanelHeight(
+              desiredHeight,
+              REGISTRATION_MEET_PANEL_MIN_HEIGHT,
+              availableHeight - REGISTRATION_DIVISION_PANEL_MIN_HEIGHT - REGISTRATION_TEAM_PANEL_MIN_HEIGHT
+            )
+            registrationDivisionPanelHeight = Math.max(
+              REGISTRATION_DIVISION_PANEL_MIN_HEIGHT,
+              Math.min(
+                divisionHeight,
+                availableHeight - registrationMeetPanelHeight - REGISTRATION_TEAM_PANEL_MIN_HEIGHT
+              )
+            )
+          } else {
+            registrationDivisionPanelHeight = clampRegistrationSidebarPanelHeight(
+              desiredHeight,
+              REGISTRATION_DIVISION_PANEL_MIN_HEIGHT,
+              divisionHeight + teamHeight - REGISTRATION_TEAM_PANEL_MIN_HEIGHT
+            )
+          }
+
+          sidebar.style.setProperty(
+            '--registration-meet-panel-height',
+            `${registrationMeetPanelHeight}px`
+          )
+          sidebar.style.setProperty(
+            '--registration-division-panel-height',
+            `${registrationDivisionPanelHeight}px`
+          )
+        })
+
         resizer.addEventListener(
           'pointerdown',
           event => {
@@ -36673,7 +36694,16 @@ function wireRegistrationSetup(): void {
     )
     ?.addEventListener(
       'click',
-      openMeetSetupChooser
+      startQuickMeetSetup
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#openMeetWizard'
+    )
+    ?.addEventListener(
+      'click',
+      openMeetWizard
     )
 
   document

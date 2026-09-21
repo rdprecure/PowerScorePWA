@@ -52,8 +52,8 @@ The emphasis now is less on basic UI construction and more on integration, recov
 ## 3. Meet Setup Wizard
 
 - ✅ optional Guided Setup
-- ✅ Normal Setup path
-- ✅ Normal Setup creates a new meet and enters normal row-edit mode
+- ✅ separate Add and Meet Wizard buttons in the Meets section
+- ✅ Add creates a new meet and enters normal row-edit mode; Meet Wizard opens Guided Setup directly
 - ✅ Guided Setup covers core initial configuration
 - ⬜ conduct first-time-user usability testing
 - ⬜ refine wording/steps based on beta feedback

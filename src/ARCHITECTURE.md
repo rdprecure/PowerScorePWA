@@ -423,20 +423,20 @@ Do not replace that wait with an immediate print call.
 
 The wizard is a guided UI over the existing model and Registration behavior.
 
-Current entry choices:
+Adjacent buttons in the Registration Meets section:
 
 ```text
-Normal Setup
-Guided Setup
++ Add
+Meet Wizard
 ```
 
-Normal Setup:
+`+ Add`:
 
 - creates a new meet;
 - selects it;
 - places its row into the normal edit state.
 
-Guided Setup walks a new user through initial configuration.
+`Meet Wizard` opens Guided Setup directly and walks a new user through initial configuration.
 
 The wizard should call/reuse the same domain behavior used by normal Registration. Do not build duplicate rule, team, or lifter logic specifically for the wizard.
 

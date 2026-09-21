@@ -8,6 +8,7 @@ This is a curated product/development changelog, not a replacement for Git histo
 
 ### Added
 
+- Double-click a Registration sidebar splitter to expand the panel above it to fit its rows, while preserving minimum space for the other panels.
 - Meet backup/export/import workflow for complete portable meet files.
 - Automatic browser persistence for normal user meets.
 - Guided Meet Setup Wizard for first-time users.
@@ -16,6 +17,9 @@ This is a curated product/development changelog, not a replacement for Git histo
 
 ### Changed
 
+- Meet Wizard defaults the date to today and starts with empty division/team lists. Matching Add buttons open focused entry rows; Enter continues filled-row entry, Enter or Escape removes an empty row, and Enter outside a row advances to the next step. Step navigation discards blank rows.
+- Meet Wizard step 4 now offers only Enter Lifters Manually and Set Up Meet Only; removed the PlatformManager Workflow lifter-entry option.
+- Registration's Add Meet button now creates a meet directly in edit mode; an adjacent Meet Wizard button opens Guided Setup without a chooser screen.
 - Tools page reorganized into collapsed/expandable tool panels.
 - Runner Sheets and Expeditor Cards now contain their own Division selectors inside each tool.
 - Tool headers simplified by removing summary/count text from collapsed headers.
