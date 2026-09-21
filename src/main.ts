@@ -121,6 +121,99 @@ interface LocalMeet {
 }
 
 
+type MeetFilePurpose =
+  | 'backup'
+  | 'export'
+
+
+interface PowerScoreMeetFile {
+  fileType: 'PowerScoreMeet'
+  formatVersion: 1
+  createdAt: string
+  purpose: MeetFilePurpose
+  meet: LocalMeet
+}
+
+
+const POWERSCORE_MEET_FILE_TYPE =
+  'PowerScoreMeet'
+
+const POWERSCORE_MEET_FILE_FORMAT_VERSION =
+  1
+
+
+interface StoredUserMeets {
+  formatVersion: 1
+  meets: LocalMeet[]
+}
+
+
+type MeetSetupDialogMode =
+  | 'chooser'
+  | 'guided'
+  | 'copy'
+
+
+type MeetWizardLifterPlan =
+  | 'manual'
+  | 'platform'
+  | 'later'
+
+
+interface MeetWizardDivisionDraft {
+  key: string
+  name: string
+  ruleSet: DivisionRuleSet
+}
+
+
+interface MeetWizardTeamDraft {
+  key: string
+  divisionKey: string
+  name: string
+  isBTeam: boolean
+}
+
+
+interface MeetWizardDraft {
+  name: string
+  date: string
+  location: string
+  resultEntryMode: ResultEntryMode
+  usePlatformManager: boolean
+  divisions: MeetWizardDivisionDraft[]
+  teams: MeetWizardTeamDraft[]
+  lifterPlan: MeetWizardLifterPlan
+}
+
+
+interface MeetCopyDraft {
+  sourceMeetId: string
+  name: string
+  date: string
+  location: string
+  resultEntryMode: ResultEntryMode
+  usePlatformManager: boolean
+}
+
+
+const POWERSCORE_USER_MEET_STORAGE_KEY =
+  'powerscore-pwa-user-meets-v1'
+
+const POWERSCORE_USER_MEET_STORAGE_FORMAT_VERSION =
+  1
+
+const BUILT_IN_MEET_IDS =
+  new Set<string>([
+    'development-meet',
+    'second-development-meet',
+    TRAINING_BEST_LIFT_MEET_ID,
+    TRAINING_ALL_ATTEMPTS_MEET_ID,
+    TEST_BEST_LIFT_MEET_ID,
+    TEST_ALL_ATTEMPTS_MEET_ID,
+  ])
+
+
 interface RegistrationDefaults {
   equipmentType:
     Lifter['equipmentType']
@@ -241,6 +334,17 @@ interface RunnerSheetPageData {
   weightClass: string
   rows: RunnerSheetRowData[]
 }
+
+
+type ToolPanelId =
+  | 'meet-file'
+  | 'runner-sheets'
+  | 'expeditor'
+
+
+let expandedToolPanel:
+  ToolPanelId | null =
+    null
 
 
 let runnerSheetSelectionDivisionId:
@@ -4418,6 +4522,17 @@ function seedDevelopmentMeetData():
 
 seedDevelopmentMeetData()
 
+restorePersistedUserMeets()
+
+window.setInterval(
+  persistUserMeets,
+  2000
+)
+
+window.addEventListener(
+  'pagehide',
+  persistUserMeets
+)
 
 
 let currentPage:
@@ -4723,6 +4838,25 @@ let registrationDefaults:
   }
 
 
+let meetSetupDialogMode:
+  MeetSetupDialogMode | null =
+    null
+
+
+let meetWizardStep =
+  1
+
+
+let meetWizardDraft:
+  MeetWizardDraft | null =
+    null
+
+
+let meetCopyDraft:
+  MeetCopyDraft | null =
+    null
+
+
 function escapeHtml(
   value: string,
 ): string {
@@ -4747,6 +4881,2492 @@ function createMeetId():
       .toString(36)
       .slice(2, 8)
   )
+}
+
+
+
+function createMeetWizardKey(
+  prefix: string,
+): string {
+
+  return (
+    prefix +
+    '-' +
+    Date.now().toString(36) +
+    '-' +
+    Math.random()
+      .toString(36)
+      .slice(2, 7)
+  )
+}
+
+
+function createEmptyMeetWizardDraft():
+  MeetWizardDraft {
+
+  return {
+    name: '',
+    date: '',
+    location: '',
+    resultEntryMode:
+      'best-lift-only',
+    usePlatformManager:
+      false,
+    divisions: [
+      {
+        key:
+          createMeetWizardKey(
+            'division'
+          ),
+        name: '',
+        ruleSet:
+          'THSPA',
+      },
+    ],
+    teams: [],
+    lifterPlan:
+      'manual',
+  }
+}
+
+
+function getMeetSetupCopySources():
+  LocalMeet[] {
+
+  return getUserMeetsForStorage()
+}
+
+
+function getMeetWizardLifterPlanLabel(
+  plan: MeetWizardLifterPlan,
+): string {
+
+  switch (
+    plan
+  ) {
+    case 'platform':
+      return 'PlatformManager workflow'
+
+    case 'later':
+      return 'Add lifters later'
+
+    default:
+      return 'Enter lifters manually'
+  }
+}
+
+
+function getMeetWizardUniqueTeamCount(
+  draft: MeetWizardDraft,
+): number {
+
+  return new Set(
+    draft.teams
+      .filter(
+        team =>
+          team.name.trim() !== ''
+      )
+      .map(
+        team =>
+          (
+            team.name
+              .trim()
+              .toLocaleLowerCase() +
+            '|' +
+            (
+              team.isBTeam
+                ? 'b'
+                : 'a'
+            )
+          )
+      )
+  ).size
+}
+
+
+function openMeetSetupChooser():
+  void {
+
+  if (
+    !finishBulkEdit(
+      true
+    ) ||
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  activeEntry =
+    null
+
+  meetSetupDialogMode =
+    'chooser'
+
+  meetWizardDraft =
+    null
+
+  meetCopyDraft =
+    null
+
+  renderApp()
+}
+
+
+function closeMeetSetupDialog():
+  void {
+
+  meetSetupDialogMode =
+    null
+
+  meetWizardDraft =
+    null
+
+  meetCopyDraft =
+    null
+
+  meetWizardStep =
+    1
+
+  renderApp()
+}
+
+
+function startGuidedMeetSetup():
+  void {
+
+  meetWizardDraft =
+    createEmptyMeetWizardDraft()
+
+  meetWizardStep =
+    1
+
+  meetSetupDialogMode =
+    'guided'
+
+  renderApp()
+}
+
+
+function startQuickMeetSetup():
+  void {
+
+  if (
+    !finishActiveEdit(
+      true,
+      false
+    )
+  ) {
+    return
+  }
+
+  const meetId =
+    createMeetId()
+
+  const newMeet:
+    LocalMeet = {
+      state: {
+        meet: {
+          id:
+            meetId,
+          name:
+            'New Meet',
+          date:
+            '',
+          location:
+            '',
+          resultEntryMode:
+            'best-lift-only',
+        },
+        divisions: [],
+        teams: [],
+        lifters: [],
+      },
+      divisionTeams: [],
+    }
+
+  localMeets.push(
+    newMeet
+  )
+
+  selectedMeetId =
+    meetId
+
+  selectedDivisionId =
+    null
+
+  selectedTeamId =
+    null
+
+  selectedLifterId =
+    null
+
+  registrationDefaults = {
+    equipmentType:
+      'equipped',
+  }
+
+  activeEntry =
+    null
+
+  meetSetupDialogMode =
+    null
+
+  meetWizardDraft =
+    null
+
+  meetCopyDraft =
+    null
+
+  currentPage =
+    'registration'
+
+  persistUserMeets()
+
+  startEdit(
+    'meet',
+    meetId
+  )
+
+  document
+    .querySelector<HTMLInputElement>(
+      '#editMeetName'
+    )
+    ?.select()
+}
+
+
+function prepareMeetCopyDraft(
+  sourceMeetId?: string,
+): boolean {
+
+  const sources =
+    getMeetSetupCopySources()
+
+  const selectedSource =
+    sourceMeetId ===
+      undefined
+      ? sources.find(
+          meet =>
+            meet.state.meet.id ===
+              selectedMeetId
+        ) ??
+        sources[0]
+      : sources.find(
+          meet =>
+            meet.state.meet.id ===
+              sourceMeetId
+        )
+
+  if (
+    selectedSource ===
+    undefined
+  ) {
+    return false
+  }
+
+  meetCopyDraft = {
+    sourceMeetId:
+      selectedSource.state.meet.id,
+    name:
+      `${selectedSource.state.meet.name} Copy`,
+    date: '',
+    location:
+      selectedSource.state.meet.location,
+    resultEntryMode:
+      selectedSource.state.meet
+        .resultEntryMode,
+    usePlatformManager:
+      false,
+  }
+
+  return true
+}
+
+
+function startCopyMeetSetup():
+  void {
+
+  if (
+    !prepareMeetCopyDraft()
+  ) {
+    window.alert(
+      'There are no saved meets available to copy yet.'
+    )
+
+    return
+  }
+
+  meetSetupDialogMode =
+    'copy'
+
+  renderApp()
+}
+
+
+function syncMeetWizardStepFromDom():
+  void {
+
+  const draft =
+    meetWizardDraft
+
+  if (
+    draft ===
+    null
+  ) {
+    return
+  }
+
+  if (
+    meetWizardStep ===
+    1
+  ) {
+    const name =
+      document.querySelector<HTMLInputElement>(
+        '#meetWizardName'
+      )
+
+    const date =
+      document.querySelector<HTMLInputElement>(
+        '#meetWizardDate'
+      )
+
+    const location =
+      document.querySelector<HTMLInputElement>(
+        '#meetWizardLocation'
+      )
+
+    const resultMode =
+      document.querySelector<HTMLSelectElement>(
+        '#meetWizardResultEntryMode'
+      )
+
+    const usePlatform =
+      document.querySelector<HTMLInputElement>(
+        '#meetWizardUsePlatformManager'
+      )
+
+    if (
+      name !== null
+    ) {
+      draft.name =
+        name.value.trim()
+    }
+
+    if (
+      date !== null
+    ) {
+      draft.date =
+        date.value
+    }
+
+    if (
+      location !== null
+    ) {
+      draft.location =
+        location.value.trim()
+    }
+
+    if (
+      resultMode !== null
+    ) {
+      draft.resultEntryMode =
+        resultMode.value ===
+          'all-attempts'
+            ? 'all-attempts'
+            : 'best-lift-only'
+    }
+
+    if (
+      usePlatform !== null
+    ) {
+      draft.usePlatformManager =
+        usePlatform.checked
+    }
+
+    return
+  }
+
+  if (
+    meetWizardStep ===
+    2
+  ) {
+    const rows =
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[data-meet-wizard-division-row]'
+        )
+      )
+
+    draft.divisions =
+      rows.map(
+        row => {
+          const key =
+            row.dataset
+              .meetWizardDivisionRow ??
+            createMeetWizardKey(
+              'division'
+            )
+
+          const name =
+            row.querySelector<HTMLInputElement>(
+              '[data-meet-wizard-division-name]'
+            )
+
+          const ruleSet =
+            row.querySelector<HTMLSelectElement>(
+              '[data-meet-wizard-division-rules]'
+            )
+
+          const value =
+            ruleSet?.value as
+              DivisionRuleSet | undefined
+
+          return {
+            key,
+            name:
+              name?.value.trim() ??
+              '',
+            ruleSet:
+              value === 'THSWPA' ||
+              value === 'NMAA_BOYS' ||
+              value === 'NMAA_GIRLS'
+                ? value
+                : 'THSPA',
+          }
+        }
+      )
+
+    return
+  }
+
+  if (
+    meetWizardStep ===
+    3
+  ) {
+    const rows =
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[data-meet-wizard-team-row]'
+        )
+      )
+
+    draft.teams =
+      rows.map(
+        row => ({
+          key:
+            row.dataset
+              .meetWizardTeamRow ??
+            createMeetWizardKey(
+              'team'
+            ),
+          divisionKey:
+            row.dataset
+              .divisionKey ??
+            '',
+          name:
+            row.querySelector<HTMLInputElement>(
+              '[data-meet-wizard-team-name]'
+            )?.value.trim() ??
+            '',
+          isBTeam:
+            row.querySelector<HTMLInputElement>(
+              '[data-meet-wizard-team-b]'
+            )?.checked ??
+            false,
+        })
+      )
+
+    return
+  }
+
+  if (
+    meetWizardStep ===
+    4
+  ) {
+    const selected =
+      document.querySelector<HTMLInputElement>(
+        'input[name="meetWizardLifterPlan"]:checked'
+      )
+
+    if (
+      selected !==
+      null &&
+      (
+        selected.value ===
+          'manual' ||
+        selected.value ===
+          'platform' ||
+        selected.value ===
+          'later'
+      )
+    ) {
+      draft.lifterPlan =
+        selected.value
+
+      if (
+        selected.value ===
+        'platform'
+      ) {
+        draft.usePlatformManager =
+          true
+      }
+    }
+  }
+}
+
+
+function validateMeetWizardStep():
+  boolean {
+
+  const draft =
+    meetWizardDraft
+
+  if (
+    draft ===
+    null
+  ) {
+    return false
+  }
+
+  if (
+    meetWizardStep ===
+    1
+  ) {
+    if (
+      draft.name ===
+      ''
+    ) {
+      window.alert(
+        'Enter a meet name.'
+      )
+
+      return false
+    }
+
+    return true
+  }
+
+  if (
+    meetWizardStep ===
+    2
+  ) {
+    if (
+      draft.divisions.length ===
+      0
+    ) {
+      window.alert(
+        'Add at least one division.'
+      )
+
+      return false
+    }
+
+    if (
+      draft.divisions.some(
+        division =>
+          division.name ===
+          ''
+      )
+    ) {
+      window.alert(
+        'Enter a name for each division.'
+      )
+
+      return false
+    }
+
+    const names =
+      draft.divisions.map(
+        division =>
+          division.name
+            .toLocaleLowerCase()
+      )
+
+    if (
+      new Set(
+        names
+      ).size !==
+      names.length
+    ) {
+      window.alert(
+        'Division names must be unique within a meet.'
+      )
+
+      return false
+    }
+
+    return true
+  }
+
+  if (
+    meetWizardStep ===
+    3
+  ) {
+    draft.teams =
+      draft.teams.filter(
+        team =>
+          team.name !== ''
+      )
+
+    const seen =
+      new Set<string>()
+
+    for (
+      const team of
+      draft.teams
+    ) {
+      const key =
+        team.divisionKey +
+        '|' +
+        team.name
+          .toLocaleLowerCase() +
+        '|' +
+        (
+          team.isBTeam
+            ? 'b'
+            : 'a'
+        )
+
+      if (
+        seen.has(
+          key
+        )
+      ) {
+        window.alert(
+          'The same team is listed more than once in a division.'
+        )
+
+        return false
+      }
+
+      seen.add(
+        key
+      )
+    }
+  }
+
+  return true
+}
+
+
+function goToNextMeetWizardStep():
+  void {
+
+  syncMeetWizardStepFromDom()
+
+  if (
+    !validateMeetWizardStep()
+  ) {
+    return
+  }
+
+  meetWizardStep =
+    Math.min(
+      5,
+      meetWizardStep + 1
+    )
+
+  renderApp()
+}
+
+
+function goToPreviousMeetWizardStep():
+  void {
+
+  syncMeetWizardStepFromDom()
+
+  meetWizardStep =
+    Math.max(
+      1,
+      meetWizardStep - 1
+    )
+
+  renderApp()
+}
+
+
+function addMeetWizardDivision():
+  void {
+
+  syncMeetWizardStepFromDom()
+
+  meetWizardDraft
+    ?.divisions.push({
+      key:
+        createMeetWizardKey(
+          'division'
+        ),
+      name: '',
+      ruleSet:
+        'THSPA',
+    })
+
+  renderApp()
+}
+
+
+function removeMeetWizardDivision(
+  key: string,
+): void {
+
+  syncMeetWizardStepFromDom()
+
+  if (
+    meetWizardDraft ===
+    null
+  ) {
+    return
+  }
+
+  meetWizardDraft.divisions =
+    meetWizardDraft
+      .divisions
+      .filter(
+        division =>
+          division.key !==
+          key
+      )
+
+  meetWizardDraft.teams =
+    meetWizardDraft
+      .teams
+      .filter(
+        team =>
+          team.divisionKey !==
+          key
+      )
+
+  renderApp()
+}
+
+
+function addMeetWizardTeam(
+  divisionKey: string,
+): void {
+
+  syncMeetWizardStepFromDom()
+
+  meetWizardDraft
+    ?.teams.push({
+      key:
+        createMeetWizardKey(
+          'team'
+        ),
+      divisionKey,
+      name: '',
+      isBTeam:
+        false,
+    })
+
+  renderApp()
+}
+
+
+function removeMeetWizardTeam(
+  key: string,
+): void {
+
+  syncMeetWizardStepFromDom()
+
+  if (
+    meetWizardDraft ===
+    null
+  ) {
+    return
+  }
+
+  meetWizardDraft.teams =
+    meetWizardDraft
+      .teams
+      .filter(
+        team =>
+          team.key !==
+          key
+      )
+
+  renderApp()
+}
+
+
+function createMeetFromWizard():
+  void {
+
+  const draft =
+    meetWizardDraft
+
+  if (
+    draft ===
+    null
+  ) {
+    return
+  }
+
+  const meetId =
+    createMeetId()
+
+  const divisions:
+    Division[] =
+      []
+
+  const divisionIdByKey =
+    new Map<string, number>()
+
+  draft.divisions.forEach(
+    (
+      item,
+      index
+    ) => {
+      const divisionId =
+        index + 1
+
+      divisionIdByKey.set(
+        item.key,
+        divisionId
+      )
+
+      divisions.push({
+        id:
+          divisionId,
+        meetId,
+        name:
+          item.name,
+        ruleSet:
+          item.ruleSet,
+      })
+    }
+  )
+
+  const teams:
+    Team[] =
+      []
+
+  const divisionTeams:
+    DivisionTeam[] =
+      []
+
+  const teamByIdentity =
+    new Map<string, Team>()
+
+  for (
+    const item of
+    draft.teams
+  ) {
+    const divisionId =
+      divisionIdByKey.get(
+        item.divisionKey
+      )
+
+    if (
+      divisionId ===
+        undefined ||
+      item.name.trim() ===
+        ''
+    ) {
+      continue
+    }
+
+    const identity =
+      item.name
+        .trim()
+        .toLocaleLowerCase() +
+      '|' +
+      (
+        item.isBTeam
+          ? 'b'
+          : 'a'
+      )
+
+    let team =
+      teamByIdentity.get(
+        identity
+      )
+
+    if (
+      team ===
+      undefined
+    ) {
+      team = {
+        id:
+          teams.length + 1,
+        meetId,
+        name:
+          item.name.trim(),
+        region:
+          null,
+        classification:
+          null,
+        isBTeam:
+          item.isBTeam,
+      }
+
+      teams.push(
+        team
+      )
+
+      teamByIdentity.set(
+        identity,
+        team
+      )
+    }
+
+    if (
+      !divisionTeams.some(
+        assignment =>
+          assignment.divisionId ===
+            divisionId &&
+          assignment.teamId ===
+            team!.id
+      )
+    ) {
+      divisionTeams.push({
+        divisionId,
+        teamId:
+          team.id,
+      })
+    }
+  }
+
+  const usesPlatformManager =
+    draft.usePlatformManager ||
+    draft.lifterPlan ===
+      'platform'
+
+  const newMeet:
+    LocalMeet = {
+      state: {
+        meet: {
+          id:
+            meetId,
+          name:
+            draft.name,
+          date:
+            draft.date,
+          location:
+            draft.location,
+          resultEntryMode:
+            draft.resultEntryMode,
+          platformMeetId:
+            usesPlatformManager
+              ? createPlatformMeetId()
+              : undefined,
+        },
+        divisions,
+        teams,
+        lifters: [],
+      },
+      divisionTeams,
+    }
+
+  localMeets.push(
+    newMeet
+  )
+
+  selectedMeetId =
+    meetId
+
+  selectedDivisionId =
+    divisions[0]?.id ??
+    null
+
+  const firstTeamAssignment =
+    selectedDivisionId ===
+      null
+      ? undefined
+      : divisionTeams.find(
+          assignment =>
+            assignment.divisionId ===
+              selectedDivisionId
+        )
+
+  selectedTeamId =
+    draft.lifterPlan ===
+      'manual'
+      ? firstTeamAssignment
+          ?.teamId ??
+        null
+      : null
+
+  selectedLifterId =
+    null
+
+  registrationDefaults = {
+    equipmentType:
+      'equipped',
+  }
+
+  activeEntry =
+    draft.lifterPlan ===
+      'manual' &&
+    selectedTeamId !==
+      null
+      ? 'lifter'
+      : null
+
+  currentPage =
+    'registration'
+
+  meetSetupDialogMode =
+    null
+
+  meetWizardDraft =
+    null
+
+  meetCopyDraft =
+    null
+
+  meetWizardStep =
+    1
+
+  persistUserMeets()
+
+  renderApp()
+
+  flashRow(
+    `[data-meet-row="${meetId}"]`
+  )
+
+  if (
+    activeEntry ===
+    'lifter'
+  ) {
+    focusElement(
+      '#entryFirstName'
+    )
+  }
+}
+
+
+function syncMeetCopyDraftFromDom():
+  void {
+
+  const draft =
+    meetCopyDraft
+
+  if (
+    draft ===
+    null
+  ) {
+    return
+  }
+
+  const source =
+    document.querySelector<HTMLSelectElement>(
+      '#copyMeetSource'
+    )
+
+  const name =
+    document.querySelector<HTMLInputElement>(
+      '#copyMeetName'
+    )
+
+  const date =
+    document.querySelector<HTMLInputElement>(
+      '#copyMeetDate'
+    )
+
+  const location =
+    document.querySelector<HTMLInputElement>(
+      '#copyMeetLocation'
+    )
+
+  const resultMode =
+    document.querySelector<HTMLSelectElement>(
+      '#copyMeetResultEntryMode'
+    )
+
+  const usePlatform =
+    document.querySelector<HTMLInputElement>(
+      '#copyMeetUsePlatformManager'
+    )
+
+  if (
+    source !== null
+  ) {
+    draft.sourceMeetId =
+      source.value
+  }
+
+  if (
+    name !== null
+  ) {
+    draft.name =
+      name.value.trim()
+  }
+
+  if (
+    date !== null
+  ) {
+    draft.date =
+      date.value
+  }
+
+  if (
+    location !== null
+  ) {
+    draft.location =
+      location.value.trim()
+  }
+
+  if (
+    resultMode !== null
+  ) {
+    draft.resultEntryMode =
+      resultMode.value ===
+        'all-attempts'
+          ? 'all-attempts'
+          : 'best-lift-only'
+  }
+
+  if (
+    usePlatform !== null
+  ) {
+    draft.usePlatformManager =
+      usePlatform.checked
+  }
+}
+
+
+function createMeetFromCopy():
+  void {
+
+  syncMeetCopyDraftFromDom()
+
+  const draft =
+    meetCopyDraft
+
+  if (
+    draft ===
+    null
+  ) {
+    return
+  }
+
+  const source =
+    getMeetSetupCopySources()
+      .find(
+        meet =>
+          meet.state.meet.id ===
+            draft.sourceMeetId
+      )
+
+  if (
+    source ===
+    undefined
+  ) {
+    window.alert(
+      'Select a meet to copy.'
+    )
+
+    return
+  }
+
+  if (
+    draft.name ===
+    ''
+  ) {
+    window.alert(
+      'Enter a name for the new meet.'
+    )
+
+    return
+  }
+
+  const meetId =
+    createMeetId()
+
+  const divisionIdMap =
+    new Map<number, number>()
+
+  const divisions =
+    source.state.divisions.map(
+      (
+        division,
+        index
+      ) => {
+        const id =
+          index + 1
+
+        divisionIdMap.set(
+          division.id,
+          id
+        )
+
+        return {
+          ...division,
+          id,
+          meetId,
+        }
+      }
+    )
+
+  const teamIdMap =
+    new Map<number, number>()
+
+  const teams =
+    source.state.teams.map(
+      (
+        team,
+        index
+      ) => {
+        const id =
+          index + 1
+
+        teamIdMap.set(
+          team.id,
+          id
+        )
+
+        return {
+          ...team,
+          id,
+          meetId,
+        }
+      }
+    )
+
+  const divisionTeams =
+    source.divisionTeams
+      .map(
+        assignment => {
+          const divisionId =
+            divisionIdMap.get(
+              assignment.divisionId
+            )
+
+          const teamId =
+            teamIdMap.get(
+              assignment.teamId
+            )
+
+          if (
+            divisionId ===
+              undefined ||
+            teamId ===
+              undefined
+          ) {
+            return null
+          }
+
+          return {
+            divisionId,
+            teamId,
+          }
+        }
+      )
+      .filter(
+        (
+          assignment
+        ): assignment is
+          DivisionTeam =>
+          assignment !==
+          null
+      )
+
+  const newMeet:
+    LocalMeet = {
+      state: {
+        meet: {
+          id:
+            meetId,
+          name:
+            draft.name,
+          date:
+            draft.date,
+          location:
+            draft.location,
+          resultEntryMode:
+            draft.resultEntryMode,
+          platformMeetId:
+            draft.usePlatformManager
+              ? createPlatformMeetId()
+              : undefined,
+        },
+        divisions,
+        teams,
+        lifters: [],
+      },
+      divisionTeams,
+    }
+
+  localMeets.push(
+    newMeet
+  )
+
+  selectedMeetId =
+    meetId
+
+  selectedDivisionId =
+    divisions[0]?.id ??
+    null
+
+  selectedTeamId =
+    null
+
+  selectedLifterId =
+    null
+
+  registrationDefaults = {
+    equipmentType:
+      'equipped',
+  }
+
+  activeEntry =
+    null
+
+  currentPage =
+    'registration'
+
+  meetSetupDialogMode =
+    null
+
+  meetCopyDraft =
+    null
+
+  meetWizardDraft =
+    null
+
+  persistUserMeets()
+
+  renderApp()
+
+  flashRow(
+    `[data-meet-row="${meetId}"]`
+  )
+}
+
+
+function renderMeetSetupChooser():
+  string {
+
+  return `
+    <div class="meet-setup-intro">
+      <p>
+        Choose how you want to create the new meet.
+      </p>
+    </div>
+
+    <div class="meet-setup-choice-grid">
+      <button
+        id="startQuickMeetSetup"
+        type="button"
+        class="meet-setup-choice"
+      >
+        <span class="meet-setup-choice-title">
+          Normal Setup
+        </span>
+
+        <span class="meet-setup-choice-description">
+          Add a new meet row in Registration and enter the meet
+          information using the normal PowerScore setup process.
+        </span>
+      </button>
+
+      <button
+        id="startGuidedMeetSetup"
+        type="button"
+        class="meet-setup-choice recommended"
+      >
+        <span class="meet-setup-choice-title">
+          Guided Setup
+        </span>
+
+        <span class="meet-setup-choice-badge">
+          Recommended for new users
+        </span>
+
+        <span class="meet-setup-choice-description">
+          PowerScore walks you through the meet, divisions, teams,
+          PlatformManager setup, and how lifters will be added.
+        </span>
+      </button>
+    </div>
+  `
+}
+
+
+
+function renderMeetWizardProgress():
+  string {
+
+  const labels = [
+    'Meet',
+    'Divisions',
+    'Teams',
+    'Lifters',
+    'Review',
+  ]
+
+  return `
+    <div
+      class="meet-wizard-progress"
+      aria-label="Meet setup progress"
+    >
+      ${
+        labels.map(
+          (
+            label,
+            index
+          ) => {
+            const step =
+              index + 1
+
+            return `
+              <div
+                class="meet-wizard-progress-step ${
+                  step ===
+                    meetWizardStep
+                    ? 'current'
+                    : step <
+                      meetWizardStep
+                      ? 'complete'
+                      : ''
+                }"
+              >
+                <span class="meet-wizard-step-number">
+                  ${step}
+                </span>
+
+                <span>
+                  ${label}
+                </span>
+              </div>
+            `
+          }
+        ).join('')
+      }
+    </div>
+  `
+}
+
+
+function renderMeetWizardStep():
+  string {
+
+  const draft =
+    meetWizardDraft
+
+  if (
+    draft ===
+    null
+  ) {
+    return ''
+  }
+
+  if (
+    meetWizardStep ===
+    1
+  ) {
+    return `
+      <div class="meet-wizard-step">
+        <div class="meet-wizard-step-heading">
+          <h3>Meet Information</h3>
+          <p>
+            Start with the information that identifies the meet.
+          </p>
+        </div>
+
+        <div class="meet-wizard-form-grid">
+          <label class="meet-wizard-field meet-wizard-field-wide">
+            <span>Meet Name</span>
+            <input
+              id="meetWizardName"
+              type="text"
+              value="${escapeHtml(draft.name)}"
+              autocomplete="off"
+            >
+          </label>
+
+          <label class="meet-wizard-field">
+            <span>Date</span>
+            <input
+              id="meetWizardDate"
+              type="date"
+              value="${escapeHtml(draft.date)}"
+            >
+          </label>
+
+          <label class="meet-wizard-field">
+            <span>Location</span>
+            <input
+              id="meetWizardLocation"
+              type="text"
+              value="${escapeHtml(draft.location)}"
+              autocomplete="off"
+            >
+          </label>
+
+          <label class="meet-wizard-field">
+            <span>Result Entry</span>
+            <select
+              id="meetWizardResultEntryMode"
+            >
+              <option
+                value="best-lift-only"
+                ${
+                  draft.resultEntryMode ===
+                  'best-lift-only'
+                    ? 'selected'
+                    : ''
+                }
+              >
+                Best Lift
+              </option>
+
+              <option
+                value="all-attempts"
+                ${
+                  draft.resultEntryMode ===
+                  'all-attempts'
+                    ? 'selected'
+                    : ''
+                }
+              >
+                All Attempts
+              </option>
+            </select>
+          </label>
+        </div>
+
+        <label class="meet-wizard-check-card">
+          <input
+            id="meetWizardUsePlatformManager"
+            type="checkbox"
+            ${
+              draft.usePlatformManager
+                ? 'checked'
+                : ''
+            }
+          >
+
+          <span>
+            <strong>Use PlatformManager for this meet</strong>
+            <small>
+              PowerScore will generate a new Platform MeetID when
+              the meet is created. Enter the same MeetID into each
+              PlatformManager station used for this meet.
+            </small>
+          </span>
+        </label>
+      </div>
+    `
+  }
+
+  if (
+    meetWizardStep ===
+    2
+  ) {
+    return `
+      <div class="meet-wizard-step">
+        <div class="meet-wizard-step-heading">
+          <h3>Divisions</h3>
+          <p>
+            Each division has its own association rules, weight
+            classes, scoring, and awards.
+          </p>
+        </div>
+
+        <div class="meet-wizard-list">
+          ${
+            draft.divisions
+              .map(
+                division => `
+                  <div
+                    class="meet-wizard-list-row"
+                    data-meet-wizard-division-row="${escapeHtml(division.key)}"
+                  >
+                    <input
+                      type="text"
+                      value="${escapeHtml(division.name)}"
+                      placeholder="Division name"
+                      autocomplete="off"
+                      data-meet-wizard-division-name
+                      aria-label="Division name"
+                    >
+
+                    <select
+                      data-meet-wizard-division-rules
+                      aria-label="Division association rules"
+                    >
+                      ${renderDivisionRuleSetOptions(division.ruleSet)}
+                    </select>
+
+                    <button
+                      type="button"
+                      class="compact-button secondary-button meet-wizard-remove"
+                      data-remove-meet-wizard-division="${escapeHtml(division.key)}"
+                      title="Remove division"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                `
+              )
+              .join('')
+          }
+        </div>
+
+        <button
+          id="addMeetWizardDivision"
+          type="button"
+          class="compact-button secondary-button"
+        >
+          + Add Division
+        </button>
+      </div>
+    `
+  }
+
+  if (
+    meetWizardStep ===
+    3
+  ) {
+    return `
+      <div class="meet-wizard-step">
+        <div class="meet-wizard-step-heading">
+          <h3>Teams</h3>
+          <p>
+            Add the schools or teams participating in each division.
+            The same school can participate in more than one division.
+            Teams can also be added later from Registration.
+          </p>
+        </div>
+
+        <div class="meet-wizard-division-groups">
+          ${
+            draft.divisions
+              .map(
+                division => {
+                  const teams =
+                    draft.teams.filter(
+                      team =>
+                        team.divisionKey ===
+                        division.key
+                    )
+
+                  return `
+                    <section class="meet-wizard-division-group">
+                      <div class="meet-wizard-division-group-heading">
+                        <div>
+                          <strong>
+                            ${escapeHtml(division.name)}
+                          </strong>
+
+                          <span>
+                            ${escapeHtml(getDivisionRuleSetLabel(division.ruleSet))}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          class="compact-button secondary-button"
+                          data-add-meet-wizard-team="${escapeHtml(division.key)}"
+                        >
+                          + Add Team
+                        </button>
+                      </div>
+
+                      <div class="meet-wizard-team-list">
+                        ${
+                          teams.length ===
+                          0
+                            ? `
+                              <div class="meet-wizard-empty">
+                                No teams added yet.
+                              </div>
+                            `
+                            : teams.map(
+                                team => `
+                                  <div
+                                    class="meet-wizard-team-row"
+                                    data-meet-wizard-team-row="${escapeHtml(team.key)}"
+                                    data-division-key="${escapeHtml(team.divisionKey)}"
+                                  >
+                                    <input
+                                      type="text"
+                                      value="${escapeHtml(team.name)}"
+                                      placeholder="Team or school name"
+                                      autocomplete="off"
+                                      data-meet-wizard-team-name
+                                      aria-label="Team name"
+                                    >
+
+                                    <label class="meet-wizard-bteam">
+                                      <input
+                                        type="checkbox"
+                                        data-meet-wizard-team-b
+                                        ${
+                                          team.isBTeam
+                                            ? 'checked'
+                                            : ''
+                                        }
+                                      >
+                                      <span>B Team</span>
+                                    </label>
+
+                                    <button
+                                      type="button"
+                                      class="compact-button secondary-button meet-wizard-remove"
+                                      data-remove-meet-wizard-team="${escapeHtml(team.key)}"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                `
+                              ).join('')
+                        }
+                      </div>
+                    </section>
+                  `
+                }
+              )
+              .join('')
+          }
+        </div>
+      </div>
+    `
+  }
+
+  if (
+    meetWizardStep ===
+    4
+  ) {
+    return `
+      <div class="meet-wizard-step">
+        <div class="meet-wizard-step-heading">
+          <h3>How will lifters be added?</h3>
+          <p>
+            Choose what you want to do after the basic meet structure
+            is created.
+          </p>
+        </div>
+
+        <div class="meet-wizard-radio-grid">
+          <label class="meet-wizard-radio-card">
+            <input
+              type="radio"
+              name="meetWizardLifterPlan"
+              value="manual"
+              ${
+                draft.lifterPlan ===
+                'manual'
+                  ? 'checked'
+                  : ''
+              }
+            >
+
+            <span>
+              <strong>Enter Lifters Manually</strong>
+              <small>
+                Finish setup and begin entering lifters on the
+                Registration page. A team must be selected before
+                adding lifters.
+              </small>
+            </span>
+          </label>
+
+          <label class="meet-wizard-radio-card">
+            <input
+              type="radio"
+              name="meetWizardLifterPlan"
+              value="platform"
+              ${
+                draft.lifterPlan ===
+                'platform'
+                  ? 'checked'
+                  : ''
+              }
+            >
+
+            <span>
+              <strong>PlatformManager Workflow</strong>
+              <small>
+                Generate a Platform MeetID and use PlatformManager
+                during the meet. If results arrive for an unregistered
+                lifter, PowerScore will flag that lifter for registration
+                completion.
+              </small>
+            </span>
+          </label>
+
+          <label class="meet-wizard-radio-card">
+            <input
+              type="radio"
+              name="meetWizardLifterPlan"
+              value="later"
+              ${
+                draft.lifterPlan ===
+                'later'
+                  ? 'checked'
+                  : ''
+              }
+            >
+
+            <span>
+              <strong>Set Up Meet Only</strong>
+              <small>
+                Create the meet now and add lifters later from
+                Registration.
+              </small>
+            </span>
+          </label>
+        </div>
+      </div>
+    `
+  }
+
+  const teamCount =
+    getMeetWizardUniqueTeamCount(
+      draft
+    )
+
+  const usesPlatform =
+    draft.usePlatformManager ||
+    draft.lifterPlan ===
+      'platform'
+
+  return `
+    <div class="meet-wizard-step">
+      <div class="meet-wizard-step-heading">
+        <h3>Review Meet Setup</h3>
+        <p>
+          Review the structure PowerScore will create.
+        </p>
+      </div>
+
+      <div class="meet-wizard-review-grid">
+        <div>
+          <span>Meet</span>
+          <strong>${escapeHtml(draft.name)}</strong>
+        </div>
+
+        <div>
+          <span>Date</span>
+          <strong>${draft.date === '' ? 'Not entered' : escapeHtml(draft.date)}</strong>
+        </div>
+
+        <div>
+          <span>Location</span>
+          <strong>${draft.location === '' ? 'Not entered' : escapeHtml(draft.location)}</strong>
+        </div>
+
+        <div>
+          <span>Result Entry</span>
+          <strong>${escapeHtml(getResultEntryModeLabel(draft.resultEntryMode))}</strong>
+        </div>
+
+        <div>
+          <span>Divisions</span>
+          <strong>${draft.divisions.length}</strong>
+        </div>
+
+        <div>
+          <span>Teams</span>
+          <strong>${teamCount}</strong>
+        </div>
+
+        <div>
+          <span>PlatformManager</span>
+          <strong>${usesPlatform ? 'New MeetID will be generated' : 'Not configured'}</strong>
+        </div>
+
+        <div>
+          <span>Next Step</span>
+          <strong>${escapeHtml(getMeetWizardLifterPlanLabel(draft.lifterPlan))}</strong>
+        </div>
+      </div>
+
+      <div class="meet-wizard-review-sections">
+        <section>
+          <strong>Divisions</strong>
+          <ul>
+            ${
+              draft.divisions
+                .map(
+                  division => `
+                    <li>
+                      ${escapeHtml(division.name)}
+                      — ${escapeHtml(getDivisionRuleSetLabel(division.ruleSet))}
+                    </li>
+                  `
+                )
+                .join('')
+            }
+          </ul>
+        </section>
+
+        <section>
+          <strong>What happens when you finish</strong>
+          <p>
+            PowerScore creates the meet and opens Registration.
+            ${
+              draft.lifterPlan ===
+              'manual'
+                ? 'If a team was added, the first team is selected and lifter entry is opened.'
+                : draft.lifterPlan ===
+                  'platform'
+                  ? 'The generated Platform MeetID will be available on Registration for use at the PlatformManager stations.'
+                  : 'You can return to Registration whenever you are ready to add teams or lifters.'
+            }
+          </p>
+        </section>
+      </div>
+    </div>
+  `
+}
+
+
+function renderGuidedMeetSetup():
+  string {
+
+  return `
+    ${renderMeetWizardProgress()}
+
+    <div class="meet-setup-dialog-body">
+      ${renderMeetWizardStep()}
+    </div>
+
+    <div class="meet-setup-dialog-footer">
+      <button
+        id="cancelMeetSetup"
+        type="button"
+        class="compact-button secondary-button"
+      >
+        Cancel
+      </button>
+
+      <div class="meet-setup-footer-spacer"></div>
+
+      ${
+        meetWizardStep >
+        1
+          ? `
+            <button
+              id="previousMeetWizardStep"
+              type="button"
+              class="compact-button secondary-button"
+            >
+              Back
+            </button>
+          `
+          : ''
+      }
+
+      ${
+        meetWizardStep <
+        5
+          ? `
+            <button
+              id="nextMeetWizardStep"
+              type="button"
+              class="compact-button"
+            >
+              Next
+            </button>
+          `
+          : `
+            <button
+              id="finishMeetWizard"
+              type="button"
+              class="compact-button"
+            >
+              Create Meet
+            </button>
+          `
+      }
+    </div>
+  `
+}
+
+
+function renderCopyMeetSetup():
+  string {
+
+  const draft =
+    meetCopyDraft
+
+  const sources =
+    getMeetSetupCopySources()
+
+  if (
+    draft ===
+    null
+  ) {
+    return ''
+  }
+
+  return `
+    <div class="meet-setup-dialog-body">
+      <div class="meet-wizard-step">
+        <div class="meet-wizard-step-heading">
+          <h3>Copy Existing Meet</h3>
+          <p>
+            Copy divisions and team assignments from a previous meet.
+            Lifters, Platform MeetID, statuses, declared weights, and
+            competition results are not copied.
+          </p>
+        </div>
+
+        <div class="meet-wizard-form-grid">
+          <label class="meet-wizard-field meet-wizard-field-wide">
+            <span>Meet to Copy</span>
+            <select
+              id="copyMeetSource"
+            >
+              ${
+                sources.map(
+                  source => `
+                    <option
+                      value="${escapeHtml(source.state.meet.id)}"
+                      ${
+                        source.state.meet.id ===
+                        draft.sourceMeetId
+                          ? 'selected'
+                          : ''
+                      }
+                    >
+                      ${escapeHtml(source.state.meet.name)}
+                    </option>
+                  `
+                ).join('')
+              }
+            </select>
+          </label>
+
+          <label class="meet-wizard-field meet-wizard-field-wide">
+            <span>New Meet Name</span>
+            <input
+              id="copyMeetName"
+              type="text"
+              value="${escapeHtml(draft.name)}"
+              autocomplete="off"
+            >
+          </label>
+
+          <label class="meet-wizard-field">
+            <span>Date</span>
+            <input
+              id="copyMeetDate"
+              type="date"
+              value="${escapeHtml(draft.date)}"
+            >
+          </label>
+
+          <label class="meet-wizard-field">
+            <span>Location</span>
+            <input
+              id="copyMeetLocation"
+              type="text"
+              value="${escapeHtml(draft.location)}"
+              autocomplete="off"
+            >
+          </label>
+
+          <label class="meet-wizard-field">
+            <span>Result Entry</span>
+            <select
+              id="copyMeetResultEntryMode"
+            >
+              <option
+                value="best-lift-only"
+                ${
+                  draft.resultEntryMode ===
+                  'best-lift-only'
+                    ? 'selected'
+                    : ''
+                }
+              >
+                Best Lift
+              </option>
+
+              <option
+                value="all-attempts"
+                ${
+                  draft.resultEntryMode ===
+                  'all-attempts'
+                    ? 'selected'
+                    : ''
+                }
+              >
+                All Attempts
+              </option>
+            </select>
+          </label>
+        </div>
+
+        <label class="meet-wizard-check-card">
+          <input
+            id="copyMeetUsePlatformManager"
+            type="checkbox"
+            ${
+              draft.usePlatformManager
+                ? 'checked'
+                : ''
+            }
+          >
+
+          <span>
+            <strong>Generate a new Platform MeetID</strong>
+            <small>
+              Platform MeetIDs are never copied from the previous meet.
+            </small>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div class="meet-setup-dialog-footer">
+      <button
+        id="cancelMeetSetup"
+        type="button"
+        class="compact-button secondary-button"
+      >
+        Cancel
+      </button>
+
+      <div class="meet-setup-footer-spacer"></div>
+
+      <button
+        id="createCopiedMeet"
+        type="button"
+        class="compact-button"
+      >
+        Create Meet
+      </button>
+    </div>
+  `
+}
+
+
+function renderMeetSetupDialog():
+  string {
+
+  if (
+    meetSetupDialogMode ===
+    null
+  ) {
+    return ''
+  }
+
+  const title =
+    meetSetupDialogMode ===
+      'chooser'
+      ? 'Create a New Meet'
+      : meetSetupDialogMode ===
+        'guided'
+        ? 'Guided Meet Setup'
+        : 'Copy Existing Meet'
+
+  return `
+    <dialog
+      id="meetSetupDialog"
+      class="meet-setup-dialog"
+    >
+      <div class="meet-setup-dialog-header">
+        <div>
+          <strong>
+            ${title}
+          </strong>
+
+          ${
+            meetSetupDialogMode ===
+            'guided'
+              ? `
+                <span>
+                  Step ${meetWizardStep} of 5
+                </span>
+              `
+              : ''
+          }
+        </div>
+
+        <button
+          id="closeMeetSetupDialog"
+          type="button"
+          class="meet-setup-dialog-close"
+          aria-label="Close meet setup"
+        >
+          ×
+        </button>
+      </div>
+
+      ${
+        meetSetupDialogMode ===
+        'chooser'
+          ? `
+            <div class="meet-setup-dialog-body">
+              ${renderMeetSetupChooser()}
+            </div>
+
+            <div class="meet-setup-dialog-footer">
+              <button
+                id="cancelMeetSetup"
+                type="button"
+                class="compact-button secondary-button"
+              >
+                Cancel
+              </button>
+            </div>
+          `
+          : meetSetupDialogMode ===
+            'guided'
+            ? renderGuidedMeetSetup()
+            : renderCopyMeetSetup()
+      }
+    </dialog>
+  `
+}
+
+
+function wireMeetSetupDialog():
+  void {
+
+  const dialog =
+    document.querySelector<HTMLDialogElement>(
+      '#meetSetupDialog'
+    )
+
+  if (
+    dialog ===
+    null
+  ) {
+    return
+  }
+
+  const cancel =
+    (): void => {
+      closeMeetSetupDialog()
+    }
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#closeMeetSetupDialog'
+    )
+    ?.addEventListener(
+      'click',
+      cancel
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#cancelMeetSetup'
+    )
+    ?.addEventListener(
+      'click',
+      cancel
+    )
+
+  dialog.addEventListener(
+    'cancel',
+    event => {
+      event.preventDefault()
+      cancel()
+    }
+  )
+
+  dialog.addEventListener(
+    'click',
+    event => {
+      if (
+        event.target ===
+        dialog
+      ) {
+        cancel()
+      }
+    }
+  )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#startGuidedMeetSetup'
+    )
+    ?.addEventListener(
+      'click',
+      startGuidedMeetSetup
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#startQuickMeetSetup'
+    )
+    ?.addEventListener(
+      'click',
+      startQuickMeetSetup
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#startCopyMeetSetup'
+    )
+    ?.addEventListener(
+      'click',
+      startCopyMeetSetup
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#nextMeetWizardStep'
+    )
+    ?.addEventListener(
+      'click',
+      goToNextMeetWizardStep
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#previousMeetWizardStep'
+    )
+    ?.addEventListener(
+      'click',
+      goToPreviousMeetWizardStep
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#addMeetWizardDivision'
+    )
+    ?.addEventListener(
+      'click',
+      addMeetWizardDivision
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-remove-meet-wizard-division]'
+    )
+    .forEach(
+      button =>
+        button.addEventListener(
+          'click',
+          () => {
+            const key =
+              button.dataset
+                .removeMeetWizardDivision
+
+            if (
+              key !==
+              undefined
+            ) {
+              removeMeetWizardDivision(
+                key
+              )
+            }
+          }
+        )
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-add-meet-wizard-team]'
+    )
+    .forEach(
+      button =>
+        button.addEventListener(
+          'click',
+          () => {
+            const key =
+              button.dataset
+                .addMeetWizardTeam
+
+            if (
+              key !==
+              undefined
+            ) {
+              addMeetWizardTeam(
+                key
+              )
+            }
+          }
+        )
+    )
+
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-remove-meet-wizard-team]'
+    )
+    .forEach(
+      button =>
+        button.addEventListener(
+          'click',
+          () => {
+            const key =
+              button.dataset
+                .removeMeetWizardTeam
+
+            if (
+              key !==
+              undefined
+            ) {
+              removeMeetWizardTeam(
+                key
+              )
+            }
+          }
+        )
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#finishMeetWizard'
+    )
+    ?.addEventListener(
+      'click',
+      createMeetFromWizard
+    )
+
+  document
+    .querySelector<HTMLSelectElement>(
+      '#copyMeetSource'
+    )
+    ?.addEventListener(
+      'change',
+      event => {
+        const select =
+          event.currentTarget as
+            HTMLSelectElement
+
+        if (
+          prepareMeetCopyDraft(
+            select.value
+          )
+        ) {
+          renderApp()
+        }
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#createCopiedMeet'
+    )
+    ?.addEventListener(
+      'click',
+      createMeetFromCopy
+    )
+
+  if (
+    !dialog.open
+  ) {
+    dialog.showModal()
+  }
+
+  if (
+    meetSetupDialogMode ===
+      'guided' &&
+    meetWizardStep ===
+      1
+  ) {
+    window.requestAnimationFrame(
+      () =>
+        document
+          .querySelector<HTMLInputElement>(
+            '#meetWizardName'
+          )
+          ?.focus()
+    )
+  }
 }
 
 
@@ -16213,6 +18833,1217 @@ function renderExpeditorLifterChoices(
 }
 
 
+function getUserMeetsForStorage():
+  LocalMeet[] {
+
+  return localMeets.filter(
+    meet =>
+      !BUILT_IN_MEET_IDS.has(
+        meet.state.meet.id
+      )
+  )
+}
+
+
+function persistUserMeets(): void {
+
+  try {
+    const stored:
+      StoredUserMeets = {
+        formatVersion:
+          POWERSCORE_USER_MEET_STORAGE_FORMAT_VERSION,
+        meets:
+          getUserMeetsForStorage()
+            .map(
+              meet =>
+                JSON.parse(
+                  JSON.stringify(
+                    meet
+                  )
+                ) as LocalMeet
+            ),
+      }
+
+    window.localStorage.setItem(
+      POWERSCORE_USER_MEET_STORAGE_KEY,
+      JSON.stringify(
+        stored
+      )
+    )
+  } catch (
+    error
+  ) {
+    console.warn(
+      'PowerScore could not save meet data to browser storage.',
+      error
+    )
+  }
+}
+
+
+function restorePersistedUserMeets(): void {
+
+  let storedText:
+    string | null =
+      null
+
+  try {
+    storedText =
+      window.localStorage.getItem(
+        POWERSCORE_USER_MEET_STORAGE_KEY
+      )
+  } catch (
+    error
+  ) {
+    console.warn(
+      'PowerScore could not read meet data from browser storage.',
+      error
+    )
+
+    return
+  }
+
+  if (
+    storedText === null ||
+    storedText.trim() === ''
+  ) {
+    return
+  }
+
+  try {
+    const parsed =
+      JSON.parse(
+        storedText
+      ) as unknown
+
+    if (
+      !isRecord(
+        parsed
+      ) ||
+      parsed.formatVersion !==
+        POWERSCORE_USER_MEET_STORAGE_FORMAT_VERSION ||
+      !Array.isArray(
+        parsed.meets
+      )
+    ) {
+      throw new Error(
+        'Stored meet data has an unsupported format.'
+      )
+    }
+
+    for (
+      const storedMeetValue of
+      parsed.meets
+    ) {
+      const storedMeet =
+        validateImportedMeet(
+          storedMeetValue
+        )
+
+      if (
+        BUILT_IN_MEET_IDS.has(
+          storedMeet.state.meet.id
+        )
+      ) {
+        continue
+      }
+
+      const existingIndex =
+        localMeets.findIndex(
+          meet =>
+            meet.state.meet.id ===
+            storedMeet.state.meet.id
+        )
+
+      if (
+        existingIndex >= 0
+      ) {
+        localMeets.splice(
+          existingIndex,
+          1,
+          storedMeet
+        )
+      } else {
+        localMeets.push(
+          storedMeet
+        )
+      }
+    }
+  } catch (
+    error
+  ) {
+    console.warn(
+      'PowerScore ignored invalid meet data in browser storage.',
+      error
+    )
+  }
+}
+
+
+function sanitizeMeetFileNamePart(
+  value: string,
+): string {
+
+  const normalized =
+    value
+      .trim()
+      .replace(
+        /[^a-zA-Z0-9_-]+/g,
+        '-'
+      )
+      .replace(
+        /-+/g,
+        '-'
+      )
+      .replace(
+        /^-|-$/g,
+        ''
+      )
+
+  return normalized === ''
+    ? 'PowerScore-Meet'
+    : normalized
+}
+
+
+function formatMeetFileTimestamp(
+  date: Date,
+): string {
+
+  const pad =
+    (value: number): string =>
+      String(value).padStart(
+        2,
+        '0'
+      )
+
+  return (
+    `${date.getFullYear()}` +
+    `${pad(date.getMonth() + 1)}` +
+    `${pad(date.getDate())}-` +
+    `${pad(date.getHours())}` +
+    `${pad(date.getMinutes())}` +
+    `${pad(date.getSeconds())}`
+  )
+}
+
+
+function getMeetFileName(
+  meet: LocalMeet,
+  purpose: MeetFilePurpose,
+): string {
+
+  const meetName =
+    sanitizeMeetFileNamePart(
+      meet.state.meet.name
+    )
+
+  const meetDate =
+    meet.state.meet.date
+      .trim()
+      .replace(
+        /[^0-9-]+/g,
+        ''
+      )
+
+  const datePart =
+    meetDate === ''
+      ? ''
+      : `-${meetDate}`
+
+  if (
+    purpose === 'backup'
+  ) {
+    return (
+      `${meetName}${datePart}-backup-` +
+      `${formatMeetFileTimestamp(new Date())}` +
+      '.powerscore.json'
+    )
+  }
+
+  return (
+    `${meetName}${datePart}` +
+    '.powerscore.json'
+  )
+}
+
+
+function createPowerScoreMeetFile(
+  meet: LocalMeet,
+  purpose: MeetFilePurpose,
+): PowerScoreMeetFile {
+
+  return {
+    fileType:
+      POWERSCORE_MEET_FILE_TYPE,
+    formatVersion:
+      POWERSCORE_MEET_FILE_FORMAT_VERSION,
+    createdAt:
+      new Date().toISOString(),
+    purpose,
+    meet:
+      JSON.parse(
+        JSON.stringify(
+          meet
+        )
+      ) as LocalMeet,
+  }
+}
+
+
+function downloadTextFile(
+  fileName: string,
+  contents: string,
+  mimeType: string,
+): void {
+
+  const blob =
+    new Blob(
+      [contents],
+      {
+        type: mimeType,
+      }
+    )
+
+  const url =
+    URL.createObjectURL(
+      blob
+    )
+
+  const link =
+    document.createElement(
+      'a'
+    )
+
+  link.href =
+    url
+
+  link.download =
+    fileName
+
+  document.body.appendChild(
+    link
+  )
+
+  link.click()
+  link.remove()
+
+  window.setTimeout(
+    () => {
+      URL.revokeObjectURL(
+        url
+      )
+    },
+    0
+  )
+}
+
+
+function downloadMeetFile(
+  meet: LocalMeet,
+  purpose: MeetFilePurpose,
+): void {
+
+  const meetFile =
+    createPowerScoreMeetFile(
+      meet,
+      purpose
+    )
+
+  downloadTextFile(
+    getMeetFileName(
+      meet,
+      purpose
+    ),
+    JSON.stringify(
+      meetFile,
+      null,
+      2
+    ),
+    'application/json'
+  )
+}
+
+
+function isRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+
+  return (
+    typeof value ===
+      'object' &&
+    value !== null &&
+    !Array.isArray(
+      value
+    )
+  )
+}
+
+
+function requireImportedString(
+  record: Record<string, unknown>,
+  propertyName: string,
+  description: string,
+): string {
+
+  const value =
+    record[propertyName]
+
+  if (
+    typeof value !==
+      'string'
+  ) {
+    throw new Error(
+      `${description} is missing or invalid.`
+    )
+  }
+
+  return value
+}
+
+
+function requireImportedNumber(
+  record: Record<string, unknown>,
+  propertyName: string,
+  description: string,
+): number {
+
+  const value =
+    record[propertyName]
+
+  if (
+    typeof value !==
+      'number' ||
+    !Number.isFinite(
+      value
+    )
+  ) {
+    throw new Error(
+      `${description} is missing or invalid.`
+    )
+  }
+
+  return value
+}
+
+
+function validateImportedMeet(
+  value: unknown,
+): LocalMeet {
+
+  if (
+    !isRecord(
+      value
+    )
+  ) {
+    throw new Error(
+      'The meet data is not a valid object.'
+    )
+  }
+
+  const state =
+    value.state
+
+  const divisionTeams =
+    value.divisionTeams
+
+  if (
+    !isRecord(
+      state
+    ) ||
+    !Array.isArray(
+      divisionTeams
+    )
+  ) {
+    throw new Error(
+      'The meet data is missing required sections.'
+    )
+  }
+
+  const meet =
+    state.meet
+
+  const divisions =
+    state.divisions
+
+  const teams =
+    state.teams
+
+  const lifters =
+    state.lifters
+
+  if (
+    !isRecord(
+      meet
+    ) ||
+    !Array.isArray(
+      divisions
+    ) ||
+    !Array.isArray(
+      teams
+    ) ||
+    !Array.isArray(
+      lifters
+    )
+  ) {
+    throw new Error(
+      'The meet data is missing meet, division, team, or lifter information.'
+    )
+  }
+
+  const meetId =
+    requireImportedString(
+      meet,
+      'id',
+      'Meet ID'
+    )
+
+  requireImportedString(
+    meet,
+    'name',
+    'Meet name'
+  )
+
+  requireImportedString(
+    meet,
+    'date',
+    'Meet date'
+  )
+
+  requireImportedString(
+    meet,
+    'location',
+    'Meet location'
+  )
+
+  const resultEntryMode =
+    requireImportedString(
+      meet,
+      'resultEntryMode',
+      'Result-entry mode'
+    )
+
+  if (
+    resultEntryMode !==
+      'best-lift-only' &&
+    resultEntryMode !==
+      'all-attempts'
+  ) {
+    throw new Error(
+      'The meet has an unsupported result-entry mode.'
+    )
+  }
+
+  divisions.forEach(
+    (
+      division,
+      index
+    ) => {
+      if (
+        !isRecord(
+          division
+        )
+      ) {
+        throw new Error(
+          `Division ${index + 1} is invalid.`
+        )
+      }
+
+      requireImportedNumber(
+        division,
+        'id',
+        `Division ${index + 1} ID`
+      )
+
+      const divisionMeetId =
+        requireImportedString(
+          division,
+          'meetId',
+          `Division ${index + 1} meet ID`
+        )
+
+      requireImportedString(
+        division,
+        'name',
+        `Division ${index + 1} name`
+      )
+
+      const ruleSet =
+        requireImportedString(
+          division,
+          'ruleSet',
+          `Division ${index + 1} rule set`
+        )
+
+      if (
+        divisionMeetId !==
+          meetId
+      ) {
+        throw new Error(
+          `Division ${index + 1} belongs to a different meet.`
+        )
+      }
+
+      if (
+        ruleSet !== 'THSPA' &&
+        ruleSet !== 'THSWPA' &&
+        ruleSet !== 'NMAA_BOYS' &&
+        ruleSet !== 'NMAA_GIRLS'
+      ) {
+        throw new Error(
+          `Division ${index + 1} has an unsupported rule set.`
+        )
+      }
+    }
+  )
+
+  teams.forEach(
+    (
+      team,
+      index
+    ) => {
+      if (
+        !isRecord(
+          team
+        )
+      ) {
+        throw new Error(
+          `Team ${index + 1} is invalid.`
+        )
+      }
+
+      requireImportedNumber(
+        team,
+        'id',
+        `Team ${index + 1} ID`
+      )
+
+      const teamMeetId =
+        requireImportedString(
+          team,
+          'meetId',
+          `Team ${index + 1} meet ID`
+        )
+
+      requireImportedString(
+        team,
+        'name',
+        `Team ${index + 1} name`
+      )
+
+      if (
+        teamMeetId !==
+          meetId
+      ) {
+        throw new Error(
+          `Team ${index + 1} belongs to a different meet.`
+        )
+      }
+    }
+  )
+
+  lifters.forEach(
+    (
+      lifter,
+      index
+    ) => {
+      if (
+        !isRecord(
+          lifter
+        )
+      ) {
+        throw new Error(
+          `Lifter ${index + 1} is invalid.`
+        )
+      }
+
+      requireImportedNumber(
+        lifter,
+        'id',
+        `Lifter ${index + 1} ID`
+      )
+
+      requireImportedNumber(
+        lifter,
+        'lifterNumber',
+        `Lifter ${index + 1} number`
+      )
+
+      requireImportedString(
+        lifter,
+        'firstName',
+        `Lifter ${index + 1} first name`
+      )
+
+      requireImportedString(
+        lifter,
+        'lastName',
+        `Lifter ${index + 1} last name`
+      )
+
+      requireImportedNumber(
+        lifter,
+        'divisionId',
+        `Lifter ${index + 1} division ID`
+      )
+
+      const teamId =
+        lifter.teamId
+
+      if (
+        teamId !== null &&
+        (
+          typeof teamId !==
+            'number' ||
+          !Number.isFinite(
+            teamId
+          )
+        )
+      ) {
+        throw new Error(
+          `Lifter ${index + 1} team ID is invalid.`
+        )
+      }
+
+      const status =
+        requireImportedString(
+          lifter,
+          'status',
+          `Lifter ${index + 1} status`
+        )
+
+      if (
+        status !== 'active' &&
+        status !== 'bombed' &&
+        status !== 'scratched' &&
+        status !== 'disqualified'
+      ) {
+        throw new Error(
+          `Lifter ${index + 1} has an unsupported status.`
+        )
+      }
+    }
+  )
+
+  divisionTeams.forEach(
+    (
+      assignment,
+      index
+    ) => {
+      if (
+        !isRecord(
+          assignment
+        )
+      ) {
+        throw new Error(
+          `Division/team assignment ${index + 1} is invalid.`
+        )
+      }
+
+      requireImportedNumber(
+        assignment,
+        'divisionId',
+        `Division/team assignment ${index + 1} division ID`
+      )
+
+      requireImportedNumber(
+        assignment,
+        'teamId',
+        `Division/team assignment ${index + 1} team ID`
+      )
+    }
+  )
+
+  return JSON.parse(
+    JSON.stringify(
+      value
+    )
+  ) as LocalMeet
+}
+
+
+function parsePowerScoreMeetFile(
+  contents: string,
+): PowerScoreMeetFile {
+
+  let parsed:
+    unknown
+
+  try {
+    parsed =
+      JSON.parse(
+        contents
+      )
+  } catch {
+    throw new Error(
+      'The selected file is not valid JSON.'
+    )
+  }
+
+  if (
+    !isRecord(
+      parsed
+    )
+  ) {
+    throw new Error(
+      'The selected file is not a PowerScore meet file.'
+    )
+  }
+
+  if (
+    parsed.fileType !==
+      POWERSCORE_MEET_FILE_TYPE
+  ) {
+    throw new Error(
+      'The selected file is not a PowerScore meet backup/export file.'
+    )
+  }
+
+  if (
+    parsed.formatVersion !==
+      POWERSCORE_MEET_FILE_FORMAT_VERSION
+  ) {
+    throw new Error(
+      `This PowerScore meet file uses unsupported format version ${String(parsed.formatVersion)}.`
+    )
+  }
+
+  const createdAt =
+    requireImportedString(
+      parsed,
+      'createdAt',
+      'File creation date'
+    )
+
+  const purpose =
+    requireImportedString(
+      parsed,
+      'purpose',
+      'File purpose'
+    )
+
+  if (
+    purpose !== 'backup' &&
+    purpose !== 'export'
+  ) {
+    throw new Error(
+      'The PowerScore meet file has an unsupported purpose.'
+    )
+  }
+
+  const meet =
+    validateImportedMeet(
+      parsed.meet
+    )
+
+  return {
+    fileType:
+      POWERSCORE_MEET_FILE_TYPE,
+    formatVersion:
+      POWERSCORE_MEET_FILE_FORMAT_VERSION,
+    createdAt,
+    purpose,
+    meet,
+  }
+}
+
+
+function getMeetFileSummary(
+  meet: LocalMeet,
+): string {
+
+  const divisions =
+    meet.state.divisions.length
+
+  const teams =
+    meet.state.teams.length
+
+  const lifters =
+    meet.state.lifters.length
+
+  return (
+    `${divisions} division${divisions === 1 ? '' : 's'}, ` +
+    `${teams} team${teams === 1 ? '' : 's'}, ` +
+    `${lifters} lifter${lifters === 1 ? '' : 's'}`
+  )
+}
+
+
+function renderMeetFileTools(
+  meet: LocalMeet | undefined,
+): string {
+
+  const isExpanded =
+    expandedToolPanel ===
+      'meet-file'
+
+  return `
+    <section class="tool-panel meet-file-tool-panel ${isExpanded ? 'is-expanded' : 'is-collapsed'}">
+      <button
+        type="button"
+        class="tool-panel-heading tool-panel-toggle"
+        data-tool-panel-toggle="meet-file"
+        aria-expanded="${isExpanded ? 'true' : 'false'}"
+      >
+        <div class="tool-panel-title-row">
+          <span class="tool-panel-chevron" aria-hidden="true">
+            ${isExpanded ? '▾' : '▸'}
+          </span>
+          <h1>Meet Backup / Transfer</h1>
+        </div>
+
+        <div class="tool-panel-heading-right">
+          <span class="tool-panel-action">
+            ${isExpanded ? 'Collapse' : 'Expand'}
+          </span>
+        </div>
+      </button>
+
+      <div class="meet-file-tool-content tool-panel-content ${isExpanded ? '' : 'hidden'}">
+        <div class="meet-file-intent-guide">
+          <p class="meet-file-intent-intro">
+            Use this tool to <strong>protect a meet during competition, restore an earlier version, or move a meet to another computer.</strong>
+          </p>
+
+          <div class="meet-file-intent-list">
+            <section class="meet-file-intent-item">
+              <h2>Create a backup during a meet</h2>
+              <ol>
+                <li>Click <strong>Save Backup Now</strong>.</li>
+                <li>PowerScore downloads a timestamped backup file.</li>
+                <li>Repeat this as often as you want during the meet to create additional recovery points.</li>
+              </ol>
+            </section>
+
+            <section class="meet-file-intent-item">
+              <h2>Restore a meet from a backup</h2>
+              <ol>
+                <li>Click <strong>Import Meet File</strong>.</li>
+                <li>Select the backup file you want to restore.</li>
+                <li>Confirm the import if PowerScore asks to replace the existing copy of the meet.</li>
+              </ol>
+            </section>
+
+            <section class="meet-file-intent-item">
+              <h2>Move a meet to another computer</h2>
+              <ol>
+                <li>On the current computer, click <strong>Export Meet</strong>.</li>
+                <li>Copy or send the exported file to the other computer.</li>
+                <li>Open PowerScore on the other computer.</li>
+                <li>Click <strong>Import Meet File</strong> and select the exported file.</li>
+              </ol>
+            </section>
+
+            <section class="meet-file-intent-item">
+              <h2>Save a meet for later use</h2>
+              <ol>
+                <li>Click <strong>Export Meet</strong>.</li>
+                <li>Store the exported file wherever you normally keep meet files.</li>
+                <li>Use <strong>Import Meet File</strong> whenever you need to reopen it on this or another computer.</li>
+              </ol>
+            </section>
+          </div>
+
+          <p class="meet-file-browser-note">
+            PowerScore also automatically saves your normal meets in the current browser every few seconds.
+            <strong>Downloaded backup and export files are separate from the browser</strong>, so they can be used if you need to recover a meet or transfer it to another computer.
+          </p>
+        </div>
+
+        ${
+          meet === undefined
+            ? `
+              <div class="meet-file-current-meet muted">
+                Select a meet to create a backup or export file.
+                You can import a meet file without selecting a meet first.
+              </div>
+            `
+            : `
+              <div class="meet-file-current-meet">
+                <strong>${escapeHtml(meet.state.meet.name)}</strong>
+                <span>
+                  ${escapeHtml(meet.state.meet.date || 'No date')}
+                  ${
+                    meet.state.meet.location.trim() === ''
+                      ? ''
+                      : ` · ${escapeHtml(meet.state.meet.location)}`
+                  }
+                </span>
+              </div>
+            `
+        }
+
+        <div class="meet-file-actions">
+          <button
+            id="backupSelectedMeet"
+            type="button"
+            class="primary-action"
+            ${meet === undefined ? 'disabled' : ''}
+          >
+            Save Backup Now
+          </button>
+
+          <button
+            id="exportSelectedMeet"
+            type="button"
+            class="compact-button"
+            ${meet === undefined ? 'disabled' : ''}
+          >
+            Export Meet
+          </button>
+
+          <button
+            id="importMeetFile"
+            type="button"
+            class="compact-button"
+          >
+            Import Meet File
+          </button>
+
+          <input
+            id="meetFileImportInput"
+            type="file"
+            accept=".json,.powerscore.json,application/json"
+            hidden
+          >
+        </div>
+      </div>
+    </section>
+  `
+}
+
+
+function importPowerScoreMeet(
+  meetFile: PowerScoreMeetFile,
+): void {
+
+  const importedMeet =
+    meetFile.meet
+
+  const existingIndex =
+    localMeets.findIndex(
+      item =>
+        item.state.meet.id ===
+        importedMeet.state.meet.id
+    )
+
+  if (
+    existingIndex >= 0
+  ) {
+    const existingMeet =
+      localMeets[existingIndex]
+
+    const replace =
+      window.confirm(
+        `A copy of "${existingMeet.state.meet.name}" already exists on this computer.\n\n` +
+        `Replace it with the imported copy?\n\n` +
+        `PowerScore will download a safety backup of the current copy before replacing it.`
+      )
+
+    if (
+      !replace
+    ) {
+      return
+    }
+
+    downloadMeetFile(
+      existingMeet,
+      'backup'
+    )
+
+    localMeets.splice(
+      existingIndex,
+      1,
+      importedMeet
+    )
+  } else {
+    const importedPlatformMeetId =
+      getNormalizedPlatformMeetId(
+        importedMeet
+      )
+
+    if (
+      importedPlatformMeetId !== ''
+    ) {
+      const platformIdMatch =
+        localMeets.find(
+          item =>
+            item.state.meet.id !==
+              importedMeet.state.meet.id &&
+            getNormalizedPlatformMeetId(
+              item
+            ) ===
+              importedPlatformMeetId
+        )
+
+      if (
+        platformIdMatch !== undefined &&
+        !window.confirm(
+          `Another meet on this computer already uses Platform MeetID ${importedPlatformMeetId}:\n\n` +
+          `${platformIdMatch.state.meet.name}\n\n` +
+          `Import the meet anyway?`
+        )
+      ) {
+        return
+      }
+    }
+
+    localMeets.push(
+      importedMeet
+    )
+  }
+
+  persistUserMeets()
+
+  selectedMeetId =
+    importedMeet.state.meet.id
+
+  selectedCompetitionWeightClass =
+    null
+
+  registrationDefaults = {
+    equipmentType:
+      'equipped',
+  }
+
+  runnerSheetSelectionDivisionId =
+    null
+
+  expeditorSelectionDivisionId =
+    null
+
+  selectFirstDivisionForMeet(
+    importedMeet
+  )
+
+  currentPage =
+    'registration'
+
+  renderApp()
+
+  window.alert(
+    `Meet imported successfully.\n\n` +
+    `${importedMeet.state.meet.name}\n` +
+    `${getMeetFileSummary(importedMeet)}`
+  )
+}
+
+
+async function handleMeetFileImport(
+  file: File,
+): Promise<void> {
+
+  try {
+    const contents =
+      await file.text()
+
+    const meetFile =
+      parsePowerScoreMeetFile(
+        contents
+      )
+
+    importPowerScoreMeet(
+      meetFile
+    )
+  } catch (
+    error
+  ) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unknown import error.'
+
+    window.alert(
+      `PowerScore could not import this meet file.\n\n${message}`
+    )
+  }
+}
+
+
+function wireMeetFileTools(
+  meet: LocalMeet | undefined,
+): void {
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#backupSelectedMeet'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          meet === undefined
+        ) {
+          return
+        }
+
+        downloadMeetFile(
+          meet,
+          'backup'
+        )
+      }
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#exportSelectedMeet'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        if (
+          meet === undefined
+        ) {
+          return
+        }
+
+        downloadMeetFile(
+          meet,
+          'export'
+        )
+      }
+    )
+
+  const importInput =
+    document.querySelector<HTMLInputElement>(
+      '#meetFileImportInput'
+    )
+
+  document
+    .querySelector<HTMLButtonElement>(
+      '#importMeetFile'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        importInput?.click()
+      }
+    )
+
+  importInput
+    ?.addEventListener(
+      'change',
+      () => {
+        const file =
+          importInput.files?.[0]
+
+        importInput.value =
+          ''
+
+        if (
+          file === undefined
+        ) {
+          return
+        }
+
+        void handleMeetFileImport(
+          file
+        )
+      }
+    )
+}
+
+
 function renderTools():
   string {
 
@@ -16224,25 +20055,42 @@ function renderTools():
   ) {
     return `
       <main class="tools-page">
-        <div class="empty-state">
-          Select a meet to use Tools.
+        <div class="tools-screen-content">
+          ${renderMeetFileTools(undefined)}
+
+          <div class="empty-state">
+            Select a meet to use the remaining Tools.
+          </div>
         </div>
       </main>
     `
   }
 
-  const division =
+  let division =
     getSelectedDivision()
+
+  if (
+    division === undefined &&
+    meet.state.divisions.length > 0
+  ) {
+    division =
+      meet.state.divisions[0]
+
+    selectedDivisionId =
+      division.id
+  }
 
   if (
     division === undefined
   ) {
     return `
       <main class="tools-page">
-        ${renderBestLifterDivisionTabs(meet)}
+        <div class="tools-screen-content">
+          ${renderMeetFileTools(meet)}
 
-        <div class="empty-state">
-          Select a division to use Tools.
+          <div class="empty-state">
+            Add a division before using Runner Sheets or Expeditor Cards.
+          </div>
         </div>
       </main>
     `
@@ -16272,26 +20120,35 @@ function renderTools():
 
       <div class="tools-screen-content">
 
-        ${renderBestLifterDivisionTabs(meet)}
+        ${renderMeetFileTools(meet)}
 
-        <section class="tool-panel runner-sheet-tool-panel">
-          <div class="tool-panel-heading">
-            <div>
+        <section class="tool-panel runner-sheet-tool-panel ${expandedToolPanel === 'runner-sheets' ? 'is-expanded' : 'is-collapsed'}">
+          <button
+            type="button"
+            class="tool-panel-heading tool-panel-toggle"
+            data-tool-panel-toggle="runner-sheets"
+            aria-expanded="${expandedToolPanel === 'runner-sheets' ? 'true' : 'false'}"
+          >
+            <div class="tool-panel-title-row">
+              <span class="tool-panel-chevron" aria-hidden="true">
+                ${expandedToolPanel === 'runner-sheets' ? '▾' : '▸'}
+              </span>
               <h1>Runner Sheets</h1>
-              <p>
-                Print one runner sheet per selected weight class.
-                Lifters are listed in lifter-number order.
-              </p>
             </div>
 
-            <div class="tool-selection-count">
-              ${runnerSheetSelectedCount} class${
-                runnerSheetSelectedCount === 1
-                  ? ''
-                  : 'es'
-              } selected
+            <div class="tool-panel-heading-right">
+              <span class="tool-panel-action">
+                ${expandedToolPanel === 'runner-sheets' ? 'Collapse' : 'Expand'}
+              </span>
             </div>
-          </div>
+          </button>
+
+          <div class="tool-panel-content ${expandedToolPanel === 'runner-sheets' ? '' : 'hidden'}">
+            ${renderBestLifterDivisionTabs(meet)}
+
+            <p class="tool-panel-description">
+              Print one runner sheet per selected weight class. Lifters are listed in lifter-number order.
+            </p>
 
           <fieldset class="runner-sheet-fieldset">
             <legend>Select Weight Classes to Print</legend>
@@ -16352,26 +20209,36 @@ function renderTools():
               Print Runner Sheets
             </button>
           </div>
+          </div>
         </section>
 
-        <section class="tool-panel">
-          <div class="tool-panel-heading">
-            <div>
+        <section class="tool-panel ${expandedToolPanel === 'expeditor' ? 'is-expanded' : 'is-collapsed'}">
+          <button
+            type="button"
+            class="tool-panel-heading tool-panel-toggle"
+            data-tool-panel-toggle="expeditor"
+            aria-expanded="${expandedToolPanel === 'expeditor' ? 'true' : 'false'}"
+          >
+            <div class="tool-panel-title-row">
+              <span class="tool-panel-chevron" aria-hidden="true">
+                ${expandedToolPanel === 'expeditor' ? '▾' : '▸'}
+              </span>
               <h1>Expeditor Cards</h1>
-              <p>
-                Print blank cards or pre-filled lifter cards for meet officials.
-                Printed two cards per 8.5×11 landscape sheet.
-              </p>
             </div>
 
-            <div class="tool-selection-count">
-              ${selectedCount} lifter${
-                selectedCount === 1
-                  ? ''
-                  : 's'
-              } selected
+            <div class="tool-panel-heading-right">
+              <span class="tool-panel-action">
+                ${expandedToolPanel === 'expeditor' ? 'Collapse' : 'Expand'}
+              </span>
             </div>
-          </div>
+          </button>
+
+          <div class="tool-panel-content ${expandedToolPanel === 'expeditor' ? '' : 'hidden'}">
+            ${renderBestLifterDivisionTabs(meet)}
+
+            <p class="tool-panel-description">
+              Print blank cards or pre-filled lifter cards for meet officials. Printed two cards per 8.5×11 landscape sheet.
+            </p>
 
           <fieldset class="expeditor-source-fieldset">
             <legend>Source</legend>
@@ -16672,6 +20539,7 @@ function renderTools():
               Print Blank Cards
             </button>
           </div>
+          </div>
         </section>
 
       </div>
@@ -16922,18 +20790,52 @@ function updateExpeditorSelectedSet(
 function wireTools():
   void {
 
+  document
+    .querySelectorAll<HTMLButtonElement>(
+      '[data-tool-panel-toggle]'
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const panel =
+              button.dataset
+                .toolPanelToggle as
+                  ToolPanelId | undefined
+
+            if (
+              panel === undefined
+            ) {
+              return
+            }
+
+            expandedToolPanel =
+              expandedToolPanel === panel
+                ? null
+                : panel
+
+            renderApp()
+          }
+        )
+      }
+    )
+
   const meet =
     getSelectedMeet()
 
-  const division =
-    getSelectedDivision()
+  wireMeetFileTools(
+    meet
+  )
 
   if (
-    meet === undefined ||
-    division === undefined
+    meet === undefined
   ) {
     return
   }
+
+  const division =
+    getSelectedDivision()
 
   document
     .querySelectorAll<HTMLButtonElement>(
@@ -16972,6 +20874,12 @@ function wireTools():
         )
       }
     )
+
+  if (
+    division === undefined
+  ) {
+    return
+  }
 
   document
     .querySelectorAll<HTMLInputElement>(
@@ -32765,7 +36673,7 @@ function wireRegistrationSetup(): void {
     )
     ?.addEventListener(
       'click',
-      startMeetEntry
+      openMeetSetupChooser
     )
 
   document
@@ -33198,6 +37106,8 @@ function renderApp(): void {
 
       ${renderShortcutHelpDialog()}
 
+      ${renderMeetSetupDialog()}
+
       ${
         currentPage ===
         'competition'
@@ -33233,6 +37143,7 @@ function renderApp(): void {
   `
 
   wireNavigation()
+  wireMeetSetupDialog()
 
   if (
     currentPage ===
@@ -33344,7 +37255,15 @@ function renderApp(): void {
   wireRegistrationSetup()
   wireRegistration()
   wireSelectAllOnEditableInputs()
-  wireRegistrationShortcuts()
+
+  if (
+    meetSetupDialogMode ===
+    null
+  ) {
+    wireRegistrationShortcuts()
+  } else {
+    disableRegistrationShortcuts()
+  }
 }
 
 
