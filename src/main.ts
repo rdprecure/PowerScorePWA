@@ -4445,6 +4445,28 @@ let selectedLifterId:
     null
 
 
+const REGISTRATION_MEET_PANEL_INITIAL_HEIGHT =
+  232
+
+const REGISTRATION_DIVISION_PANEL_INITIAL_HEIGHT =
+  111
+
+const REGISTRATION_MEET_PANEL_MIN_HEIGHT =
+  106
+
+const REGISTRATION_DIVISION_PANEL_MIN_HEIGHT =
+  79
+
+const REGISTRATION_TEAM_PANEL_MIN_HEIGHT =
+  132
+
+let registrationMeetPanelHeight =
+  REGISTRATION_MEET_PANEL_INITIAL_HEIGHT
+
+let registrationDivisionPanelHeight =
+  REGISTRATION_DIVISION_PANEL_INITIAL_HEIGHT
+
+
 let selectedCompetitionWeightClass:
   string | null =
     null
@@ -15888,6 +15910,8 @@ function renderExpeditorCard(
                     }"
                     src="${escapeHtml(card.associationLogo)}"
                     alt="${escapeHtml(card.associationLogoAlt)}"
+                    loading="eager"
+                    decoding="sync"
                   >
                 </div>
               `
@@ -16661,6 +16685,143 @@ function renderTools():
 }
 
 
+function waitForExpeditorImage(
+  image: HTMLImageElement,
+): Promise<void> {
+
+  return new Promise(
+    resolve => {
+      let finished =
+        false
+
+      const finish =
+        (): void => {
+          if (
+            finished
+          ) {
+            return
+          }
+
+          finished =
+            true
+
+          image.removeEventListener(
+            'load',
+            handleReady
+          )
+
+          image.removeEventListener(
+            'error',
+            handleReady
+          )
+
+          window.clearTimeout(
+            timeoutId
+          )
+
+          resolve()
+        }
+
+      const decodeAndFinish =
+        (): void => {
+          if (
+            image.naturalWidth > 0 &&
+            typeof image.decode ===
+              'function'
+          ) {
+            image.decode()
+              .catch(
+                () => undefined
+              )
+              .finally(
+                finish
+              )
+
+            return
+          }
+
+          finish()
+        }
+
+      const handleReady =
+        (): void => {
+          decodeAndFinish()
+        }
+
+      const timeoutId =
+        window.setTimeout(
+          finish,
+          5000
+        )
+
+      if (
+        image.complete
+      ) {
+        decodeAndFinish()
+
+        return
+      }
+
+      image.addEventListener(
+        'load',
+        handleReady,
+        {
+          once: true,
+        }
+      )
+
+      image.addEventListener(
+        'error',
+        handleReady,
+        {
+          once: true,
+        }
+      )
+    }
+  )
+}
+
+
+async function waitForExpeditorPrintImages():
+  Promise<void> {
+
+  const images =
+    Array.from(
+      document.querySelectorAll<HTMLImageElement>(
+        '.expeditor-print-root .expeditor-association-logo'
+      )
+    )
+
+  await Promise.all(
+    images.map(
+      image =>
+        waitForExpeditorImage(
+          image
+        )
+    )
+  )
+}
+
+
+function printExpeditorWhenReady(): void {
+
+  void waitForExpeditorPrintImages()
+    .finally(
+      () => {
+        window.requestAnimationFrame(
+          () => {
+            window.requestAnimationFrame(
+              () => {
+                window.print()
+              }
+            )
+          }
+        )
+      }
+    )
+}
+
+
 function startExpeditorPrint(
   cards:
     ExpeditorCardData[],
@@ -16692,12 +16853,7 @@ function startExpeditorPrint(
     }
   )
 
-  window.setTimeout(
-    () => {
-      window.print()
-    },
-    0
-  )
+  printExpeditorWhenReady()
 }
 
 
@@ -17937,6 +18093,14 @@ function renderDivisionRuleSetOptions(
 }
 
 
+function formatSelectorLifterCount(
+  count: number,
+): string {
+
+  return `${count} ${count === 1 ? 'lifter' : 'lifters'}`
+}
+
+
 function renderDivisionRows():
   string {
 
@@ -17961,6 +18125,13 @@ function renderDivisionRows():
           const selected =
             division.id ===
             selectedDivisionId
+
+          const lifterCount =
+            meet.state.lifters.filter(
+              lifter =>
+                lifter.divisionId ===
+                division.id
+            ).length
 
           if (
             isEditingEntity(
@@ -18029,6 +18200,10 @@ function renderDivisionRows():
                       division.name
                     )
                   }
+                </span>
+
+                <span class="selector-lifter-count">
+                  ${formatSelectorLifterCount(lifterCount)}
                 </span>
 
                 ${
@@ -18157,6 +18332,15 @@ function renderTeamRows():
             team.id ===
             selectedTeamId
 
+          const lifterCount =
+            meet.state.lifters.filter(
+              lifter =>
+                lifter.divisionId ===
+                  division.id &&
+                lifter.teamId ===
+                  team.id
+            ).length
+
           if (
             isEditingEntity(
               'team',
@@ -18219,6 +18403,9 @@ function renderTeamRows():
                 <span class="team-name">
                   ${escapeHtml(team.name)}
                 </span>
+                <span class="selector-lifter-count">
+                  ${formatSelectorLifterCount(lifterCount)}
+                </span>
                 <span class="selector-button-detail">
                   ${team.isBTeam === true ? 'BTeam' : 'ATeam'}
                 </span>
@@ -18277,15 +18464,15 @@ function renderTeamRows():
     >
       <button
         type="button"
-        class="selector-button"
+        class="selector-button team-selector-button"
         data-select-all-teams
         tabindex="-1"
       >
         <span class="team-name">
           All Teams
         </span>
-        <span class="selector-button-detail">
-          ${allTeamsLifterCount} lifters
+        <span class="selector-lifter-count">
+          ${formatSelectorLifterCount(allTeamsLifterCount)}
         </span>
       </button>
 
@@ -18338,7 +18525,10 @@ function renderRegistrationSidebar():
     getSelectedDivision()
 
   return `
-    <div class="registration-sidebar">
+    <div
+      class="registration-sidebar"
+      style="--registration-meet-panel-height: ${registrationMeetPanelHeight}px; --registration-division-panel-height: ${registrationDivisionPanelHeight}px;"
+    >
 
       <section
         class="workspace-panel registration-sidebar-panel meet-panel"
@@ -18368,6 +18558,17 @@ function renderRegistrationSidebar():
         </div>
 
       </section>
+
+      <div
+        class="registration-sidebar-resizer"
+        data-registration-sidebar-resizer="meet-division"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize Meets and Divisions sections"
+        title="Drag to resize Meets and Divisions"
+      >
+        <span></span>
+      </div>
 
 
       <section
@@ -18409,6 +18610,17 @@ function renderRegistrationSidebar():
         </div>
 
       </section>
+
+      <div
+        class="registration-sidebar-resizer"
+        data-registration-sidebar-resizer="division-team"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize Divisions and Teams sections"
+        title="Drag to resize Divisions and Teams"
+      >
+        <span></span>
+      </div>
 
 
       <section
@@ -22176,7 +22388,7 @@ function renderRegistration():
 
                 <div class="registration-toolbar">
 
-                  <div>
+                  <div class="registration-lifter-summary">
                     <span class="section-title">
                       Lifters
                     </span>
@@ -22194,6 +22406,61 @@ function renderRegistration():
                           meet
                         )
                       )
+                    }
+                  </div>
+
+                  <div class="registration-actions">
+                    ${
+                      isBulkEditing
+                        ? `
+                          <button
+                            id="cancelBulkEdit"
+                            type="button"
+                            class="compact-button secondary-button"
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            id="saveBulkEdit"
+                            type="button"
+                            class="compact-button"
+                          >
+                            Save Changes
+                          </button>
+                        `
+                        : `
+                          <button
+                            id="bulkEditLifters"
+                            type="button"
+                            class="compact-button secondary-button"
+                            ${
+                              division ===
+                                undefined ||
+                              visibleLifterCount ===
+                                0
+                                ? 'disabled'
+                                : ''
+                            }
+                          >
+                            Bulk Edit
+                          </button>
+
+                          <button
+                            id="addLifter"
+                            type="button"
+                            class="compact-button"
+                            data-open-entry="lifter"
+                            ${
+                              selectedTeam ===
+                              undefined
+                                ? 'disabled'
+                                : ''
+                            }
+                          >
+                            + Add
+                          </button>
+                        `
                     }
                   </div>
 
@@ -22241,75 +22508,22 @@ function renderRegistration():
                     </button>
                   </div>
 
-                  <div class="registration-actions">
+                  <div class="registration-help">
                     ${
                       isBulkEditing
-                        ? `
-                          <button
-                            id="cancelBulkEdit"
-                            type="button"
-                            class="compact-button secondary-button"
-                          >
-                            Cancel
-                          </button>
-
-                          <button
-                            id="saveBulkEdit"
-                            type="button"
-                            class="compact-button"
-                          >
-                            Save Changes
-                          </button>
-                        `
-                        : `
-                          <span class="registration-help">
-                            ${
-                              selectedTeam ===
-                              undefined
-                                ? (
-                                    division ===
-                                    undefined
-                                      ? 'Select a division'
-                                      : 'All Teams selected · choose a team to add lifters'
-                                  )
-                                : activeEntry ===
-                                  'lifter'
-                                  ? 'Tab moves fields · Enter adds · Esc cancels'
-                                  : ''
-                            }
-                          </span>
-
-                          <button
-                            id="bulkEditLifters"
-                            type="button"
-                            class="compact-button secondary-button"
-                            ${
+                        ? ''
+                        : selectedTeam ===
+                          undefined
+                          ? (
                               division ===
-                                undefined ||
-                              visibleLifterCount ===
-                                0
-                                ? 'disabled'
-                                : ''
-                            }
-                          >
-                            Bulk Edit
-                          </button>
-
-                          <button
-                            id="addLifter"
-                            type="button"
-                            class="compact-button"
-                            data-open-entry="lifter"
-                            ${
-                              selectedTeam ===
                               undefined
-                                ? 'disabled'
+                                ? 'Select a division'
                                 : ''
-                            }
-                          >
-                            + Add
-                          </button>
-                        `
+                            )
+                          : activeEntry ===
+                            'lifter'
+                            ? 'Tab moves fields · Enter adds · Esc cancels'
+                            : ''
                     }
                   </div>
 
@@ -32325,7 +32539,225 @@ function disableRegistrationShortcuts():
 }
 
 
+function clampRegistrationSidebarPanelHeight(
+  value: number,
+  minimum: number,
+  maximum: number,
+): number {
+
+  return Math.max(
+    minimum,
+    Math.min(
+      maximum,
+      value
+    )
+  )
+}
+
+
+function wireRegistrationSidebarResizers(): void {
+
+  const sidebar =
+    document.querySelector<HTMLElement>(
+      '.registration-sidebar'
+    )
+
+  const meetPanel =
+    sidebar?.querySelector<HTMLElement>(
+      '.meet-panel'
+    )
+
+  const divisionPanel =
+    sidebar?.querySelector<HTMLElement>(
+      '.division-panel'
+    )
+
+  const teamPanel =
+    sidebar?.querySelector<HTMLElement>(
+      '.team-panel'
+    )
+
+  if (
+    sidebar === null ||
+    sidebar === undefined ||
+    meetPanel === null ||
+    meetPanel === undefined ||
+    divisionPanel === null ||
+    divisionPanel === undefined ||
+    teamPanel === null ||
+    teamPanel === undefined
+  ) {
+    return
+  }
+
+  sidebar
+    .querySelectorAll<HTMLElement>(
+      '[data-registration-sidebar-resizer]'
+    )
+    .forEach(
+      resizer => {
+
+        resizer.addEventListener(
+          'pointerdown',
+          event => {
+
+            if (
+              event.button !== 0
+            ) {
+              return
+            }
+
+            event.preventDefault()
+
+            const kind =
+              resizer.dataset
+                .registrationSidebarResizer
+
+            if (
+              kind !==
+                'meet-division' &&
+              kind !==
+                'division-team'
+            ) {
+              return
+            }
+
+            const startY =
+              event.clientY
+
+            const meetStart =
+              meetPanel
+                .getBoundingClientRect()
+                .height
+
+            const divisionStart =
+              divisionPanel
+                .getBoundingClientRect()
+                .height
+
+            const teamStart =
+              teamPanel
+                .getBoundingClientRect()
+                .height
+
+            document.body.classList.add(
+              'registration-sidebar-resizing'
+            )
+
+            resizer.classList.add(
+              'active'
+            )
+
+            const onPointerMove =
+              (moveEvent: PointerEvent) => {
+
+                const delta =
+                  moveEvent.clientY -
+                  startY
+
+                if (
+                  kind ===
+                    'meet-division'
+                ) {
+                  const pairHeight =
+                    meetStart +
+                    divisionStart
+
+                  const nextMeetHeight =
+                    clampRegistrationSidebarPanelHeight(
+                      meetStart +
+                        delta,
+                      REGISTRATION_MEET_PANEL_MIN_HEIGHT,
+                      pairHeight -
+                        REGISTRATION_DIVISION_PANEL_MIN_HEIGHT
+                    )
+
+                  const nextDivisionHeight =
+                    pairHeight -
+                    nextMeetHeight
+
+                  registrationMeetPanelHeight =
+                    nextMeetHeight
+
+                  registrationDivisionPanelHeight =
+                    nextDivisionHeight
+                } else {
+                  const nextDivisionHeight =
+                    clampRegistrationSidebarPanelHeight(
+                      divisionStart +
+                        delta,
+                      REGISTRATION_DIVISION_PANEL_MIN_HEIGHT,
+                      divisionStart +
+                        teamStart -
+                        REGISTRATION_TEAM_PANEL_MIN_HEIGHT
+                    )
+
+                  registrationDivisionPanelHeight =
+                    nextDivisionHeight
+                }
+
+                sidebar.style.setProperty(
+                  '--registration-meet-panel-height',
+                  `${registrationMeetPanelHeight}px`
+                )
+
+                sidebar.style.setProperty(
+                  '--registration-division-panel-height',
+                  `${registrationDivisionPanelHeight}px`
+                )
+              }
+
+            const finishResize =
+              () => {
+
+                document.removeEventListener(
+                  'pointermove',
+                  onPointerMove
+                )
+
+                document.removeEventListener(
+                  'pointerup',
+                  finishResize
+                )
+
+                document.removeEventListener(
+                  'pointercancel',
+                  finishResize
+                )
+
+                document.body.classList.remove(
+                  'registration-sidebar-resizing'
+                )
+
+                resizer.classList.remove(
+                  'active'
+                )
+              }
+
+            document.addEventListener(
+              'pointermove',
+              onPointerMove
+            )
+
+            document.addEventListener(
+              'pointerup',
+              finishResize
+            )
+
+            document.addEventListener(
+              'pointercancel',
+              finishResize
+            )
+          }
+        )
+      }
+    )
+}
+
+
 function wireRegistrationSetup(): void {
+
+  wireRegistrationSidebarResizers()
 
   document
     .querySelector<HTMLButtonElement>(

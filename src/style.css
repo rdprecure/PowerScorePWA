@@ -381,11 +381,13 @@ select {
   display: grid;
 
   grid-template-rows:
-    minmax(130px, 0.55fr)
-    minmax(130px, 0.55fr)
-    minmax(280px, 2.4fr);
+    minmax(96px, var(--registration-meet-panel-height, 208px))
+    8px
+    minmax(72px, var(--registration-division-panel-height, 98px))
+    8px
+    minmax(120px, 1fr);
 
-  gap: 8px;
+  gap: 0;
 }
 
 .registration-sidebar-panel {
@@ -394,6 +396,56 @@ select {
 
   display: flex;
   flex-direction: column;
+}
+
+.registration-sidebar-resizer {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 8px;
+
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.registration-sidebar-resizer::before {
+  content: '';
+
+  position: absolute;
+  inset: 1px 0;
+
+  border-radius: 3px;
+
+  background: transparent;
+}
+
+.registration-sidebar-resizer span {
+  position: relative;
+
+  width: 42px;
+  height: 3px;
+
+  border-radius: 2px;
+
+  background: #a7b5c5;
+}
+
+.registration-sidebar-resizer:hover::before,
+.registration-sidebar-resizer.active::before {
+  background: #dce6f1;
+}
+
+.registration-sidebar-resizer:hover span,
+.registration-sidebar-resizer.active span {
+  background: #5f7896;
+}
+
+body.registration-sidebar-resizing {
+  cursor: row-resize;
+  user-select: none;
 }
 
 .column-heading {
@@ -446,13 +498,17 @@ select {
 /* Selector rows */
 
 .selector-row {
-  min-height: 35px;
+  min-height: 29px;
 
   display: flex;
   flex-direction: column;
   justify-content: center;
 
   padding: 4px 8px;
+
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
 
   border-bottom:
     1px solid #e2e8f0;
@@ -485,8 +541,9 @@ select {
 
   color: #1f2937;
 
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
 
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -498,6 +555,8 @@ select {
   color: #64748b;
 
   font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .selector-row-with-actions {
@@ -517,7 +576,7 @@ select {
 
 .selector-button {
   width: 100%;
-  min-height: 29px;
+  min-height: 23px;
 
   display: flex;
   flex-direction: column;
@@ -533,14 +592,19 @@ select {
 
   color: #1f2937;
 
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+
   text-align: left;
 }
 
 .selector-button-main {
   overflow: hidden;
 
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
 
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -550,13 +614,16 @@ select {
   color: #64748b;
 
   font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .team-name {
   overflow: hidden;
 
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
 
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -579,8 +646,8 @@ select {
 }
 
 .row-edit {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 
   padding: 0;
 
@@ -608,8 +675,8 @@ select {
 
 
 .row-delete {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 
   padding: 0;
 
@@ -651,7 +718,7 @@ select {
 .edit-fields select,
 .row-edit-input {
   width: 100%;
-  height: 27px;
+  height: 24px;
 
   min-width: 0;
 
@@ -688,7 +755,7 @@ select {
   position: sticky;
   bottom: 0;
 
-  padding: 5px;
+  padding: 4px;
 
   background: #f8fafc;
 
@@ -699,7 +766,7 @@ select {
 .quick-entry-row input,
 .quick-entry-row select {
   width: 100%;
-  height: 27px;
+  height: 24px;
 
   padding: 3px 6px;
 
@@ -794,11 +861,15 @@ select {
 }
 
 .meet-selector-row {
-  min-height: 34px;
+  min-height: 28px;
 }
 
 .meet-selector-button {
   display: grid;
+
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
 
   grid-template-columns:
     minmax(115px, 1.35fr)
@@ -822,7 +893,8 @@ select {
 
 .meet-row-name {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .meet-row-date,
@@ -831,6 +903,8 @@ select {
   color: #64748b;
 
   font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .entry-accepted {
@@ -863,7 +937,7 @@ select {
   display: grid;
 
   grid-template-columns:
-    minmax(350px, 28.5%)
+    minmax(438px, 35.625%)
     minmax(0, 1fr);
 
   gap: 8px;
@@ -1054,7 +1128,7 @@ select {
   position: sticky;
   top: 0;
 
-  min-height: 48px;
+  min-height: 43px;
 
   background: #e9eef4;
 
@@ -1143,12 +1217,14 @@ select {
 }
 
 .registered-row {
-  min-height: 27px;
+  min-height: 22px;
 
   border-bottom:
     1px solid #e2e8f0;
 
   font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 .registered-row:nth-child(even) {
@@ -1224,11 +1300,13 @@ select {
 }
 
 .cell-name {
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .registration-entry-row {
-  min-height: 31px;
+  min-height: 25px;
 
   background: #f8fafc;
 
@@ -1257,7 +1335,7 @@ select {
 .grid-input,
 .grid-select {
   width: 100%;
-  height: 26px;
+  height: 23px;
 
   padding: 2px 4px;
 
@@ -1702,7 +1780,7 @@ select {
 
   .registration-layout {
     grid-template-columns:
-      minmax(330px, 31%)
+      minmax(413px, 38.75%)
       minmax(0, 1fr);
   }
 }
@@ -2265,27 +2343,70 @@ select {
   white-space: nowrap;
 }
 
-/* Registration division/team values are shown horizontally. */
+/* Registration division/team values are shown horizontally.
+   The count and designation use fixed layout columns so they stay
+   evenly distributed between the name and the Edit/Delete buttons. */
 .division-selector-button,
 .team-selector-button {
-  flex-direction: row;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.45fr)
+    minmax(72px, 0.78fr)
+    minmax(64px, 0.78fr);
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
+  column-gap: 8px;
 }
 
 .division-selector-button .selector-button-main,
 .team-selector-button .team-name {
   min-width: 0;
-  flex: 1 1 auto;
+  grid-column: 1;
+}
+
+.selector-lifter-count {
+  grid-column: 2;
+  justify-self: center;
+
+  margin-left: 0;
+
+  color: #64748b;
+
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
+
+  white-space: nowrap;
+  text-align: center;
 }
 
 .division-selector-button .selector-button-detail,
 .team-selector-button .selector-button-detail {
-  flex: 0 0 auto;
-  margin-left: auto;
+  grid-column: 3;
+  justify-self: center;
+
+  margin-left: 0;
+
   white-space: nowrap;
-  text-align: right;
+  text-align: center;
+}
+
+/* Use identical typography for every value shown on Meet, Division,
+   and Team selector rows. Color differences remain for secondary values,
+   but font family, size, weight, and line height are uniform. */
+.meet-row-name,
+.meet-row-date,
+.meet-row-location,
+.meet-row-mode,
+.division-selector-button .selector-button-main,
+.division-selector-button .selector-lifter-count,
+.division-selector-button .selector-button-detail,
+.team-selector-button .team-name,
+.team-selector-button .selector-lifter-count,
+.team-selector-button .selector-button-detail {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 /* Lifter status highlighting. Active lifters retain the normal row colors. */
@@ -4847,4 +4968,390 @@ select {
 .expeditor-association-logo-thspa {
   max-width: 0.84in;
   max-height: 0.68in;
+}
+
+/* Registration page visual scale
+   Match the more comfortable appearance of viewing Registration at roughly
+   110% browser zoom without changing the scale of the rest of PowerScore. */
+.registration-workspace {
+  padding: 9px;
+}
+
+.registration-workspace .registration-layout {
+  grid-template-columns:
+    minmax(482px, 35.625%)
+    minmax(0, 1fr);
+  gap: 9px;
+}
+
+.registration-workspace .registration-sidebar {
+  grid-template-rows:
+    minmax(106px, var(--registration-meet-panel-height, 232px))
+    9px
+    minmax(79px, var(--registration-division-panel-height, 111px))
+    9px
+    minmax(132px, 1fr);
+}
+
+.registration-workspace .registration-sidebar-resizer {
+  min-height: 9px;
+}
+
+.registration-workspace .registration-sidebar-resizer span {
+  width: 46px;
+  height: 3px;
+}
+
+.registration-workspace .column-heading {
+  min-height: 43px;
+  gap: 9px;
+  padding: 6px 8px;
+}
+
+.registration-workspace .column-heading > div {
+  gap: 8px;
+}
+
+.registration-workspace .column-heading strong,
+.registration-workspace .section-title {
+  font-size: 13px;
+}
+
+.registration-workspace .item-count {
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+.registration-workspace .compact-button {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.registration-workspace .selector-row {
+  min-height: 32px;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+
+.registration-workspace .selector-row-with-actions {
+  padding: 2px 6px 2px 9px;
+}
+
+.registration-workspace .selector-button {
+  min-height: 25px;
+  font-size: 12px;
+}
+
+.registration-workspace .selector-main,
+.registration-workspace .selector-button-main,
+.registration-workspace .team-name,
+.registration-workspace .meet-row-name,
+.registration-workspace .meet-row-date,
+.registration-workspace .meet-row-location,
+.registration-workspace .meet-row-mode,
+.registration-workspace .division-selector-button .selector-button-main,
+.registration-workspace .division-selector-button .selector-lifter-count,
+.registration-workspace .division-selector-button .selector-button-detail,
+.registration-workspace .team-selector-button .team-name,
+.registration-workspace .team-selector-button .selector-lifter-count,
+.registration-workspace .team-selector-button .selector-button-detail {
+  font-size: 12px;
+}
+
+.registration-workspace .selector-detail,
+.registration-workspace .selector-lifter-count {
+  font-size: 10px;
+}
+
+.registration-workspace .division-selector-button,
+.registration-workspace .team-selector-button {
+  column-gap: 9px;
+}
+
+.registration-workspace .row-edit,
+.registration-workspace .row-delete {
+  width: 24px;
+  height: 24px;
+  font-size: 18px;
+  line-height: 22px;
+}
+
+.registration-workspace .edit-fields input,
+.registration-workspace .edit-fields select,
+.registration-workspace .row-edit-input,
+.registration-workspace .quick-entry-row input,
+.registration-workspace .quick-entry-row select {
+  height: 26px;
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
+.registration-workspace .quick-entry-row {
+  padding: 4px;
+}
+
+.registration-workspace .division-entry-fields {
+  grid-template-columns:
+    minmax(110px, 1fr)
+    79px;
+  gap: 4px;
+}
+
+.registration-workspace .team-entry-fields,
+.registration-workspace .team-edit-fields {
+  grid-template-columns:
+    minmax(110px, 1fr)
+    auto;
+  gap: 7px;
+}
+
+.registration-workspace .team-b-option {
+  gap: 4px;
+  font-size: 11px;
+}
+
+.registration-workspace .team-b-option input,
+.registration-workspace .quick-entry-row .team-b-option input {
+  width: 15px;
+  height: 15px;
+}
+
+.registration-workspace .meet-entry-fields {
+  grid-template-columns:
+    minmax(143px, 1.35fr)
+    114px
+    minmax(116px, 1fr)
+    101px;
+  gap: 4px;
+}
+
+.registration-workspace .meet-selector-row {
+  min-height: 31px;
+}
+
+.registration-workspace .meet-selector-button {
+  grid-template-columns:
+    minmax(127px, 1.35fr)
+    86px
+    minmax(99px, 1fr)
+    90px;
+  gap: 6px;
+}
+
+.registration-workspace .empty-column {
+  padding: 20px 11px;
+  font-size: 12px;
+}
+
+.registration-workspace .registration-toolbar {
+  min-height: 67px;
+
+  grid-template-columns:
+    minmax(190px, 1fr)
+    minmax(240px, 1.65fr)
+    auto;
+
+  grid-template-areas:
+    "summary selection selection"
+    "platform help actions";
+
+  grid-template-rows:
+    30px
+    30px;
+
+  column-gap: 10px;
+  row-gap: 2px;
+
+  padding: 2px 9px;
+}
+
+.registration-workspace .registration-lifter-summary {
+  grid-area: summary;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-width: 0;
+}
+
+.registration-workspace .registration-meet-name {
+  grid-area: selection;
+
+  font-size: 13px;
+}
+
+.registration-workspace .registration-actions {
+  grid-area: actions;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  justify-self: end;
+}
+
+.registration-workspace .registration-platform-meet-id {
+  grid-area: platform;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  min-width: 0;
+
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.registration-workspace .registration-platform-meet-id input {
+  height: 25px;
+
+  box-sizing: border-box;
+}
+
+.registration-workspace .registration-platform-meet-id .compact-button {
+  height: 26px;
+}
+
+.registration-workspace .registration-help {
+  grid-area: help;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.registration-workspace .registration-header {
+  min-height: 47px;
+  font-size: 12px;
+}
+
+.registration-workspace .registered-row {
+  min-height: 24px;
+  font-size: 12px;
+}
+
+.registration-workspace .cell-name {
+  font-size: 12px;
+}
+
+.registration-workspace .registration-entry-row {
+  min-height: 28px;
+}
+
+.registration-workspace .entry-fixed-cell {
+  padding: 0 4px;
+  font-size: 11px;
+}
+
+.registration-workspace .grid-input,
+.registration-workspace .grid-select {
+  height: 25px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.registration-workspace .grid-check input,
+.registration-workspace .bulk-check input {
+  width: 17px;
+  height: 17px;
+}
+
+.registration-workspace .readiness {
+  padding: 2px 4px;
+  font-size: 10px;
+}
+
+.registration-workspace .registration-empty {
+  padding: 39px 11px;
+  font-size: 12px;
+}
+
+.registration-workspace .registration-placeholder {
+  gap: 6px;
+}
+
+.registration-workspace .registration-placeholder strong {
+  font-size: 18px;
+}
+
+.registration-workspace .registration-placeholder span {
+  font-size: 13px;
+}
+
+.registration-workspace .bulk-options-bar {
+  min-height: 35px;
+  gap: 11px;
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+.registration-workspace .bulk-edit-row {
+  gap: 3px;
+  padding: 2px 6px;
+}
+
+.registration-workspace .bulk-edit-header {
+  min-height: 53px;
+  font-size: 12px;
+}
+
+.registration-workspace .bulk-edit-input,
+.registration-workspace .bulk-edit-select {
+  height: 28px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.registration-workspace .bulk-team-cell {
+  padding: 0 4px;
+  font-size: 11px;
+}
+
+/* Preserve the existing responsive Registration behavior after the 110% sizing pass. */
+@media (max-width: 1100px) {
+  .registration-workspace .registration-layout {
+    grid-template-columns:
+      minmax(454px, 38.75%)
+      minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .registration-workspace .registration-layout {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .registration-workspace .registration-sidebar {
+    min-height: 770px;
+  }
+
+  .registration-workspace .registration-panel {
+    min-height:
+      calc(100vh - 100px);
+  }
+
+  .registration-workspace .meet-entry-fields,
+  .registration-workspace .meet-selector-button {
+    grid-template-columns:
+      minmax(132px, 1.4fr)
+      99px
+      minmax(110px, 1fr)
+      97px;
+  }
+}
+
+@media (max-width: 700px) {
+  .registration-workspace .registration-sidebar {
+    min-height: 902px;
+  }
 }
