@@ -8,6 +8,8 @@ This is a curated product/development changelog, not a replacement for Git histo
 
 ### Added
 
+- Add Lifter now works with All Teams selected. New lifter rows include a team-name autocomplete selector limited to teams in the current division, with distinct B Team labels.
+- Association-specific team-name autocomplete in Registration and Meet Wizard. Team lists refresh once per app load and persist locally for offline reuse.
 - Double-click a Registration sidebar splitter to expand the panel above it to fit its rows, while preserving minimum space for the other panels.
 - Meet backup/export/import workflow for complete portable meet files.
 - Automatic browser persistence for normal user meets.
@@ -17,7 +19,10 @@ This is a curated product/development changelog, not a replacement for Git histo
 
 ### Changed
 
-- Meet Wizard defaults the date to today and starts with empty division/team lists. Matching Add buttons open focused entry rows; Enter continues filled-row entry, Enter or Escape removes an empty row, and Enter outside a row advances to the next step. Step navigation discards blank rows.
+- Removed spinner controls from body-weight entry fields in Registration, Bulk Edit, and Platform Issues.
+- Team directories now load from `PowerScore.asmx/GetTeams` on all three association websites.
+- Team-name autocomplete matches typed text anywhere in a name, case-insensitively.
+- Meet Wizard defaults the date to today and starts with empty division/team lists. Matching Add buttons open focused entry rows; Enter continues filled-row entry, Enter on an empty row is ignored, Escape removes an empty row, and Enter outside a row advances to the next step. Step navigation discards blank rows.
 - Meet Wizard step 4 now offers only Enter Lifters Manually and Set Up Meet Only; removed the PlatformManager Workflow lifter-entry option.
 - Registration's Add Meet button now creates a meet directly in edit mode; an adjacent Meet Wizard button opens Guided Setup without a chooser screen.
 - Tools page reorganized into collapsed/expandable tool panels.
@@ -27,6 +32,7 @@ This is a curated product/development changelog, not a replacement for Git histo
 
 ### Fixed
 
+- Parse `GetTeams` records as `TeamName,Region,Division,UILClass` separated by semicolons, using only team names for autocomplete. Versioned the directory cache to discard previously misparsed lists.
 - Expeditor Card association logos now wait for image loading/decoding before print, eliminating intermittent missing logos in print preview/output.
 
 ## [2026-09-21] - Main UI stabilization

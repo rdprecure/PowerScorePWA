@@ -1950,6 +1950,18 @@ body.registration-sidebar-resizing {
   text-align: center;
 }
 
+/* Body-weight fields retain numeric validation without spinner controls. */
+input:is(#entryBodyWeight, #editLifterBodyWeight, [data-bulk-field="bodyWeight"], [data-platform-issue-bwt]) {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input:is(#entryBodyWeight, #editLifterBodyWeight, [data-bulk-field="bodyWeight"], [data-platform-issue-bwt])::-webkit-inner-spin-button,
+input:is(#entryBodyWeight, #editLifterBodyWeight, [data-bulk-field="bodyWeight"], [data-platform-issue-bwt])::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .grid-check {
   display: flex;
   align-items: center;

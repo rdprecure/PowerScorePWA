@@ -1,5 +1,16 @@
 import './style.css'
 
+import {
+  TeamDirectory,
+  getTeamAssociation,
+  completeTeamName,
+} from './integration/teamDirectory'
+import type { TeamAssociation } from './integration/teamDirectory'
+
+const teamDirectory = new TeamDirectory()
+
+import { getLifterEntryTeamLabel, resolveLifterEntryTeam } from './domain/lifterTeamSelection'
+
 import type {
   Division,
   DivisionRuleSet,
@@ -5701,7 +5712,13 @@ function handleMeetWizardRowKeydown(event: KeyboardEvent): void {
     '[data-meet-wizard-division-name], [data-meet-wizard-team-name]'
   )
 
-  if (event.key === 'Escape' || (event.key === 'Enter' && name?.value.trim() === '')) {
+  if (event.key === 'Enter' && name?.value.trim() === '') {
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
+  if (event.key === 'Escape') {
     event.preventDefault()
     event.stopPropagation()
     if (name?.value.trim() !== '') return
@@ -6612,6 +6629,7 @@ function renderMeetWizardStep():
                                       placeholder="Team or school name"
                                       autocomplete="off"
                                       data-meet-wizard-team-name
+                                      data-team-association="${getTeamAssociation(division.ruleSet) ?? ''}"
                                       aria-label="Team name"
                                     >
 
@@ -6683,8 +6701,8 @@ function renderMeetWizardStep():
               <strong>Enter Lifters Manually</strong>
               <small>
                 Finish setup and begin entering lifters on the
-                Registration page. A team must be selected before
-                adding lifters.
+                Registration page. Select a team in the sidebar or
+                choose one in the new lifter row when viewing All Teams.
               </small>
             </span>
           </label>
@@ -9474,7 +9492,7 @@ function beginNewEntry(
 
   if (
     type === 'lifter' &&
-    getSelectedTeam() ===
+    getSelectedDivision() ===
       undefined
   ) {
     return
@@ -22221,6 +22239,7 @@ function renderTeamRows():
                 <div class="team-edit-fields">
                   <input
                     id="editTeamName"
+                    data-team-association="${getTeamAssociation(division.ruleSet) ?? ''}"
                     class="row-edit-input"
                     type="text"
                     value="${escapeHtml(team.name)}"
@@ -22358,6 +22377,7 @@ function renderTeamRows():
             <div class="team-entry-fields">
               <input
                 id="newTeamName"
+                data-team-association="${getTeamAssociation(division.ruleSet) ?? ''}"
                 type="text"
                 placeholder="Team name"
                 autocomplete="off"
@@ -23633,8 +23653,7 @@ function renderRegistrationEntryRow(
     getSelectedTeam()
 
   if (
-    division === undefined ||
-    team === undefined
+    division === undefined
   ) {
     return ''
   }
@@ -23682,9 +23701,15 @@ function renderRegistrationEntryRow(
       ${
         shouldShowLifterTeamColumn()
           ? `
-            <div class="entry-fixed-cell">
-              ${escapeHtml(team.name)}
-            </div>
+            <input
+              id="entryLifterTeam"
+              class="grid-input"
+              type="text"
+              autocomplete="off"
+              data-lifter-team-selector
+              aria-label="Team for new lifter"
+              placeholder="Select team"
+            >
           `
           : ''
       }
@@ -23745,7 +23770,7 @@ function renderRegistrationEntryRow(
         class="grid-select status-select"
         aria-label="Team status"
       >
-        <option value="regular" selected>${team.isBTeam === true ? 'BTeam (Team)' : 'Regular'}</option>
+        <option value="regular" selected>${team?.isBTeam === true ? 'BTeam (Team)' : 'Regular'}</option>
         <option value="bteam">BTeam</option>
         <option value="guest">GuestLifter</option>
       </select>
@@ -26328,7 +26353,7 @@ function renderRegistration():
                             class="compact-button"
                             data-open-entry="lifter"
                             ${
-                              selectedTeam ===
+                              division ===
                               undefined
                                 ? 'disabled'
                                 : ''
@@ -34393,18 +34418,25 @@ function commitNewLifter():
   const division =
     getSelectedDivision()
 
-  const team =
-    getSelectedTeam()
-
   if (
     meet === undefined ||
-    division === undefined ||
-    team === undefined
+    division === undefined
   ) {
     window.alert(
-      'Select a team before adding lifters.'
+      'Select a division before adding lifters.'
     )
 
+    return
+  }
+
+  const teamInput = document.querySelector<HTMLInputElement>('#entryLifterTeam')
+  const team = getSelectedTeam() ?? resolveLifterEntryTeam(
+    teamInput?.value ?? '',
+    getTeamsForDivision(meet, division.id)
+  )
+  if (team === undefined) {
+    window.alert('Select a team from this division. Add the team in the Teams section first if it is not listed.')
+    teamInput?.focus()
     return
   }
 
@@ -36246,34 +36278,6 @@ function beginShortcutEntry(
     return
   }
 
-  if (
-    getSelectedTeam() ===
-    undefined
-  ) {
-    const selectedLifter =
-      meet.state.lifters.find(
-        lifter =>
-          lifter.id ===
-          selectedLifterId
-      )
-
-    const candidateTeamId =
-      selectedLifter?.teamId ??
-      getTeamsForSelectedDivision()[0]
-        ?.id ??
-      null
-
-    if (
-      candidateTeamId === null
-    ) {
-      return
-    }
-
-    selectTeam(
-      candidateTeamId
-    )
-  }
-
   startLifterEntry()
 }
 
@@ -37080,6 +37084,93 @@ function wireRegistration():
 }
 
 
+function updateTeamNameSuggestions(): void {
+  document.querySelectorAll<HTMLDataListElement>('[data-team-directory]').forEach(list => {
+    const association = list.dataset.teamDirectory as TeamAssociation
+    list.replaceChildren(...teamDirectory.getNames(association).map(name => {
+      const option = document.createElement('option')
+      option.value = name
+      return option
+    }))
+  })
+}
+
+
+function wireTeamNameAutocomplete(): void {
+  const app = document.querySelector<HTMLElement>('#app')
+  if (app === null) return
+
+  app.querySelectorAll<HTMLInputElement>('[data-team-association], [data-lifter-team-selector]').forEach(input => {
+    const association = input.dataset.teamAssociation
+    const isLifterTeam = input.hasAttribute('data-lifter-team-selector')
+    if (!isLifterTeam && association !== 'THSPA' && association !== 'THSWPA' && association !== 'NMAA') return
+    const getNames = (): readonly string[] => isLifterTeam
+      ? getTeamsForSelectedDivision().map(getLifterEntryTeamLabel)
+      : teamDirectory.getNames(association as TeamAssociation)
+
+    const listId = isLifterTeam ? 'lifter-entry-teams' : `team-directory-${association}`
+    if (document.getElementById(listId) === null) {
+      const list = document.createElement('datalist')
+      list.id = listId
+      if (isLifterTeam) {
+        list.replaceChildren(...getNames().map(name => {
+          const option = document.createElement('option')
+          option.value = name
+          return option
+        }))
+      } else {
+        list.dataset.teamDirectory = association
+      }
+      app.append(list)
+    }
+    input.setAttribute('list', listId)
+    input.setAttribute('autocapitalize', 'off')
+    input.spellcheck = false
+
+    let completion: { query: string; name: string; selectionStart: number } | undefined
+
+    input.addEventListener('beforeinput', event => {
+      if (!(event instanceof InputEvent) || event.isComposing || completion === undefined) return
+      // Continue searching with what the user typed, excluding any city/name
+      // prefix inserted by an earlier match in the middle of a team name.
+      if (input.value === completion.name &&
+          input.selectionStart === completion.selectionStart &&
+          input.selectionEnd === completion.name.length) {
+        input.value = completion.query
+        input.setSelectionRange(completion.query.length, completion.query.length)
+      }
+      completion = undefined
+    })
+
+    input.addEventListener('input', event => {
+      completion = undefined
+      // Complete only newly typed text at the end, leaving deletion, paste,
+      // composition, and edits in the middle under the operator's control.
+      if (!(event instanceof InputEvent) || event.isComposing || event.inputType !== 'insertText') return
+      const typedLength = input.value.length
+      if (input.selectionStart !== typedLength || input.selectionEnd !== typedLength) return
+      const query = input.value
+      const match = completeTeamName(query, getNames())
+      if (match === undefined) return
+      const selectionStart = match.toLocaleLowerCase().indexOf(query.toLocaleLowerCase()) + typedLength
+      input.value = match
+      input.setSelectionRange(selectionStart, match.length)
+      completion = { query, name: match, selectionStart }
+    })
+    if (isLifterTeam) {
+      const updateTeamStatusLabel = () => {
+        const team = resolveLifterEntryTeam(input.value, getTeamsForSelectedDivision())
+        const regular = document.querySelector<HTMLOptionElement>('#entryTeamStatus option[value="regular"]')
+        if (regular !== null) regular.textContent = team?.isBTeam === true ? 'BTeam (Team)' : 'Regular'
+      }
+      input.addEventListener('input', updateTeamStatusLabel)
+      input.addEventListener('change', updateTeamStatusLabel)
+    }
+  })
+  updateTeamNameSuggestions()
+}
+
+
 function renderApp(): void {
 
   if (
@@ -37173,6 +37264,7 @@ function renderApp(): void {
   `
 
   wireNavigation()
+  wireTeamNameAutocomplete()
   wireMeetSetupDialog()
 
   if (
@@ -37299,3 +37391,4 @@ function renderApp(): void {
 
 selectFirstHierarchy()
 renderApp()
+void teamDirectory.refresh(updateTeamNameSuggestions)

@@ -39,7 +39,7 @@ The emphasis now is less on basic UI construction and more on integration, recov
 - ✅ inline Division entry
 - ✅ inline Team entry
 - ✅ inline Lifter entry
-- ✅ lifters inherit selected Division and Team
+- ✅ lifters inherit selected Division and Team, or choose a division team in the entry row when All Teams is selected
 - ✅ bulk editing
 - ✅ compact meet information
 - ✅ automatic initial selection

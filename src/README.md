@@ -115,9 +115,9 @@ Registration behavior is intentionally hierarchical:
 - selecting a Meet shows all lifters in the meet;
 - selecting a Division shows lifters in that division;
 - selecting a Team shows lifters for that team within the selected division;
-- a Team must be selected before adding a lifter;
-- new lifters inherit the selected Division and Team;
-- Division and Team are therefore not separate dropdowns in the normal lifter-entry row.
+- new lifters inherit the selected Division and, when selected, Team;
+- with All Teams selected, Add Lifter remains available and the new row includes a team-name autocomplete selector for teams already in that division;
+- a valid team must be chosen before saving the lifter; B Teams have distinct labels, and saving preserves the All Teams view.
 
 Meet, Division, Team, and Lifter entry use inline rows. New rows should always be brought into view so a newly-created record is not hidden below a scroll boundary.
 
@@ -187,6 +187,14 @@ A lifter's competition class is initially assigned from body weight.
 If the user manually changes the competition class, that manual override must persist. Later body-weight edits must not silently overwrite the manual class selection.
 
 This behavior is important and should be preserved in any registration or import changes.
+
+## Team-name autocomplete
+
+Registration team entry/editing and Meet Wizard team rows complete names as the user types and offer a list of suggestions. Matching is case-insensitive and finds typed text anywhere in a team name. The suggested suffix is selected so typing can refine the search; unlisted team names are also allowed.
+
+At startup, PowerScore restores the last saved lists and requests `https://<association-host>/PowerScore.asmx/GetTeams` once from each host: `thspa.us`, `thswpa.com`, and `nmaapowerlifting.com`. Both NMAA divisions share one list. Lists stay in memory for the session and are cached separately in localStorage under `powerscore-team-directory-v2-<association>`. Failed requests retain the last successful list. Reloading the app starts a fresh update.
+
+The service returns an XML `string` containing semicolon-separated records in the form `TeamName,Region,Division,UILClass`. Autocomplete uses only the team-name field; the other fields do not become suggestions or change meet team metadata. Each website must allow cross-origin GET requests from the PowerScore app origin (including the development origin when testing). `Access-Control-Allow-Origin` must be present on the service responses for browser downloads. This feature does not use a proxy or bypass browser cross-origin restrictions.
 
 ## PlatformManager
 
@@ -306,7 +314,7 @@ The Meets section offers two adjacent buttons:
 
 Guided Setup walks a new user through meet information, divisions, teams, and how lifters will be added.
 
-The date defaults to today in the user's local time. Division and team lists start empty. Use `+ Add` to open a focused blank row. Enter on a filled row continues with another row; Enter or Escape on a blank row removes it without closing the wizard. On these two steps, Enter outside a row advances to the next step. Blank rows are discarded when moving between steps.
+The date defaults to today in the user's local time. Division and team lists start empty. Use `+ Add` to open a focused blank row. Enter on a filled row continues with another row; Enter on a blank row does nothing. Escape removes a blank row without closing the wizard. On these two steps, Enter outside a row advances to the next step. Blank rows are discarded when moving between steps.
 
 The wizard is an optional guide over the existing data model. It must not create a separate parallel meet-configuration architecture.
 

@@ -163,9 +163,7 @@ Team selected
   -> show lifters for that team within the selected division
 ```
 
-New lifters inherit the selected Division and Team.
-
-A Team must be selected before lifter creation.
+New lifters inherit the selected Division and, when selected, Team. With All Teams selected, the entry row provides a team-name autocomplete selector sourced from that division's teams. A unique existing team must be resolved before saving; B Team labels distinguish teams with the same school name. Adding a lifter preserves the All Teams selection.
 
 ## 4. Meet identity and Platform MeetID
 
@@ -495,7 +493,13 @@ A safe extraction should:
 3. keep tests passing after each step;
 4. avoid mixing architectural refactor with domain-rule changes.
 
-## 19. Codex change checklist
+## 19. Team directory integration
+
+`src/integration/teamDirectory.ts` owns association team-list retrieval and caching. It reads the ASMX XML string response, parses semicolon-separated `TeamName,Region,Division,UILClass` records and extracts their names, and maintains independent localStorage caches for THSPA, THSWPA, and NMAA. One app-level instance restores caches immediately and refreshes each association once per load. Network, parsing, or storage failures do not interrupt meet entry; a failed refresh preserves the last successful list. Both NMAA rule sets use the same directory.
+
+Registration and wizard name fields select the directory from the division rule set. Refresh completion updates suggestion lists without rerendering the form or replacing typed input. Directory data is separate from saved meet data; selecting or completing a name does not create a team until the normal entry workflow commits it. The remote services must permit the app origin through CORS.
+
+## 20. Codex change checklist
 
 Before changing code:
 
